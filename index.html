@@ -1,1 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Garage Guys OC — Garage Door Repair & Installation | Orange County, CA</title>
+<meta name="description" content="Garage door repair, installation, tune-up, painting, openers & custom storage solutions. Serving Orange County, CA. Call Sam today.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --black: #111111;
+    --steel: #1C2333;
+    --orange: #F05A1A;
+    --orange-dark: #C44510;
+    --cream: #F7F4EF;
+    --gray: #6B7280;
+    --light: #E8E4DD;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--cream);
+    color: var(--black);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: var(--black);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    height: 64px;
+  }
+
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    color: white;
+    letter-spacing: 2px;
+  }
+
+  .nav-logo span { color: var(--orange); }
+
+  .nav-phone {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    background: var(--orange);
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 10px 20px;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+
+  .nav-phone:hover { background: var(--orange-dark); }
+
+  /* HERO */
+  .hero {
+    margin-top: 64px;
+    background: var(--steel);
+    position: relative;
+    overflow: hidden;
+    min-height: 92vh;
+    display: flex;
+    align-items: center;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 60px,
+        rgba(255,255,255,0.015) 60px,
+        rgba(255,255,255,0.015) 61px
+      ),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 60px,
+        rgba(255,255,255,0.015) 60px,
+        rgba(255,255,255,0.015) 61px
+      );
+  }
+
+  .hero-accent {
+    position: absolute;
+    right: -100px;
+    top: -100px;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(240,90,26,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 80px 32px;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 24px;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 2px;
+    background: var(--orange);
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(64px, 10vw, 120px);
+    line-height: 0.95;
+    color: white;
+    margin-bottom: 28px;
+    letter-spacing: 2px;
+  }
+
+  h1 .line-orange { color: var(--orange); display: block; }
+
+  .hero-sub {
+    font-size: 18px;
+    color: rgba(255,255,255,0.65);
+    max-width: 520px;
+    margin-bottom: 44px;
+    line-height: 1.7;
+  }
+
+  .hero-ctas {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--orange);
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    padding: 16px 32px;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .btn-primary:hover { background: var(--orange-dark); transform: translateY(-1px); }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    border: 1.5px solid rgba(255,255,255,0.3);
+    color: white;
+    font-weight: 500;
+    font-size: 16px;
+    padding: 16px 32px;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: border-color 0.2s;
+  }
+
+  .btn-secondary:hover { border-color: rgba(255,255,255,0.7); }
+
+  .hero-badges {
+    margin-top: 60px;
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .badge-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    color: white;
+    line-height: 1;
+  }
+
+  .badge-num span { color: var(--orange); }
+
+  .badge-label {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  /* SERVICES */
+  .services {
+    padding: 100px 32px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 16px;
+  }
+
+  h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(40px, 6vw, 64px);
+    line-height: 1;
+    letter-spacing: 1px;
+    color: var(--black);
+    margin-bottom: 56px;
+  }
+
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2px;
+    background: var(--light);
+    border: 2px solid var(--light);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .service-card {
+    background: var(--cream);
+    padding: 36px 32px;
+    transition: background 0.2s;
+    cursor: default;
+  }
+
+  .service-card:hover { background: white; }
+
+  .service-icon {
+    font-size: 32px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .service-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 1px;
+    color: var(--black);
+    margin-bottom: 10px;
+  }
+
+  .service-desc {
+    font-size: 14px;
+    color: var(--gray);
+    line-height: 1.65;
+  }
+
+  /* WHY */
+  .why {
+    background: var(--steel);
+    padding: 100px 32px;
+  }
+
+  .why-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .why h2 { color: white; margin-bottom: 0; }
+  .why .section-eyebrow { margin-bottom: 16px; }
+
+  .why-text {
+    font-size: 17px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.8;
+    margin-top: 20px;
+    margin-bottom: 36px;
+  }
+
+  .why-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .why-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    font-size: 15px;
+    color: rgba(255,255,255,0.8);
+  }
+
+  .why-list li::before {
+    content: '✓';
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    background: var(--orange);
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    margin-top: 1px;
+  }
+
+  /* GARAGE DOOR ILLUSTRATION */
+  .door-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .door-svg-wrap {
+    width: 100%;
+    max-width: 380px;
+  }
+
+  /* CTA */
+  .cta-section {
+    padding: 100px 32px;
+    text-align: center;
+  }
+
+  .cta-inner {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .cta-section h2 { margin-bottom: 16px; }
+
+  .cta-sub {
+    font-size: 17px;
+    color: var(--gray);
+    margin-bottom: 44px;
+  }
+
+  .cta-phone-big {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    color: var(--black);
+    text-decoration: none;
+    letter-spacing: 2px;
+    transition: color 0.2s;
+  }
+
+  .cta-phone-big:hover { color: var(--orange); }
+
+  .cta-phone-icon {
+    width: 52px;
+    height: 52px;
+    background: var(--orange);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  .cta-note {
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--gray);
+  }
+
+  .service-area {
+    margin-top: 60px;
+    padding-top: 40px;
+    border-top: 1px solid var(--light);
+    font-size: 14px;
+    color: var(--gray);
+  }
+
+  .service-area strong { color: var(--black); }
+
+  /* FOOTER */
+  footer {
+    background: var(--black);
+    padding: 40px 32px;
+    text-align: center;
+  }
+
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    color: white;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .footer-logo span { color: var(--orange); }
+
+  .footer-text {
+    font-size: 13px;
+    color: rgba(255,255,255,0.35);
+  }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .nav-logo { font-size: 20px; }
+    .nav-phone { font-size: 13px; padding: 8px 14px; }
+    .hero-content { padding: 60px 20px; }
+    .hero-badges { gap: 24px; }
+    .services { padding: 60px 20px; }
+    .why-inner { grid-template-columns: 1fr; gap: 40px; }
+    .door-visual { display: none; }
+    .why { padding: 60px 20px; }
+    .cta-section { padding: 60px 20px; }
+    .cta-phone-big { font-size: 32px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Garage <span>Guys</span></div>
+  <a href="tel:+19452740424" class="nav-phone">
+    📞 (945) 274-0424
+  </a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-accent"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">Orange County, California</div>
+    <h1>Your Garage,<span class="line-orange">Fixed Right.</span></h1>
+    <p class="hero-sub">Repair, installation, tune-ups, custom storage & more. Licensed, local, and hands-on. Sam comes to you.</p>
+    <div class="hero-ctas">
+      <a href="tel:+19452740424" class="btn-primary">📞 Call Sam Now</a>
+      <a href="#services" class="btn-secondary">See All Services ↓</a>
+    </div>
+    <div class="hero-badges">
+      <div class="badge">
+        <div class="badge-num">OC<span>'s</span></div>
+        <div class="badge-label">Local Expert</div>
+      </div>
+      <div class="badge">
+        <div class="badge-num">Same<span>-</span>Day</div>
+        <div class="badge-label">Service Available</div>
+      </div>
+      <div class="badge">
+        <div class="badge-num">100<span>%</span></div>
+        <div class="badge-label">Satisfaction Guarantee</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section class="services" id="services">
+  <div class="section-eyebrow">What We Do</div>
+  <h2>Every Garage Problem,<br>One Call Away</h2>
+  <div class="services-grid">
+    <div class="service-card">
+      <span class="service-icon">🔧</span>
+      <div class="service-title">Repair & Diagnostics</div>
+      <p class="service-desc">Broken springs, cables, rollers, panels — we diagnose fast and fix it right the first time.</p>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">🚪</span>
+      <div class="service-title">Door Installation</div>
+      <p class="service-desc">New garage door install for any size opening. Steel, wood, modern or classic — your choice.</p>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">🎨</span>
+      <div class="service-title">Door Painting</div>
+      <p class="service-desc">Professional prep and paint. Refresh your curb appeal without replacing the whole door.</p>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">⚙️</span>
+      <div class="service-title">Tune-Up & Maintenance</div>
+      <p class="service-desc">Lubrication, balance check, hardware tightening — keep your door running quietly for years.</p>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">📡</span>
+      <div class="service-title">Opener Installation</div>
+      <p class="service-desc">Belt, chain, or smart Wi-Fi openers. App control, camera, keypad — we set it all up.</p>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">📦</span>
+      <div class="service-title">Shelving & Storage</div>
+      <p class="service-desc">Custom wall shelving, ceiling racks, and overhead storage systems built for your space.</p>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">💡</span>
+      <div class="service-title">Custom Garage Solutions</div>
+      <p class="service-desc">Non-standard openings, unusual layouts, unique ideas — if it's garage-related, Sam figures it out.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section class="why">
+  <div class="why-inner">
+    <div>
+      <div class="section-eyebrow">Why Garage Guys</div>
+      <h2>No Crews. No Markup. Just Sam.</h2>
+      <p class="why-text">When you call Garage Guys, you get me — Sam. Not a dispatcher, not a subcontractor. I show up, I do the work, I stand behind it.</p>
+      <ul class="why-list">
+        <li>Licensed & insured — legit business, real accountability</li>
+        <li>Serving all of Orange County — Newport Beach to Anaheim</li>
+        <li>Transparent pricing — you know the cost before I start</li>
+        <li>Mechanical background — I fix things right, not just fast</li>
+        <li>Same-day service available for urgent repairs</li>
+        <li>No job too small — tune-up, painting, a single broken spring</li>
+      </ul>
+    </div>
+    <div class="door-visual">
+      <div class="door-svg-wrap">
+        <svg viewBox="0 0 360 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- garage structure -->
+          <rect x="20" y="60" width="320" height="320" rx="4" fill="#0F1825" stroke="#2A3547" stroke-width="2"/>
+          <!-- door panels -->
+          <rect x="40" y="80" width="280" height="58" rx="2" fill="#1C2B40" stroke="#2E4060" stroke-width="1.5"/>
+          <rect x="40" y="144" width="280" height="58" rx="2" fill="#1C2B40" stroke="#2E4060" stroke-width="1.5"/>
+          <rect x="40" y="208" width="280" height="58" rx="2" fill="#1C2B40" stroke="#2E4060" stroke-width="1.5"/>
+          <rect x="40" y="272" width="280" height="58" rx="2" fill="#1C2B40" stroke="#2E4060" stroke-width="1.5"/>
+          <!-- panel lines vertical -->
+          <line x1="180" y1="80" x2="180" y2="330" stroke="#2E4060" stroke-width="1.5"/>
+          <!-- orange accent stripe -->
+          <rect x="40" y="80" width="4" height="250" rx="2" fill="#F05A1A" opacity="0.8"/>
+          <!-- handle -->
+          <rect x="166" y="196" width="28" height="8" rx="4" fill="#F05A1A"/>
+          <!-- top track -->
+          <rect x="30" y="55" width="300" height="10" rx="2" fill="#2A3547"/>
+          <!-- side tracks -->
+          <rect x="30" y="65" width="8" height="280" rx="2" fill="#2A3547"/>
+          <rect x="322" y="65" width="8" height="280" rx="2" fill="#2A3547"/>
+          <!-- floor -->
+          <rect x="20" y="370" width="320" height="10" rx="2" fill="#0A1020"/>
+          <!-- GG text on door -->
+          <text x="180" y="355" text-anchor="middle" font-family="'Bebas Neue', sans-serif" font-size="18" fill="#F05A1A" letter-spacing="3" opacity="0.7">GARAGE GUYS</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-inner">
+    <div class="section-eyebrow">Ready to Get Started?</div>
+    <h2>Call Sam. Get It Fixed.</h2>
+    <p class="cta-sub">Free estimate on any job. Available 7 days a week across Orange County.</p>
+    <a href="tel:+19452740424" class="cta-phone-big">
+      <span class="cta-phone-icon">📞</span>
+      (945) 274-0424
+    </a>
+    <p class="cta-note">Text or call — Sam answers personally</p>
+    <div class="service-area">
+      <strong>Serving:</strong> Newport Beach · Irvine · Anaheim · Huntington Beach · Costa Mesa · Santa Ana · Orange · Fullerton · Mission Viejo · and all of Orange County
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Garage <span>Guys</span> OC</div>
+  <p class="footer-text">Newport Beach, CA · Licensed & Insured · © 2026 VELES PLUS LLC DBA Garage Guys</p>
+</footer>
+
+</body>
+</html>
