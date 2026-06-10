@@ -889,135 +889,217 @@ footer {
 </footer>
 
 <script>
-// ===== 3D PARTS ANIMATION =====
+// ===== CAD-STYLE 3D PARTS ANIMATION =====
 (function(){
   const cv=document.getElementById('parts-canvas');
   if(!cv)return;
   const ct=cv.getContext('2d');
-  const S=3,W=460*S,H=380*S,CX=230*S,CY=175*S,FOV=360;
-  let t=0,phase=0,aTimer=0,AD=280;
+  const S=3,W=460*S,H=380*S,CX=230*S,CY=175*S,FOV=420;
+  let t=0,phase=0,aTimer=0;
+  const SLIDE_MS=4000;
   const NAMES=['Torsion Spring','Garage Door Opener','Hinge / Bracket','Roller','Cable Drum'];
+  const C={
+    wire:'#6ec4f0',wireHi:'#9de0ff',wireLo:'rgba(110,196,240,0.22)',
+    face:'rgba(110,196,240,0.07)',faceHi:'rgba(157,224,255,0.11)',
+    steel:'#8fa8bc',brass:'#c8a84e',nylon:'#a8c8d8',axis:'rgba(110,196,240,0.18)'
+  };
+  let faces=[],edges=[],circs=[];
 
   function proj(x,y,z,rx,ry){
     const y1=y*Math.cos(rx)-z*Math.sin(rx),z1=y*Math.sin(rx)+z*Math.cos(rx);
     const x2=x*Math.cos(ry)+z1*Math.sin(ry),z2=-x*Math.sin(ry)+z1*Math.cos(ry);
     const sc=FOV/(FOV+z2);return{x:CX+x2*sc*S,y:CY+y1*sc*S,z:z2,s:sc*S};
   }
-  function L(x1,y1,z1,x2,y2,z2,rx,ry,al,col){
-    const p1=proj(x1,y1,z1,rx,ry),p2=proj(x2,y2,z2,rx,ry);
-    ct.globalAlpha=al||1;ct.strokeStyle=col||'#5ba3d9';
-    ct.beginPath();ct.moveTo(p1.x,p1.y);ct.lineTo(p2.x,p2.y);ct.stroke();ct.globalAlpha=1;
-  }
-  function circ(cx,cy,cz,r,axis,steps,rx,ry,al,col){
-    const pts=[];
-    for(let i=0;i<=steps;i++){
-      const a=i/steps*Math.PI*2;let px=cx,py=cy,pz=cz;
-      if(axis==='y'){px=cx+Math.cos(a)*r;pz=cz+Math.sin(a)*r;}
-      else if(axis==='x'){py=cy+Math.cos(a)*r;pz=cz+Math.sin(a)*r;}
-      else{px=cx+Math.cos(a)*r;py=cy+Math.sin(a)*r;}
-      pts.push(proj(px,py,pz,rx,ry));
-    }
-    ct.strokeStyle=col||'#5ba3d9';ct.globalAlpha=al||1;
-    ct.beginPath();ct.moveTo(pts[0].x,pts[0].y);
-    for(let i=1;i<=steps;i++)ct.lineTo(pts[i].x,pts[i].y);
-    ct.stroke();ct.globalAlpha=1;
-  }
-  function cyl(cx,y1,y2,cz,r,steps,rx,ry,al,col){
-    circ(cx,y1,cz,r,'y',steps,rx,ry,al,col);
-    circ(cx,y2,cz,r,'y',steps,rx,ry,al,col);
-    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;L(cx+Math.cos(a)*r,y1,cz+Math.sin(a)*r,cx+Math.cos(a)*r,y2,cz+Math.sin(a)*r,rx,ry,(al||1)*0.35,col);}
-  }
-  function box(x1,y1,z1,x2,y2,z2,rx,ry,al,col){
+  function reset(){faces=[];edges=[];circs=[];}
+  function e(x1,y1,z1,x2,y2,z2,col,lw,dash){edges.push({x1,y1,z1,x2,y2,z2,col:col||C.wire,lw:lw||1,dash});}
+  function f(v,fill,stroke,sw){faces.push({v,fill:fill||C.face,stroke:stroke||C.wireLo,sw:sw||0.6});}
+  function cc(cx,cy,cz,r,axis,steps,col,lw,fill){circs.push({cx,cy,cz,r,axis,steps,col:col||C.wire,lw:lw||1,fill});}
+
+  function box(x1,y1,z1,x2,y2,z2,fill,stroke){
     const v=[[x1,y1,z1],[x2,y1,z1],[x2,y2,z1],[x1,y2,z1],[x1,y1,z2],[x2,y1,z2],[x2,y2,z2],[x1,y2,z2]];
-    [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]].forEach(([a,b])=>L(...v[a],...v[b],rx,ry,al,col));
+    f([v[0],v[1],v[2],v[3]],fill,stroke);f([v[4],v[5],v[6],v[7]],fill,stroke);
+    f([v[0],v[1],v[5],v[4]],fill,stroke);f([v[2],v[3],v[7],v[6]],fill,stroke);
+    f([v[0],v[3],v[7],v[4]],fill,stroke);f([v[1],v[2],v[6],v[5]],fill,stroke);
+    [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]].forEach(([a,b])=>e(...v[a],...v[b],stroke||C.wire,1));
   }
+  function cyl(cx,y1,y2,cz,r,steps,fill,stroke){
+    cc(cx,y1,cz,r,'y',steps,stroke,1);cc(cx,y2,cz,r,'y',steps,stroke,1);
+    for(let i=0;i<steps;i++){const a=i/steps*Math.PI*2;e(cx+Math.cos(a)*r,y1,cz+Math.sin(a)*r,cx+Math.cos(a)*r,y2,cz+Math.sin(a)*r,stroke,0.7);}
+    f([[cx+r,y1,cz],[cx,y1,cz+r],[cx-r,y1,cz],[cx,y1,cz-r]],fill,stroke,0.5);
+    f([[cx+r,y2,cz],[cx,y2,cz+r],[cx-r,y2,cz],[cx,y2,cz-r]],fill,stroke,0.5);
+  }
+  function hole(cx,cy,cz,r,axis,steps){cc(cx,cy,cz,r,axis,steps,C.wireLo,0.6);}
+  function axisLine(y1,y2){e(0,y1,0,0,y2,0,C.axis,0.8,[6,5]);}
 
-  function drawSpring(rx,ry){
-    ct.lineWidth=1.3;
-    const SL=140,CR=18,COILS=13,SPS=32*COILS;
-    const pts=[];
-    for(let i=0;i<=SPS;i++){const f=i/SPS,a=f*COILS*Math.PI*2;pts.push(proj(Math.cos(a)*CR,-SL/2+f*SL,Math.sin(a)*CR,rx,ry));}
-    const segs=[];for(let i=0;i<pts.length-1;i++)segs.push({i,z:(pts[i].z+pts[i+1].z)/2});segs.sort((a,b)=>b.z-a.z);
-    ct.shadowColor='#5ba3d9';ct.shadowBlur=5;
-    for(const sg of segs){const p1=pts[sg.i],p2=pts[sg.i+1];ct.strokeStyle='#5ba3d9';ct.lineWidth=Math.max(0.6,1.8*p1.s);ct.globalAlpha=Math.max(0.2,0.25+p1.s*0.8);ct.beginPath();ct.moveTo(p1.x,p1.y);ct.lineTo(p2.x,p2.y);ct.stroke();}
-    ct.globalAlpha=1;ct.shadowBlur=0;ct.lineWidth=1.4;
-    function cone(yB,yT,r1,r2,col){
-      for(let i=0;i<=4;i++){const f=i/4;circ(0,yB+(yT-yB)*f,0,r1+(r2-r1)*f,'y',20,rx,ry,0.7,col);}
-      for(let i=0;i<8;i++){const a=i/8*Math.PI*2;L(Math.cos(a)*r1,yB,Math.sin(a)*r1,Math.cos(a)*r2,yT,Math.sin(a)*r2,rx,ry,0.4,col);}
-      for(let i=0;i<4;i++){const a=i/4*Math.PI*2;const sp=proj(Math.cos(a)*(r1+3),yB+(yT-yB)*0.35,Math.sin(a)*(r1+3),rx,ry);ct.strokeStyle=col;ct.globalAlpha=0.8;ct.beginPath();ct.arc(sp.x,sp.y,2*sp.s,0,Math.PI*2);ct.stroke();ct.globalAlpha=1;}
+  function flush(rx,ry){
+    const pf=faces.map(fa=>{const p=fa.v.map(v=>proj(...v,rx,ry));return{...fa,p,z:p.reduce((s,q)=>s+q.z,0)/p.length};}).sort((a,b)=>a.z-b.z);
+    for(const fa of pf){
+      ct.fillStyle=fa.fill;ct.beginPath();ct.moveTo(fa.p[0].x,fa.p[0].y);
+      for(let i=1;i<fa.p.length;i++)ct.lineTo(fa.p[i].x,fa.p[i].y);ct.closePath();ct.fill();
+      if(fa.stroke){ct.strokeStyle=fa.stroke;ct.lineWidth=fa.sw*S*0.35;ct.stroke();}
     }
-    cone(-SL/2,-SL/2-18,6,CR+4,'#d4634a');cone(SL/2,SL/2+18,CR+4,6,'#8ab4d4');
-    ct.setLineDash([5,4]);L(0,-SL/2-22,0,0,SL/2+22,0,rx,ry,0.2,'#5ba3d9');ct.setLineDash([]);
+    const pe=edges.map(ed=>{
+      const p1=proj(ed.x1,ed.y1,ed.z1,rx,ry),p2=proj(ed.x2,ed.y2,ed.z2,rx,ry);
+      return{...ed,p1,p2,z:(p1.z+p2.z)/2};
+    }).sort((a,b)=>a.z-b.z);
+    for(const ed of pe){
+      ct.strokeStyle=ed.col;ct.lineWidth=Math.max(0.5,ed.lw*S*0.38);
+      ct.globalAlpha=ed.col===C.wireLo?0.45:0.92;
+      ct.setLineDash(ed.dash||[]);
+      ct.beginPath();ct.moveTo(ed.p1.x,ed.p1.y);ct.lineTo(ed.p2.x,ed.p2.y);ct.stroke();
+    }
+    ct.setLineDash([]);ct.globalAlpha=1;
+    for(const c of circs){
+      const pts=[];for(let i=0;i<=c.steps;i++){
+        const a=i/c.steps*Math.PI*2;let px=c.cx,py=c.cy,pz=c.cz;
+        if(c.axis==='y'){px=c.cx+Math.cos(a)*c.r;pz=c.cz+Math.sin(a)*c.r;}
+        else if(c.axis==='x'){py=c.cy+Math.cos(a)*c.r;pz=c.cz+Math.sin(a)*c.r;}
+        else{px=c.cx+Math.cos(a)*c.r;py=c.cy+Math.sin(a)*c.r;}
+        pts.push(proj(px,py,pz,rx,ry));
+      }
+      if(c.fill){ct.fillStyle=c.fill;ct.beginPath();ct.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ct.lineTo(pts[i].x,pts[i].y);ct.closePath();ct.fill();}
+      ct.strokeStyle=c.col;ct.lineWidth=Math.max(0.5,c.lw*S*0.38);ct.globalAlpha=0.92;
+      ct.beginPath();ct.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ct.lineTo(pts[i].x,pts[i].y);ct.stroke();
+    }
+    ct.globalAlpha=1;
   }
 
-  function drawOpener(rx,ry){
-    ct.lineWidth=1.1;
-    box(-82,-32,-40,82,32,40,rx,ry,0.14,'#5ba3d9');
-    box(-98,32,-36,98,44,36,rx,ry,0.17,'#5ba3d9');
-    circ(0,46,0,9,'y',16,rx,ry,0.7,'#5ba3d9');circ(0,46,0,4,'y',12,rx,ry,0.6,'#5ba3d9');circ(0,46,0,2,'y',10,rx,ry,0.95,'#7ac4e8');
-    box(-11,42,-11,11,52,11,rx,ry,0.4,'#5ba3d9');
-    ct.shadowColor='#4a9fd4';ct.shadowBlur=5;
-    cyl(-48,-26,26,0,18,24,rx,ry,0.85,'#4a9fd4');
-    for(let i=0;i<5;i++)circ(-48,-20+i*10,0,18,'y',18,rx,ry,0.22,'#3a7ab4');
-    circ(-48,0,0,5,'y',12,rx,ry,0.9,'#7ac4e8');ct.shadowBlur=0;
-    const ga=t*0.016;
-    circ(-15,0,0,15,'y',24,rx,ry,0.8,'#5ba3d9');circ(-15,0,0,8,'y',18,rx,ry,0.5,'#5ba3d9');circ(-15,0,0,3,'y',12,rx,ry,0.9,'#7ac4e8');
-    for(let i=0;i<12;i++){const a=ga+i/12*Math.PI*2;const p1=proj(-15+Math.cos(a)*15,0,Math.sin(a)*15,rx,ry);const p2=proj(-15+Math.cos(a)*20,0,Math.sin(a)*20,rx,ry);ct.strokeStyle='#5ba3d9';ct.globalAlpha=0.65;ct.beginPath();ct.moveTo(p1.x,p1.y);ct.lineTo(p2.x,p2.y);ct.stroke();ct.globalAlpha=1;}
-    ct.setLineDash([4,3]);L(-48,0,0,-15,0,0,rx,ry,0.4,'#4a9fd4');ct.setLineDash([]);
-    box(27,-20,-22,31,20,22,rx,ry,0.5,'#2a8a3a');
-    for(let i=0;i<4;i++)L(31,-14+i*9,-18,31,-14+i*9,18,rx,ry,0.3,'#3aaa4a');
-    box(32,-8,-6,37,8,6,rx,ry,0.8,'#2a6a8a');
-    cyl(52,-22,4,-24,9,14,rx,ry,0.7,'#8a6a2a');
-    box(-27,-32-13,-6,27,-32,6,rx,ry,0.55,'#5ba3d9');
+  function drawSpring(){
+    reset();
+    const SL=130,CR=16,COILS=18,WT=3.2;
+    axisLine(-SL/2-28,SL/2+28);
+    for(let i=0;i<=COILS*40;i++){
+      const u=i/(COILS*40),ang=u*COILS*Math.PI*2,y=-SL/2+u*SL;
+      const nx=Math.cos(ang),nz=Math.sin(ang);
+      for(let k=0;k<4;k++){
+        const a2=ang+k*Math.PI/2;
+        e(Math.cos(a2)*CR,y,Math.sin(a2)*CR,Math.cos(a2+0.14)*CR,y+SL/(COILS*40),Math.sin(a2+0.14)*CR,C.steel,0.85);
+      }
+      if(i%8===0)e(nx*(CR-WT),y,nz*(CR-WT),nx*(CR+WT),y,nz*(CR+WT),C.wireHi,1.1);
+    }
+    function windingCone(yB,yT,rOut,rIn){
+      for(let i=0;i<=6;i++){const t=i/6,ry=yB+(yT-yB)*t,ro=rOut+(rIn-rOut)*t;
+        cc(0,ry,0,ro,'y',24,C.brass,1,C.faceHi);cc(0,ry,0,ro*0.35,'y',12,C.brass,0.7);
+      }
+      for(let i=0;i<12;i++){const a=i/12*Math.PI*2;e(Math.cos(a)*rOut,yB,Math.sin(a)*rOut,Math.cos(a)*rIn,yT,Math.sin(a)*rIn,C.brass,0.8);}
+      cc(0,yT,0,rIn*0.5,'y',10,C.wireHi,0.9);
+    }
+    windingCone(-SL/2-22,-SL/2,CR+2,5);
+    windingCone(SL/2,SL/2+22,5,CR+2);
+    cc(0,-SL/2-22,0,5,'y',16,C.steel,1);cc(0,SL/2+22,0,5,'y',16,C.steel,1);
   }
 
-  function drawHinge(rx,ry){
-    ct.lineWidth=1.3;ct.shadowColor='#5ba3d9';ct.shadowBlur=4;
-    const sh=[[-8,-55],[8,-55],[48,0],[8,55],[-8,55],[-48,0]],th=5;
-    for(let i=0;i<sh.length;i++){const[ax,ay]=sh[i],[bx,by]=sh[(i+1)%sh.length];L(ax,ay,-th,bx,by,-th,rx,ry,0.85,'#5ba3d9');L(ax,ay,th,bx,by,th,rx,ry,0.85,'#5ba3d9');L(ax,ay,-th,ax,ay,th,rx,ry,0.4,'#5ba3d9');}
-    cyl(0,-16,16,0,13,20,rx,ry,0.8,'#5ba3d9');circ(0,0,0,13,'y',20,rx,ry,0.9,'#7ac4e8');circ(0,0,0,5,'y',12,rx,ry,0.8,'#7ac4e8');
-    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;L(Math.cos(a)*5,0,Math.sin(a)*5,Math.cos(a)*13,0,Math.sin(a)*13,rx,ry,0.25,'#5ba3d9');}
-    [[-28,-38],[28,-38],[-28,38],[28,38]].forEach(([hx,hy])=>{const hp=proj(hx,hy,-th,rx,ry);ct.strokeStyle='#5ba3d9';ct.globalAlpha=0.7;ct.beginPath();ct.arc(hp.x,hp.y,3.5*hp.s,0,Math.PI*2);ct.stroke();ct.globalAlpha=1;});
-    ct.shadowBlur=0;
+  function drawOpener(){
+    reset();
+    axisLine(-55,55);
+    box(-88,-28,-34,88,28,34,C.face,C.wire);
+    for(let i=0;i<5;i++)e(-72+i*18,-26,-32,-72+i*18,26,-32,C.wireLo,0.6);
+    box(-88,28,-30,88,38,30,C.faceHi,C.wire);
+    cc(0,44,0,10,'y',20,C.wire,1);cc(0,44,0,5,'y',14,C.wireHi,1);cc(0,44,0,2,'y',10,C.wireHi,1.2);
+    box(-10,38,-8,10,50,8,C.face,C.wire);
+    cyl(-52,-22,22,0,16,20,C.faceHi,C.wire);
+    for(let i=0;i<6;i++)cc(-52,-18+i*7,0,16,'y',18,C.wireLo,0.5);
+    cc(-52,0,0,4,'y',12,C.wireHi,1);
+    box(-105,-8,-10,-88,8,10,C.face,C.wire);
+    for(let i=0;i<3;i++)e(-105,-5+i*5,-8,-88,-5+i*5,-8,C.wireLo,0.5);
+    box(88,-6,-12,105,6,12,C.face,C.wire);
+    for(let i=0;i<4;i++)e(90,-4+i*2.5,-10,103,-4+i*2.5,-10,C.wireLo,0.5);
+    box(-14,-12,-14,14,12,14,C.faceHi,C.wire);
+    cc(-14,0,0,12,'y',20,C.wire,1);cc(-14,0,0,6,'y',14,C.wireLo,0.7);cc(-14,0,0,2.5,'y',10,C.wireHi,1);
+    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;e(-14+Math.cos(a)*12,0,Math.sin(a)*12,-14+Math.cos(a)*16,0,Math.sin(a)*16,C.wire,0.7);}
+    box(18,-14,-18,32,14,18,C.face,C.wire);
+    e(32,-10,-16,32,10,-16,C.wireLo,0.6);e(32,-10,16,32,10,16,C.wireLo,0.6);
+    box(33,-7,-5,38,7,5,C.faceHi,C.wire);
+    cyl(58,-18,2,-20,7,14,C.face,C.steel);
+    e(-52,0,0,-14,0,0,C.wire,0.9,[4,3]);
+    box(28,-18,-20,34,18,20,C.face,C.wire);
+    for(let i=0;i<3;i++)e(31,-14+i*14,-18,31,-14+i*14,18,C.wireLo,0.5);
+    box(-30,-28-12,-5,30,-28,5,C.faceHi,C.wire);
+    hole(-18,-34,-2,3,'y',10);hole(18,-34,-2,3,'y',10);
   }
 
-  function drawRoller(rx,ry){
-    ct.lineWidth=1.3;ct.shadowColor='#5ba3d9';ct.shadowBlur=4;
-    const WR=34,WT=13,SR=5,SL=72;
-    circ(0,-WT,0,WR,'y',24,rx,ry,0.85,'#5ba3d9');circ(0,WT,0,WR,'y',24,rx,ry,0.85,'#5ba3d9');
-    for(let i=0;i<24;i+=3){const a=i/24*Math.PI*2;L(Math.cos(a)*WR,-WT,Math.sin(a)*WR,Math.cos(a)*WR,WT,Math.sin(a)*WR,rx,ry,0.28,'#5ba3d9');}
-    circ(0,0,0,WR,'y',24,rx,ry,0.3,'#5ba3d9');
-    circ(0,-WT,0,SR,'y',12,rx,ry,0.9,'#7ac4e8');circ(0,WT,0,SR,'y',12,rx,ry,0.9,'#7ac4e8');
-    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;L(Math.cos(a)*SR,-WT,Math.sin(a)*SR,Math.cos(a)*SR,WT,Math.sin(a)*SR,rx,ry,0.5,'#7ac4e8');}
-    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;L(Math.cos(a)*SR,WT,Math.sin(a)*SR,Math.cos(a)*SR,WT+SL,Math.sin(a)*SR,rx,ry,0.4,'#5ba3d9');}
-    circ(0,WT+SL,0,SR,'y',12,rx,ry,0.8,'#5ba3d9');
-    for(let i=0;i<6;i++)circ(0,WT+12+i*10,0,SR+1,'y',8,rx,ry,0.18,'#5ba3d9');
-    ct.shadowBlur=0;
+  function drawHinge(){
+    reset();
+    axisLine(-50,50);
+    const th=4.5;
+    function leaf(w,h,xOff,holes){
+      box(xOff,-h/2,-th,xOff+w,h/2,th,C.face,C.wire);
+      box(xOff,-h/2,th,xOff+w,h/2,th+1.5,C.faceHi,C.wire);
+      holes.forEach(([hx,hy])=>{cc(hx,hy,-th-0.5,3.5,'y',14,C.wireHi,0.9);cc(hx,hy,th+1,3.5,'y',14,C.wireHi,0.9);});
+    }
+    leaf(42,52,-48,[[-30,-18],[-30,0],[-30,18],[-12,-18],[-12,18]]);
+    leaf(42,52,6,[[12,-18],[12,0],[12,18],[30,-18],[30,18]]);
+    cyl(0,-14,14,0,11,18,C.faceHi,C.wire);
+    cc(0,0,0,11,'y',22,C.wire,1);cc(0,0,0,4.5,'y',14,C.wireHi,1);
+    for(let i=0;i<6;i++){const a=i/6*Math.PI*2;e(Math.cos(a)*4.5,0,Math.sin(a)*4.5,Math.cos(a)*11,0,Math.sin(a)*11,C.wireLo,0.5);}
+    box(-6,-16,-th-2,6,16,th+2,C.face,C.steel);
+    e(-48,-26,-th,-48,26,-th,C.wire,1);e(48,-26,th+1.5,48,26,th+1.5,C.wire,1);
+    cc(0,-14,0,11,'y',18,C.wireLo,0.5);cc(0,14,0,11,'y',18,C.wireLo,0.5);
   }
 
-  function drawDrum(rx,ry){
-    ct.lineWidth=1.3;ct.shadowColor='#5ba3d9';ct.shadowBlur=4;
-    const OR=52,IR=14,HD=26,GR=8;
-    circ(0,-HD,0,OR,'y',28,rx,ry,0.9,'#5ba3d9');circ(0,HD,0,OR,'y',28,rx,ry,0.9,'#5ba3d9');
-    for(let g=0;g<GR;g++){const gy=-HD+(g/(GR-1))*HD*2;circ(0,gy,0,OR-2,'y',22,rx,ry,0.2,'#5ba3d9');}
-    for(let i=0;i<16;i++){const a=i/16*Math.PI*2;L(Math.cos(a)*OR,-HD,Math.sin(a)*OR,Math.cos(a)*OR,HD,Math.sin(a)*OR,rx,ry,0.16,'#5ba3d9');}
-    cyl(0,-HD,HD,0,IR,16,rx,ry,0.85,'#7ac4e8');
-    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;L(Math.cos(a)*IR,0,Math.sin(a)*IR,Math.cos(a)*(OR*0.55),0,Math.sin(a)*(OR*0.55),rx,ry,0.18,'#5ba3d9');}
-    for(let i=0;i<3;i++){const a=i/3*Math.PI*2;const sp=proj(Math.cos(a)*(IR+7),0,Math.sin(a)*(IR+7),rx,ry);ct.strokeStyle='#e05a40';ct.globalAlpha=0.85;ct.beginPath();ct.arc(sp.x,sp.y,3*sp.s,0,Math.PI*2);ct.stroke();ct.globalAlpha=1;L(Math.cos(a)*(IR+7),-5,Math.sin(a)*(IR+7),Math.cos(a)*(IR+7),5,Math.sin(a)*(IR+7),rx,ry,0.5,'#e05a40');}
-    ct.shadowBlur=0;
+  function drawRoller(){
+    reset();
+    axisLine(-20,95);
+    const WR=30,WT=11,SR=4.5,SL=68;
+    cc(0,-WT,0,WR,'y',28,C.nylon,1.1);cc(0,WT,0,WR,'y',28,C.nylon,1.1);
+    for(let i=0;i<16;i+=2){const a=i/16*Math.PI*2;e(Math.cos(a)*WR,-WT,Math.sin(a)*WR,Math.cos(a)*WR,WT,Math.sin(a)*WR,C.wireLo,0.5);}
+    cc(0,0,0,WR,'y',28,C.wireLo,0.6);
+    cc(0,-WT,0,SR,'y',14,C.steel,1);cc(0,WT,0,SR,'y',14,C.steel,1);
+    cyl(0,-WT,WT,0,SR,12,C.faceHi,C.steel);
+    for(let i=0;i<6;i++){const a=i/6*Math.PI*2;e(Math.cos(a)*SR,-WT,Math.sin(a)*SR,Math.cos(a)*SR,WT,Math.sin(a)*SR,C.wireLo,0.5);}
+    for(let i=0;i<6;i++){const a=i/6*Math.PI*2;e(Math.cos(a)*SR,WT,Math.sin(a)*SR,Math.cos(a)*SR,WT+SL,Math.sin(a)*SR,C.steel,0.85);}
+    cc(0,WT+SL,0,SR,'y',14,C.steel,1);
+    box(-16,WT+SL,-5,16,WT+SL+8,5,C.face,C.wire);
+    hole(-8,WT+SL+4,-2,2.5,'y',10);hole(8,WT+SL+4,-2,2.5,'y',10);
+    box(-22,-WT-6,-8,22,-WT,8,C.faceHi,C.wire);
+    cc(0,-WT-3,0,18,'y',20,C.wireLo,0.6);
+  }
+
+  function drawDrum(){
+    reset();
+    axisLine(-55,55);
+    const OR=48,IR=12,HD=24;
+    cc(0,-HD,0,OR,'y',32,C.wire,1.1);cc(0,HD,0,OR,'y',32,C.wire,1.1);
+    cc(0,-HD,0,OR-4,'y',28,C.wireLo,0.5);cc(0,HD,0,OR-4,'y',28,C.wireLo,0.5);
+    for(let g=0;g<10;g++){const gy=-HD+(g/9)*HD*2;cc(0,gy,0,OR-1.5,'y',24,C.wireLo,0.45);}
+    for(let i=0;i<20;i+=2){const a=i/20*Math.PI*2;e(Math.cos(a)*OR,-HD,Math.sin(a)*OR,Math.cos(a)*OR,HD,Math.sin(a)*OR,C.wireLo,0.45);}
+    cyl(0,-HD,HD,0,IR,18,C.faceHi,C.wire);
+    cc(0,0,0,IR,'y',18,C.wireHi,1);
+    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;e(Math.cos(a)*IR,0,Math.sin(a)*IR,Math.cos(a)*(OR*0.5),0,Math.sin(a)*(OR*0.5),C.wireLo,0.5);}
+    for(let i=0;i<3;i++){const a=i/3*Math.PI*2+0.4;cc(Math.cos(a)*(IR+5),0,Math.sin(a)*(IR+5),2.5,'y',12,C.brass,1);e(Math.cos(a)*(IR+2),-6,Math.sin(a)*(IR+2),Math.cos(a)*(IR+2),6,Math.sin(a)*(IR+2),C.brass,0.9);}
+    for(let i=0;i<=48;i++){
+      const u=i/48,ang=u*Math.PI*5.5,r=OR-6+(u<0.08?u*8:0);
+      e(Math.cos(ang)*r,-HD+2+u*HD*1.85,Math.sin(ang)*r,Math.cos(ang+0.12)*r,-HD+2+(u+1/48)*HD*1.85,Math.sin(ang+0.12)*r,C.wireHi,0.75);
+    }
+    box(-4,-HD-4,-IR-8,4,HD+4,IR+8,C.face,C.steel);
+    cc(0,-HD-4,0,IR+4,'y',16,C.wireLo,0.5);cc(0,HD+4,0,IR+4,'y',16,C.wireLo,0.5);
+    e(OR+2,0,0,OR+12,0,0,C.wire,0.9);
+    e(OR+12,-4,-3,OR+12,4,-3,C.wireLo,0.6);e(OR+12,-4,3,OR+12,4,3,C.wireLo,0.6);
   }
 
   const DRS=[drawSpring,drawOpener,drawHinge,drawRoller,drawDrum];
+  let lastTs=0;
 
-  function frame(){
+  function frame(ts){
+    if(!lastTs)lastTs=ts;
+    const dt=ts-lastTs;lastTs=ts;
+    aTimer+=dt;
+    if(aTimer>=SLIDE_MS){aTimer=0;phase=(phase+1)%5;const lbl=document.getElementById('parts-label');if(lbl)lbl.textContent=NAMES[phase];}
     ct.clearRect(0,0,W,H);
-    aTimer++;
-    if(aTimer>=AD){aTimer=0;phase=(phase+1)%5;const lbl=document.getElementById('parts-label');if(lbl)lbl.textContent=NAMES[phase];}
-    const ry=t*0.05,rx=Math.sin(t*0.022)*0.65;
-    ct.lineWidth=1.2;DRS[phase](rx,ry);
+    drawCadGrid();
+    const ry=t*0.011,rx=0.42+Math.sin(t*0.006)*0.04;
+    DRS[phase]();flush(rx,ry);
     t++;requestAnimationFrame(frame);
   }
-  frame();
+
+  function drawCadGrid(){
+    ct.strokeStyle='rgba(110,196,240,0.04)';ct.lineWidth=1;
+    const step=28*S;
+    for(let x=0;x<=W;x+=step){ct.beginPath();ct.moveTo(x,0);ct.lineTo(x,H);ct.stroke();}
+    for(let y=0;y<=H;y+=step){ct.beginPath();ct.moveTo(0,y);ct.lineTo(W,y);ct.stroke();}
+  }
+
+  requestAnimationFrame(frame);
 })();
 
 // Scroll reveal
