@@ -643,6 +643,8 @@ footer {
   nav { padding: 0 20px; }
   .nav-links { display: none; }
   .hero-content { padding: 100px 20px 60px; }
+  .hero-content--split { flex-direction: column; }
+  .hero-right { display: none; }
   .stats-inner { grid-template-columns: repeat(2, 1fr); }
   .services { padding: 60px 20px; }
   .services-grid { grid-template-columns: 1fr 1fr; }
@@ -652,6 +654,35 @@ footer {
   .cta { padding: 60px 20px; }
   .cta-box { padding: 48px 28px; }
   footer { flex-direction: column; gap: 12px; text-align: center; }
+}
+
+.hero-content--split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+}
+
+.hero-left { flex: 1; max-width: 560px; }
+
+.hero-right {
+  flex: 0 0 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+#parts-canvas { display: block; }
+
+.parts-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 15px;
+  letter-spacing: 3px;
+  color: #5ba3d9;
+  text-align: center;
+  margin-top: 8px;
+  opacity: 0.8;
 }
 
 @media (max-width: 600px) {
@@ -680,21 +711,27 @@ footer {
   <div class="hero-bg"></div>
   <div class="hero-grid"></div>
   <div class="hero-glow"></div>
-  <div class="hero-content">
-    <div class="hero-eyebrow">Orange County & Inland Empire</div>
-    <h1 class="hero-title">
-      Complete<br>
-      <span>Garage</span><br>
-      Service
-    </h1>
-    <p class="hero-sub">Installation, repair, painting, epoxy floors and custom storage solutions — all in one call.</p>
-    <div class="hero-actions">
-      <a href="tel:+19493590009" class="btn-primary">Call Now</a>
-      <a href="#services" class="btn-secondary">See All Services</a>
+  <div class="hero-content hero-content--split">
+    <div class="hero-left">
+      <div class="hero-eyebrow">Orange County & Inland Empire</div>
+      <h1 class="hero-title">
+        Complete<br>
+        <span>Garage</span><br>
+        Service
+      </h1>
+      <p class="hero-sub">Installation, repair, painting, epoxy floors and custom storage solutions — all in one call.</p>
+      <div class="hero-actions">
+        <a href="tel:+19493590009" class="btn-primary">Call Now</a>
+        <a href="#services" class="btn-secondary">See All Services</a>
+      </div>
+      <div class="hero-phone-big">
+        <div class="hero-phone-label">Free estimate — call or text</div>
+        <a href="tel:+19493590009" class="hero-phone-number">(949) 359-0009</a>
+      </div>
     </div>
-    <div class="hero-phone-big">
-      <div class="hero-phone-label">Free estimate — call or text</div>
-      <a href="tel:+19493590009" class="hero-phone-number">(949) 359-0009</a>
+    <div class="hero-right">
+      <canvas id="parts-canvas" width="460" height="380"></canvas>
+      <div class="parts-label" id="parts-label">Торсионная пружина</div>
     </div>
   </div>
 </section>
@@ -846,6 +883,137 @@ footer {
 </footer>
 
 <script>
+// ===== 3D PARTS ANIMATION =====
+(function(){
+  const cv=document.getElementById('parts-canvas');
+  if(!cv)return;
+  const ct=cv.getContext('2d');
+  const W=460,H=380,CX=230,CY=175,FOV=360;
+  let t=0,phase=0,aTimer=0,AD=280;
+  const NAMES=['Торсионная пружина','Garage Door Opener','Петля / Кронштейн','Ролик','Кабельный барабан'];
+
+  function proj(x,y,z,rx,ry){
+    const y1=y*Math.cos(rx)-z*Math.sin(rx),z1=y*Math.sin(rx)+z*Math.cos(rx);
+    const x2=x*Math.cos(ry)+z1*Math.sin(ry),z2=-x*Math.sin(ry)+z1*Math.cos(ry);
+    const sc=FOV/(FOV+z2);return{x:CX+x2*sc,y:CY+y1*sc,z:z2,s:sc};
+  }
+  function L(x1,y1,z1,x2,y2,z2,rx,ry,al,col){
+    const p1=proj(x1,y1,z1,rx,ry),p2=proj(x2,y2,z2,rx,ry);
+    ct.globalAlpha=al||1;ct.strokeStyle=col||'#5ba3d9';
+    ct.beginPath();ct.moveTo(p1.x,p1.y);ct.lineTo(p2.x,p2.y);ct.stroke();ct.globalAlpha=1;
+  }
+  function circ(cx,cy,cz,r,axis,steps,rx,ry,al,col){
+    const pts=[];
+    for(let i=0;i<=steps;i++){
+      const a=i/steps*Math.PI*2;let px=cx,py=cy,pz=cz;
+      if(axis==='y'){px=cx+Math.cos(a)*r;pz=cz+Math.sin(a)*r;}
+      else if(axis==='x'){py=cy+Math.cos(a)*r;pz=cz+Math.sin(a)*r;}
+      else{px=cx+Math.cos(a)*r;py=cy+Math.sin(a)*r;}
+      pts.push(proj(px,py,pz,rx,ry));
+    }
+    ct.strokeStyle=col||'#5ba3d9';ct.globalAlpha=al||1;
+    ct.beginPath();ct.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<=steps;i++)ct.lineTo(pts[i].x,pts[i].y);
+    ct.stroke();ct.globalAlpha=1;
+  }
+  function cyl(cx,y1,y2,cz,r,steps,rx,ry,al,col){
+    circ(cx,y1,cz,r,'y',steps,rx,ry,al,col);
+    circ(cx,y2,cz,r,'y',steps,rx,ry,al,col);
+    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;L(cx+Math.cos(a)*r,y1,cz+Math.sin(a)*r,cx+Math.cos(a)*r,y2,cz+Math.sin(a)*r,rx,ry,(al||1)*0.35,col);}
+  }
+  function box(x1,y1,z1,x2,y2,z2,rx,ry,al,col){
+    const v=[[x1,y1,z1],[x2,y1,z1],[x2,y2,z1],[x1,y2,z1],[x1,y1,z2],[x2,y1,z2],[x2,y2,z2],[x1,y2,z2]];
+    [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]].forEach(([a,b])=>L(...v[a],...v[b],rx,ry,al,col));
+  }
+
+  function drawSpring(rx,ry){
+    ct.lineWidth=1.3;
+    const SL=140,CR=18,COILS=13,SPS=32*COILS;
+    const pts=[];
+    for(let i=0;i<=SPS;i++){const f=i/SPS,a=f*COILS*Math.PI*2;pts.push(proj(Math.cos(a)*CR,-SL/2+f*SL,Math.sin(a)*CR,rx,ry));}
+    const segs=[];for(let i=0;i<pts.length-1;i++)segs.push({i,z:(pts[i].z+pts[i+1].z)/2});segs.sort((a,b)=>b.z-a.z);
+    ct.shadowColor='#5ba3d9';ct.shadowBlur=5;
+    for(const sg of segs){const p1=pts[sg.i],p2=pts[sg.i+1];ct.strokeStyle='#5ba3d9';ct.lineWidth=Math.max(0.6,1.8*p1.s);ct.globalAlpha=Math.max(0.2,0.25+p1.s*0.8);ct.beginPath();ct.moveTo(p1.x,p1.y);ct.lineTo(p2.x,p2.y);ct.stroke();}
+    ct.globalAlpha=1;ct.shadowBlur=0;ct.lineWidth=1.4;
+    function cone(yB,yT,r1,r2,col){
+      for(let i=0;i<=4;i++){const f=i/4;circ(0,yB+(yT-yB)*f,0,r1+(r2-r1)*f,'y',20,rx,ry,0.7,col);}
+      for(let i=0;i<8;i++){const a=i/8*Math.PI*2;L(Math.cos(a)*r1,yB,Math.sin(a)*r1,Math.cos(a)*r2,yT,Math.sin(a)*r2,rx,ry,0.4,col);}
+      for(let i=0;i<4;i++){const a=i/4*Math.PI*2;const sp=proj(Math.cos(a)*(r1+3),yB+(yT-yB)*0.35,Math.sin(a)*(r1+3),rx,ry);ct.strokeStyle=col;ct.globalAlpha=0.8;ct.beginPath();ct.arc(sp.x,sp.y,2*sp.s,0,Math.PI*2);ct.stroke();ct.globalAlpha=1;}
+    }
+    cone(-SL/2,-SL/2-18,6,CR+4,'#d4634a');cone(SL/2,SL/2+18,CR+4,6,'#8ab4d4');
+    ct.setLineDash([5,4]);L(0,-SL/2-22,0,0,SL/2+22,0,rx,ry,0.2,'#5ba3d9');ct.setLineDash([]);
+  }
+
+  function drawOpener(rx,ry){
+    ct.lineWidth=1.1;
+    box(-82,-32,-40,82,32,40,rx,ry,0.14,'#5ba3d9');
+    box(-98,32,-36,98,44,36,rx,ry,0.17,'#5ba3d9');
+    circ(0,46,0,9,'y',16,rx,ry,0.7,'#5ba3d9');circ(0,46,0,4,'y',12,rx,ry,0.6,'#5ba3d9');circ(0,46,0,2,'y',10,rx,ry,0.95,'#7ac4e8');
+    box(-11,42,-11,11,52,11,rx,ry,0.4,'#5ba3d9');
+    ct.shadowColor='#4a9fd4';ct.shadowBlur=5;
+    cyl(-48,-26,26,0,18,24,rx,ry,0.85,'#4a9fd4');
+    for(let i=0;i<5;i++)circ(-48,-20+i*10,0,18,'y',18,rx,ry,0.22,'#3a7ab4');
+    circ(-48,0,0,5,'y',12,rx,ry,0.9,'#7ac4e8');ct.shadowBlur=0;
+    const ga=t*0.016;
+    circ(-15,0,0,15,'y',24,rx,ry,0.8,'#5ba3d9');circ(-15,0,0,8,'y',18,rx,ry,0.5,'#5ba3d9');circ(-15,0,0,3,'y',12,rx,ry,0.9,'#7ac4e8');
+    for(let i=0;i<12;i++){const a=ga+i/12*Math.PI*2;const p1=proj(-15+Math.cos(a)*15,0,Math.sin(a)*15,rx,ry);const p2=proj(-15+Math.cos(a)*20,0,Math.sin(a)*20,rx,ry);ct.strokeStyle='#5ba3d9';ct.globalAlpha=0.65;ct.beginPath();ct.moveTo(p1.x,p1.y);ct.lineTo(p2.x,p2.y);ct.stroke();ct.globalAlpha=1;}
+    ct.setLineDash([4,3]);L(-48,0,0,-15,0,0,rx,ry,0.4,'#4a9fd4');ct.setLineDash([]);
+    box(27,-20,-22,31,20,22,rx,ry,0.5,'#2a8a3a');
+    for(let i=0;i<4;i++)L(31,-14+i*9,-18,31,-14+i*9,18,rx,ry,0.3,'#3aaa4a');
+    box(32,-8,-6,37,8,6,rx,ry,0.8,'#2a6a8a');
+    cyl(52,-22,4,-24,9,14,rx,ry,0.7,'#8a6a2a');
+    box(-27,-32-13,-6,27,-32,6,rx,ry,0.55,'#5ba3d9');
+  }
+
+  function drawHinge(rx,ry){
+    ct.lineWidth=1.3;ct.shadowColor='#5ba3d9';ct.shadowBlur=4;
+    const sh=[[-8,-55],[8,-55],[48,0],[8,55],[-8,55],[-48,0]],th=5;
+    for(let i=0;i<sh.length;i++){const[ax,ay]=sh[i],[bx,by]=sh[(i+1)%sh.length];L(ax,ay,-th,bx,by,-th,rx,ry,0.85,'#5ba3d9');L(ax,ay,th,bx,by,th,rx,ry,0.85,'#5ba3d9');L(ax,ay,-th,ax,ay,th,rx,ry,0.4,'#5ba3d9');}
+    cyl(0,-16,16,0,13,20,rx,ry,0.8,'#5ba3d9');circ(0,0,0,13,'y',20,rx,ry,0.9,'#7ac4e8');circ(0,0,0,5,'y',12,rx,ry,0.8,'#7ac4e8');
+    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;L(Math.cos(a)*5,0,Math.sin(a)*5,Math.cos(a)*13,0,Math.sin(a)*13,rx,ry,0.25,'#5ba3d9');}
+    [[-28,-38],[28,-38],[-28,38],[28,38]].forEach(([hx,hy])=>{const hp=proj(hx,hy,-th,rx,ry);ct.strokeStyle='#5ba3d9';ct.globalAlpha=0.7;ct.beginPath();ct.arc(hp.x,hp.y,3.5*hp.s,0,Math.PI*2);ct.stroke();ct.globalAlpha=1;});
+    ct.shadowBlur=0;
+  }
+
+  function drawRoller(rx,ry){
+    ct.lineWidth=1.3;ct.shadowColor='#5ba3d9';ct.shadowBlur=4;
+    const WR=34,WT=13,SR=5,SL=72;
+    circ(0,-WT,0,WR,'y',24,rx,ry,0.85,'#5ba3d9');circ(0,WT,0,WR,'y',24,rx,ry,0.85,'#5ba3d9');
+    for(let i=0;i<24;i+=3){const a=i/24*Math.PI*2;L(Math.cos(a)*WR,-WT,Math.sin(a)*WR,Math.cos(a)*WR,WT,Math.sin(a)*WR,rx,ry,0.28,'#5ba3d9');}
+    circ(0,0,0,WR,'y',24,rx,ry,0.3,'#5ba3d9');
+    circ(0,-WT,0,SR,'y',12,rx,ry,0.9,'#7ac4e8');circ(0,WT,0,SR,'y',12,rx,ry,0.9,'#7ac4e8');
+    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;L(Math.cos(a)*SR,-WT,Math.sin(a)*SR,Math.cos(a)*SR,WT,Math.sin(a)*SR,rx,ry,0.5,'#7ac4e8');}
+    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;L(Math.cos(a)*SR,WT,Math.sin(a)*SR,Math.cos(a)*SR,WT+SL,Math.sin(a)*SR,rx,ry,0.4,'#5ba3d9');}
+    circ(0,WT+SL,0,SR,'y',12,rx,ry,0.8,'#5ba3d9');
+    for(let i=0;i<6;i++)circ(0,WT+12+i*10,0,SR+1,'y',8,rx,ry,0.18,'#5ba3d9');
+    ct.shadowBlur=0;
+  }
+
+  function drawDrum(rx,ry){
+    ct.lineWidth=1.3;ct.shadowColor='#5ba3d9';ct.shadowBlur=4;
+    const OR=52,IR=14,HD=26,GR=8;
+    circ(0,-HD,0,OR,'y',28,rx,ry,0.9,'#5ba3d9');circ(0,HD,0,OR,'y',28,rx,ry,0.9,'#5ba3d9');
+    for(let g=0;g<GR;g++){const gy=-HD+(g/(GR-1))*HD*2;circ(0,gy,0,OR-2,'y',22,rx,ry,0.2,'#5ba3d9');}
+    for(let i=0;i<16;i++){const a=i/16*Math.PI*2;L(Math.cos(a)*OR,-HD,Math.sin(a)*OR,Math.cos(a)*OR,HD,Math.sin(a)*OR,rx,ry,0.16,'#5ba3d9');}
+    cyl(0,-HD,HD,0,IR,16,rx,ry,0.85,'#7ac4e8');
+    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;L(Math.cos(a)*IR,0,Math.sin(a)*IR,Math.cos(a)*(OR*0.55),0,Math.sin(a)*(OR*0.55),rx,ry,0.18,'#5ba3d9');}
+    for(let i=0;i<3;i++){const a=i/3*Math.PI*2;const sp=proj(Math.cos(a)*(IR+7),0,Math.sin(a)*(IR+7),rx,ry);ct.strokeStyle='#e05a40';ct.globalAlpha=0.85;ct.beginPath();ct.arc(sp.x,sp.y,3*sp.s,0,Math.PI*2);ct.stroke();ct.globalAlpha=1;L(Math.cos(a)*(IR+7),-5,Math.sin(a)*(IR+7),Math.cos(a)*(IR+7),5,Math.sin(a)*(IR+7),rx,ry,0.5,'#e05a40');}
+    ct.shadowBlur=0;
+  }
+
+  const DRS=[drawSpring,drawOpener,drawHinge,drawRoller,drawDrum];
+
+  function frame(){
+    ct.clearRect(0,0,W,H);
+    aTimer++;
+    if(aTimer>=AD){aTimer=0;phase=(phase+1)%5;const lbl=document.getElementById('parts-label');if(lbl)lbl.textContent=NAMES[phase];}
+    const ry=t*0.016,rx=Math.sin(t*0.007)*0.2;
+    ct.lineWidth=1.2;DRS[phase](rx,ry);
+    t++;requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
 // Scroll reveal
 const reveals = document.querySelectorAll('.reveal');
 const observer = new IntersectionObserver((entries) => {
