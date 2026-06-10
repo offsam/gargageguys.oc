@@ -3,613 +3,861 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Garage Guys OC — Garage Door Repair & Installation | Orange County, CA</title>
-<meta name="description" content="Garage door repair, installation, tune-up, painting, openers & custom storage solutions. Serving Orange County, CA. Call Sam today.">
+<title>Garage Guys — Complete Garage Service | Orange County & Inland Empire</title>
+<meta name="description" content="Garage door repair, installation, painting, epoxy floors and custom storage solutions. Serving Orange County & Inland Empire, CA. Call (949) 359-0009.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --black: #111111;
-    --steel: #1C2333;
-    --orange: #F05A1A;
-    --orange-dark: #C44510;
-    --cream: #F7F4EF;
-    --gray: #6B7280;
-    --light: #E8E4DD;
-  }
+:root {
+  --navy: #0f2340;
+  --navy-mid: #1a3a5c;
+  --navy-light: #234875;
+  --blue-accent: #2e6da4;
+  --white: #ffffff;
+  --off-white: #f4f7fb;
+  --gray: #8a9bb0;
+  --text: #1a2a3a;
+}
 
-  html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; }
 
-  body {
-    font-family: 'Inter', sans-serif;
-    background: var(--cream);
-    color: var(--black);
-    font-size: 16px;
-    line-height: 1.6;
-  }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--white);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
 
-  /* NAV */
-  nav {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 100;
-    background: var(--black);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 32px;
-    height: 64px;
-  }
+/* NAV */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  background: rgba(15, 35, 64, 0.97);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  height: 70px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
 
-  .nav-logo {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 26px;
-    color: white;
-    letter-spacing: 2px;
-  }
+.nav-logo img {
+  height: 44px;
+  filter: brightness(0) invert(1);
+}
 
-  .nav-logo span { color: var(--orange); }
+.nav-phone {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  color: var(--white);
+  text-decoration: none;
+  letter-spacing: 1px;
+  transition: color 0.2s;
+}
 
-  .nav-phone {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-    background: var(--orange);
-    color: white;
-    font-weight: 600;
-    font-size: 15px;
-    padding: 10px 20px;
-    border-radius: 6px;
-    transition: background 0.2s;
-  }
+.nav-phone:hover { color: #5ba3d9; }
 
-  .nav-phone:hover { background: var(--orange-dark); }
+.nav-links {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+}
 
-  /* HERO */
-  .hero {
-    margin-top: 64px;
-    background: var(--steel);
-    position: relative;
-    overflow: hidden;
-    min-height: 92vh;
-    display: flex;
-    align-items: center;
-  }
+.nav-links a {
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
 
-  .hero-bg {
-    position: absolute;
-    inset: 0;
-    background:
-      repeating-linear-gradient(
-        90deg,
-        transparent,
-        transparent 60px,
-        rgba(255,255,255,0.015) 60px,
-        rgba(255,255,255,0.015) 61px
-      ),
-      repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 60px,
-        rgba(255,255,255,0.015) 60px,
-        rgba(255,255,255,0.015) 61px
-      );
-  }
+.nav-links a:hover { color: var(--white); }
 
-  .hero-accent {
-    position: absolute;
-    right: -100px;
-    top: -100px;
-    width: 600px;
-    height: 600px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(240,90,26,0.15) 0%, transparent 70%);
-    pointer-events: none;
-  }
+/* HERO */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: var(--navy);
+}
 
-  .hero-content {
-    position: relative;
-    z-index: 2;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 80px 32px;
-  }
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: 
+    linear-gradient(135deg, rgba(15,35,64,0.97) 0%, rgba(15,35,64,0.85) 50%, rgba(26,58,92,0.9) 100%),
+    url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1600&q=80') center/cover no-repeat;
+}
 
-  .hero-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--orange);
-    margin-bottom: 24px;
-  }
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
 
-  .hero-eyebrow::before {
-    content: '';
-    display: block;
-    width: 32px;
-    height: 2px;
-    background: var(--orange);
-  }
+.hero-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  right: -100px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: radial-gradient(circle, rgba(46,109,164,0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
 
-  h1 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(64px, 10vw, 120px);
-    line-height: 0.95;
-    color: white;
-    margin-bottom: 28px;
-    letter-spacing: 2px;
-  }
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 120px 40px 80px;
+  width: 100%;
+}
 
-  h1 .line-orange { color: var(--orange); display: block; }
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #5ba3d9;
+  margin-bottom: 24px;
+}
 
-  .hero-sub {
-    font-size: 18px;
-    color: rgba(255,255,255,0.65);
-    max-width: 520px;
-    margin-bottom: 44px;
-    line-height: 1.7;
-  }
+.hero-eyebrow::before {
+  content: '';
+  display: block;
+  width: 32px;
+  height: 1px;
+  background: #5ba3d9;
+}
 
-  .hero-ctas {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
+.hero-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(64px, 9vw, 120px);
+  line-height: 0.95;
+  color: var(--white);
+  margin-bottom: 32px;
+  letter-spacing: 2px;
+}
 
-  .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--orange);
-    color: white;
-    font-weight: 600;
-    font-size: 16px;
-    padding: 16px 32px;
-    border-radius: 6px;
-    text-decoration: none;
-    transition: background 0.2s, transform 0.1s;
-  }
+.hero-title span {
+  display: block;
+  color: #5ba3d9;
+}
 
-  .btn-primary:hover { background: var(--orange-dark); transform: translateY(-1px); }
+.hero-sub {
+  font-size: 18px;
+  color: rgba(255,255,255,0.65);
+  max-width: 500px;
+  margin-bottom: 48px;
+  line-height: 1.7;
+}
 
-  .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: transparent;
-    border: 1.5px solid rgba(255,255,255,0.3);
-    color: white;
-    font-weight: 500;
-    font-size: 16px;
-    padding: 16px 32px;
-    border-radius: 6px;
-    text-decoration: none;
-    transition: border-color 0.2s;
-  }
+.hero-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
 
-  .btn-secondary:hover { border-color: rgba(255,255,255,0.7); }
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #2e6da4;
+  color: var(--white);
+  text-decoration: none;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 1.5px;
+  padding: 16px 36px;
+  border-radius: 4px;
+  transition: all 0.25s;
+  border: none;
+  cursor: pointer;
+}
 
-  .hero-badges {
-    margin-top: 60px;
-    display: flex;
-    gap: 40px;
-    flex-wrap: wrap;
-  }
+.btn-primary:hover {
+  background: #3a82c4;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(46,109,164,0.5);
+}
 
-  .badge {
-    display: flex;
-    flex-direction: column;
-  }
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  color: var(--white);
+  text-decoration: none;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 1.5px;
+  padding: 16px 36px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.25);
+  transition: all 0.25s;
+}
 
-  .badge-num {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 42px;
-    color: white;
-    line-height: 1;
-  }
+.btn-secondary:hover {
+  border-color: rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.07);
+}
 
-  .badge-num span { color: var(--orange); }
+.hero-phone-big {
+  margin-top: 56px;
+  padding-top: 40px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
 
-  .badge-label {
-    font-size: 13px;
-    color: rgba(255,255,255,0.5);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 4px;
-  }
+.hero-phone-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 8px;
+}
 
-  /* SERVICES */
-  .services {
-    padding: 100px 32px;
-    max-width: 1100px;
-    margin: 0 auto;
-  }
+.hero-phone-number {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(40px, 6vw, 72px);
+  color: var(--white);
+  text-decoration: none;
+  letter-spacing: 3px;
+  display: block;
+  line-height: 1;
+  transition: color 0.2s;
+}
 
-  .section-eyebrow {
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--orange);
-    margin-bottom: 16px;
-  }
+.hero-phone-number:hover { color: #5ba3d9; }
 
-  h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(40px, 6vw, 64px);
-    line-height: 1;
-    letter-spacing: 1px;
-    color: var(--black);
-    margin-bottom: 56px;
-  }
+/* STATS BAR */
+.stats-bar {
+  background: var(--navy-mid);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
 
-  .services-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 2px;
-    background: var(--light);
-    border: 2px solid var(--light);
-    border-radius: 12px;
-    overflow: hidden;
-  }
+.stats-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
 
-  .service-card {
-    background: var(--cream);
-    padding: 36px 32px;
-    transition: background 0.2s;
-    cursor: default;
-  }
+.stat-item {
+  padding: 28px 0;
+  text-align: center;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  position: relative;
+}
 
-  .service-card:hover { background: white; }
+.stat-item:last-child { border-right: none; }
 
-  .service-icon {
-    font-size: 32px;
-    margin-bottom: 16px;
-    display: block;
-  }
+.stat-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 42px;
+  color: var(--white);
+  letter-spacing: 2px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
 
-  .service-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 22px;
-    letter-spacing: 1px;
-    color: var(--black);
-    margin-bottom: 10px;
-  }
+.stat-num span { color: #5ba3d9; }
 
-  .service-desc {
-    font-size: 14px;
-    color: var(--gray);
-    line-height: 1.65;
-  }
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gray);
+}
 
-  /* WHY */
-  .why {
-    background: var(--steel);
-    padding: 100px 32px;
-  }
+/* SERVICES */
+.services {
+  padding: 100px 40px;
+  background: var(--off-white);
+}
 
-  .why-inner {
-    max-width: 1100px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 80px;
-    align-items: center;
-  }
+.section-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
 
-  .why h2 { color: white; margin-bottom: 0; }
-  .why .section-eyebrow { margin-bottom: 16px; }
+.section-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--blue-accent);
+  margin-bottom: 16px;
+}
 
-  .why-text {
-    font-size: 17px;
-    color: rgba(255,255,255,0.6);
-    line-height: 1.8;
-    margin-top: 20px;
-    margin-bottom: 36px;
-  }
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(40px, 5vw, 64px);
+  color: var(--navy);
+  letter-spacing: 2px;
+  line-height: 1.05;
+  margin-bottom: 60px;
+}
 
-  .why-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  background: #dce5f0;
+  border: 2px solid #dce5f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
 
-  .why-list li {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    font-size: 15px;
-    color: rgba(255,255,255,0.8);
-  }
+.service-card:nth-child(4) {
+  grid-column: span 1;
+}
 
-  .why-list li::before {
-    content: '✓';
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 24px;
-    height: 24px;
-    background: var(--orange);
-    border-radius: 50%;
-    font-size: 12px;
-    font-weight: 700;
-    color: white;
-    margin-top: 1px;
-  }
+.services-grid .service-card:nth-last-child(2),
+.services-grid .service-card:last-child {
+  grid-column: span 1;
+}
 
-  /* GARAGE DOOR ILLUSTRATION */
-  .door-visual {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+/* Center last row of 2 cards */
+.services-grid {
+  justify-items: stretch;
+}
 
-  .door-svg-wrap {
-    width: 100%;
-    max-width: 380px;
-  }
+.service-card {
+  background: var(--white);
+  padding: 40px 36px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
 
-  /* CTA */
-  .cta-section {
-    padding: 100px 32px;
-    text-align: center;
-  }
+.service-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--blue-accent);
+  transform: scaleX(0);
+  transition: transform 0.3s;
+}
 
-  .cta-inner {
-    max-width: 640px;
-    margin: 0 auto;
-  }
+.service-card:hover { background: var(--navy); }
+.service-card:hover::before { transform: scaleX(1); }
 
-  .cta-section h2 { margin-bottom: 16px; }
+.service-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--off-white);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  transition: background 0.3s;
+}
 
-  .cta-sub {
-    font-size: 17px;
-    color: var(--gray);
-    margin-bottom: 44px;
-  }
+.service-card:hover .service-icon { background: rgba(255,255,255,0.1); }
 
-  .cta-phone-big {
-    display: inline-flex;
-    align-items: center;
-    gap: 14px;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 48px;
-    color: var(--black);
-    text-decoration: none;
-    letter-spacing: 2px;
-    transition: color 0.2s;
-  }
+.service-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: var(--blue-accent);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 
-  .cta-phone-big:hover { color: var(--orange); }
+.service-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 1.5px;
+  color: var(--navy);
+  margin-bottom: 10px;
+  transition: color 0.3s;
+}
 
-  .cta-phone-icon {
-    width: 52px;
-    height: 52px;
-    background: var(--orange);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-  }
+.service-card:hover .service-name { color: var(--white); }
 
-  .cta-note {
-    margin-top: 16px;
-    font-size: 14px;
-    color: var(--gray);
-  }
+.service-desc {
+  font-size: 14px;
+  color: var(--gray);
+  line-height: 1.6;
+  transition: color 0.3s;
+}
 
-  .service-area {
-    margin-top: 60px;
-    padding-top: 40px;
-    border-top: 1px solid var(--light);
-    font-size: 14px;
-    color: var(--gray);
-  }
+.service-card:hover .service-desc { color: rgba(255,255,255,0.6); }
 
-  .service-area strong { color: var(--black); }
+/* WHY US */
+.why {
+  padding: 100px 40px;
+  background: var(--navy);
+  position: relative;
+  overflow: hidden;
+}
 
-  /* FOOTER */
-  footer {
-    background: var(--black);
-    padding: 40px 32px;
-    text-align: center;
-  }
+.why::before {
+  content: 'GG';
+  position: absolute;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 400px;
+  color: rgba(255,255,255,0.02);
+  right: -40px;
+  top: 50%;
+  transform: translateY(-50%);
+  line-height: 1;
+  pointer-events: none;
+}
 
-  .footer-logo {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 28px;
-    color: white;
-    letter-spacing: 2px;
-    margin-bottom: 12px;
-  }
+.why .section-title { color: var(--white); }
 
-  .footer-logo span { color: var(--orange); }
+.why-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
 
-  .footer-text {
-    font-size: 13px;
-    color: rgba(255,255,255,0.35);
-  }
+.why-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
 
-  /* MOBILE */
-  @media (max-width: 768px) {
-    nav { padding: 0 20px; }
-    .nav-logo { font-size: 20px; }
-    .nav-phone { font-size: 13px; padding: 8px 14px; }
-    .hero-content { padding: 60px 20px; }
-    .hero-badges { gap: 24px; }
-    .services { padding: 60px 20px; }
-    .why-inner { grid-template-columns: 1fr; gap: 40px; }
-    .door-visual { display: none; }
-    .why { padding: 60px 20px; }
-    .cta-section { padding: 60px 20px; }
-    .cta-phone-big { font-size: 32px; }
-  }
+.why-item {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 24px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 6px;
+  transition: all 0.25s;
+}
 
-  @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; }
-  }
+.why-item:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(91,163,217,0.3);
+}
+
+.why-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px;
+  color: rgba(91,163,217,0.4);
+  line-height: 1;
+  min-width: 44px;
+}
+
+.why-text h4 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 1px;
+  color: var(--white);
+  margin-bottom: 6px;
+}
+
+.why-text p {
+  font-size: 14px;
+  color: var(--gray);
+  line-height: 1.6;
+}
+
+.why-image {
+  position: relative;
+}
+
+.why-image-frame {
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 4/5;
+  background: var(--navy-mid);
+}
+
+.why-image-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+}
+
+.why-badge {
+  position: absolute;
+  bottom: -20px;
+  left: -20px;
+  background: #2e6da4;
+  color: var(--white);
+  padding: 20px 24px;
+  border-radius: 6px;
+}
+
+.why-badge-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 48px;
+  line-height: 1;
+  letter-spacing: 2px;
+}
+
+.why-badge-text {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+/* CTA */
+.cta {
+  padding: 100px 40px;
+  background: var(--off-white);
+  text-align: center;
+}
+
+.cta-box {
+  max-width: 800px;
+  margin: 0 auto;
+  background: var(--navy);
+  border-radius: 12px;
+  padding: 72px 60px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-box::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top, rgba(46,109,164,0.3) 0%, transparent 60%);
+}
+
+.cta-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #5ba3d9;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.cta-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(48px, 6vw, 80px);
+  color: var(--white);
+  letter-spacing: 3px;
+  line-height: 1;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.cta-sub {
+  font-size: 16px;
+  color: var(--gray);
+  margin-bottom: 48px;
+  position: relative;
+}
+
+.cta-phone {
+  display: block;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(48px, 7vw, 88px);
+  color: var(--white);
+  text-decoration: none;
+  letter-spacing: 4px;
+  line-height: 1;
+  margin-bottom: 40px;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.cta-phone:hover { color: #5ba3d9; }
+
+.cta-areas {
+  font-size: 13px;
+  color: var(--gray);
+  position: relative;
+  line-height: 2;
+}
+
+.cta-areas strong {
+  color: rgba(255,255,255,0.5);
+  font-weight: 500;
+}
+
+/* FOOTER */
+footer {
+  background: #07162a;
+  padding: 32px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.footer-logo img {
+  height: 36px;
+  filter: brightness(0) invert(1);
+  opacity: 0.6;
+}
+
+.footer-copy {
+  font-size: 13px;
+  color: rgba(255,255,255,0.3);
+}
+
+/* SCROLL ANIMATIONS */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  nav { padding: 0 20px; }
+  .nav-links { display: none; }
+  .hero-content { padding: 100px 20px 60px; }
+  .stats-inner { grid-template-columns: repeat(2, 1fr); }
+  .services { padding: 60px 20px; }
+  .services-grid { grid-template-columns: 1fr 1fr; }
+  .why { padding: 60px 20px; }
+  .why-grid { grid-template-columns: 1fr; gap: 40px; }
+  .why-image { display: none; }
+  .cta { padding: 60px 20px; }
+  .cta-box { padding: 48px 28px; }
+  footer { flex-direction: column; gap: 12px; text-align: center; }
+}
+
+@media (max-width: 600px) {
+  .services-grid { grid-template-columns: 1fr; }
+  .stats-inner { grid-template-columns: repeat(2, 1fr); }
+}
 </style>
 </head>
 <body>
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo">Garage <span>Guys</span></div>
-  <a href="tel:+19452740424" class="nav-phone">
-    📞 (945) 274-0424
-  </a>
+  <div class="nav-logo">
+    <img src="sticker.png" alt="Garage Guys">
+  </div>
+  <ul class="nav-links">
+    <li><a href="#services">Services</a></li>
+    <li><a href="#why">Why Us</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <a href="tel:+19493590009" class="nav-phone">(949) 359-0009</a>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
   <div class="hero-bg"></div>
-  <div class="hero-accent"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
   <div class="hero-content">
-    <div class="hero-eyebrow">Orange County, California</div>
-    <h1>Your Garage,<span class="line-orange">Fixed Right.</span></h1>
-    <p class="hero-sub">Repair, installation, tune-ups, custom storage & more. Licensed, local, and hands-on. Sam comes to you.</p>
-    <div class="hero-ctas">
-      <a href="tel:+19452740424" class="btn-primary">📞 Call Sam Now</a>
-      <a href="#services" class="btn-secondary">See All Services ↓</a>
+    <div class="hero-eyebrow">Orange County & Inland Empire</div>
+    <h1 class="hero-title">
+      Complete<br>
+      <span>Garage</span><br>
+      Service
+    </h1>
+    <p class="hero-sub">Installation, repair, painting, epoxy floors and custom storage solutions — all in one call.</p>
+    <div class="hero-actions">
+      <a href="tel:+19493590009" class="btn-primary">Call Now</a>
+      <a href="#services" class="btn-secondary">See All Services</a>
     </div>
-    <div class="hero-badges">
-      <div class="badge">
-        <div class="badge-num">OC<span>'s</span></div>
-        <div class="badge-label">Local Expert</div>
-      </div>
-      <div class="badge">
-        <div class="badge-num">Same<span>-</span>Day</div>
-        <div class="badge-label">Service Available</div>
-      </div>
-      <div class="badge">
-        <div class="badge-num">100<span>%</span></div>
-        <div class="badge-label">Satisfaction Guarantee</div>
-      </div>
+    <div class="hero-phone-big">
+      <div class="hero-phone-label">Free estimate — call or text</div>
+      <a href="tel:+19493590009" class="hero-phone-number">(949) 359-0009</a>
     </div>
   </div>
 </section>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-num">Same<span>-</span>Day</div>
+      <div class="stat-label">Service Available</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">7<span>d</span></div>
+      <div class="stat-label">Days a Week</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">100<span>%</span></div>
+      <div class="stat-label">Satisfaction</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">OC<span>+</span>IE</div>
+      <div class="stat-label">Coverage Area</div>
+    </div>
+  </div>
+</div>
 
 <!-- SERVICES -->
 <section class="services" id="services">
-  <div class="section-eyebrow">What We Do</div>
-  <h2>Every Garage Problem,<br>One Call Away</h2>
-  <div class="services-grid">
-    <div class="service-card">
-      <span class="service-icon">🔧</span>
-      <div class="service-title">Repair & Diagnostics</div>
-      <p class="service-desc">Broken springs, cables, rollers, panels — we diagnose fast and fix it right the first time.</p>
-    </div>
-    <div class="service-card">
-      <span class="service-icon">🚪</span>
-      <div class="service-title">Door Installation</div>
-      <p class="service-desc">New garage door install for any size opening. Steel, wood, modern or classic — your choice.</p>
-    </div>
-    <div class="service-card">
-      <span class="service-icon">🎨</span>
-      <div class="service-title">Door Painting</div>
-      <p class="service-desc">Professional prep and paint. Refresh your curb appeal without replacing the whole door.</p>
-    </div>
-    <div class="service-card">
-      <span class="service-icon">⚙️</span>
-      <div class="service-title">Tune-Up & Maintenance</div>
-      <p class="service-desc">Lubrication, balance check, hardware tightening — keep your door running quietly for years.</p>
-    </div>
-    <div class="service-card">
-      <span class="service-icon">📡</span>
-      <div class="service-title">Opener Installation</div>
-      <p class="service-desc">Belt, chain, or smart Wi-Fi openers. App control, camera, keypad — we set it all up.</p>
-    </div>
-    <div class="service-card">
-      <span class="service-icon">📦</span>
-      <div class="service-title">Shelving & Storage</div>
-      <p class="service-desc">Custom wall shelving, ceiling racks, and overhead storage systems built for your space.</p>
-    </div>
-    <div class="service-card">
-      <span class="service-icon">💡</span>
-      <div class="service-title">Custom Garage Solutions</div>
-      <p class="service-desc">Non-standard openings, unusual layouts, unique ideas — if it's garage-related, Sam figures it out.</p>
+  <div class="section-inner">
+    <div class="section-eyebrow reveal">What We Do</div>
+    <h2 class="section-title reveal">Every Garage Problem,<br>One Call Away</h2>
+    <div class="services-grid">
+
+      <div class="service-card reveal">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        </div>
+        <div class="service-name">Repair & Diagnostics</div>
+        <div class="service-desc">Broken springs, cables, rollers, panels — fast diagnosis and a lasting fix.</div>
+      </div>
+
+      <div class="service-card reveal">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" Y1="15" x2="9" y2="15"/></svg>
+        </div>
+        <div class="service-name">Door Painting</div>
+        <div class="service-desc">Professional prep, primer and paint. Refresh your curb appeal without replacing the door.</div>
+      </div>
+
+      <div class="service-card reveal">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22C6.48 22 2 17.52 2 12S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10zm0-18c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm1 13h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+        </div>
+        <div class="service-name">Tune-Up & Maintenance</div>
+        <div class="service-desc">Lubrication, balance check, hardware tightening — keep your door running quietly for years.</div>
+      </div>
+
+      <div class="service-card reveal">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </div>
+        <div class="service-name">Opener Installation</div>
+        <div class="service-desc">Belt, chain, or smart Wi-Fi openers. App control, camera, keypad — full setup included.</div>
+      </div>
+
+      <div class="service-card reveal">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div class="service-name">Custom Garage Solutions</div>
+        <div class="service-desc">Wall shelving, ceiling racks, overhead storage and any custom project for your garage space.</div>
+      </div>
+
     </div>
   </div>
 </section>
 
-<!-- WHY -->
-<section class="why">
-  <div class="why-inner">
-    <div>
-      <div class="section-eyebrow">Why Garage Guys</div>
-      <h2>No Crews. No Markup. Just Sam.</h2>
-      <p class="why-text">When you call Garage Guys, you get me — Sam. Not a dispatcher, not a subcontractor. I show up, I do the work, I stand behind it.</p>
-      <ul class="why-list">
-        <li>Licensed & insured — legit business, real accountability</li>
-        <li>Serving all of Orange County — Newport Beach to Anaheim</li>
-        <li>Transparent pricing — you know the cost before I start</li>
-        <li>Mechanical background — I fix things right, not just fast</li>
-        <li>Same-day service available for urgent repairs</li>
-        <li>No job too small — tune-up, painting, a single broken spring</li>
-      </ul>
-    </div>
-    <div class="door-visual">
-      <div class="door-svg-wrap">
-        <svg viewBox="0 0 360 400" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- garage structure -->
-          <rect x="20" y="60" width="320" height="320" rx="4" fill="#0F1825" stroke="#2A3547" stroke-width="2"/>
-          <!-- door panels -->
-          <rect x="40" y="80" width="280" height="58" rx="2" fill="#1C2B40" stroke="#2E4060" stroke-width="1.5"/>
-          <rect x="40" y="144" width="280" height="58" rx="2" fill="#1C2B40" stroke="#2E4060" stroke-width="1.5"/>
-          <rect x="40" y="208" width="280" height="58" rx="2" fill="#1C2B40" stroke="#2E4060" stroke-width="1.5"/>
-          <rect x="40" y="272" width="280" height="58" rx="2" fill="#1C2B40" stroke="#2E4060" stroke-width="1.5"/>
-          <!-- panel lines vertical -->
-          <line x1="180" y1="80" x2="180" y2="330" stroke="#2E4060" stroke-width="1.5"/>
-          <!-- orange accent stripe -->
-          <rect x="40" y="80" width="4" height="250" rx="2" fill="#F05A1A" opacity="0.8"/>
-          <!-- handle -->
-          <rect x="166" y="196" width="28" height="8" rx="4" fill="#F05A1A"/>
-          <!-- top track -->
-          <rect x="30" y="55" width="300" height="10" rx="2" fill="#2A3547"/>
-          <!-- side tracks -->
-          <rect x="30" y="65" width="8" height="280" rx="2" fill="#2A3547"/>
-          <rect x="322" y="65" width="8" height="280" rx="2" fill="#2A3547"/>
-          <!-- floor -->
-          <rect x="20" y="370" width="320" height="10" rx="2" fill="#0A1020"/>
-          <!-- GG text on door -->
-          <text x="180" y="355" text-anchor="middle" font-family="'Bebas Neue', sans-serif" font-size="18" fill="#F05A1A" letter-spacing="3" opacity="0.7">GARAGE GUYS</text>
-        </svg>
+<!-- WHY US -->
+<section class="why" id="why">
+  <div class="section-inner">
+    <div class="why-grid">
+      <div>
+        <div class="section-eyebrow reveal">Why Garage Guys</div>
+        <h2 class="section-title reveal">No Fluff.<br>Just Results.</h2>
+        <div class="why-list">
+          <div class="why-item reveal">
+            <div class="why-num">01</div>
+            <div class="why-text">
+              <h4>Same-Day Response</h4>
+              <p>Call in the morning, we show up the same day. No waiting around for a week.</p>
+            </div>
+          </div>
+          <div class="why-item reveal">
+            <div class="why-num">02</div>
+            <div class="why-text">
+              <h4>Transparent Pricing</h4>
+              <p>You know the full cost before we start. No surprises, no hidden fees.</p>
+            </div>
+          </div>
+          <div class="why-item reveal">
+            <div class="why-num">03</div>
+            <div class="why-text">
+              <h4>All-In-One Service</h4>
+              <p>From doors to floors to storage — one company handles everything in your garage.</p>
+            </div>
+          </div>
+          <div class="why-item reveal">
+            <div class="why-num">04</div>
+            <div class="why-text">
+              <h4>OC & Inland Empire</h4>
+              <p>Newport Beach to Riverside — we cover the full area, no extra travel charges.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="why-image reveal">
+        <div class="why-image-frame">
+          <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80" alt="Garage service">
+        </div>
+        <div class="why-badge">
+          <div class="why-badge-num">100%</div>
+          <div class="why-badge-text">Satisfaction</div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
 <!-- CTA -->
-<section class="cta-section">
-  <div class="cta-inner">
-    <div class="section-eyebrow">Ready to Get Started?</div>
-    <h2>Call Sam. Get It Fixed.</h2>
-    <p class="cta-sub">Free estimate on any job. Available 7 days a week across Orange County.</p>
-    <a href="tel:+19452740424" class="cta-phone-big">
-      <span class="cta-phone-icon">📞</span>
-      (945) 274-0424
-    </a>
-    <p class="cta-note">Text or call — Sam answers personally</p>
-    <div class="service-area">
-      <strong>Serving:</strong> Newport Beach · Irvine · Anaheim · Huntington Beach · Costa Mesa · Santa Ana · Orange · Fullerton · Mission Viejo · and all of Orange County
+<section class="cta" id="contact">
+  <div class="cta-box">
+    <div class="cta-eyebrow">Free Estimate — 7 Days a Week</div>
+    <h2 class="cta-title">Ready to Get<br>It Done?</h2>
+    <p class="cta-sub">Call or text — we'll get back to you fast.</p>
+    <a href="tel:+19493590009" class="cta-phone">(949) 359-0009</a>
+    <div class="cta-areas">
+      <strong>Serving:</strong> Newport Beach · Irvine · Anaheim · Huntington Beach · Costa Mesa<br>
+      Santa Ana · Orange · Fullerton · Riverside · Ontario · Rancho Cucamonga
     </div>
   </div>
 </section>
 
 <!-- FOOTER -->
 <footer>
-  <div class="footer-logo">Garage <span>Guys</span> OC</div>
-  <p class="footer-text">Newport Beach, CA · Licensed & Insured · © 2026 VELES PLUS LLC DBA Garage Guys</p>
+  <div class="footer-logo">
+    <img src="sticker.png" alt="Garage Guys">
+  </div>
+  <div class="footer-copy">© 2026 Garage Guys · Orange County & Inland Empire, CA</div>
 </footer>
+
+<script>
+// Scroll reveal
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => entry.target.classList.add('visible'), i * 80);
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1 });
+reveals.forEach(el => observer.observe(el));
+</script>
 
 </body>
 </html>
