@@ -122,7 +122,7 @@ nav {
 .hero-content {
   position: relative;
   z-index: 2;
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 120px 40px 80px;
   width: 100%;
@@ -666,22 +666,28 @@ footer {
 .hero-left { flex: 1; max-width: 560px; }
 
 .hero-right {
-  flex: 0 0 460px;
+  flex: 1;
+  min-width: 0;
+  max-width: 1380px;
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
 }
 
-#parts-canvas { display: block; }
+#parts-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 
 .parts-label {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 15px;
+  font-size: clamp(20px, 2.2vw, 28px);
   letter-spacing: 3px;
   color: #5ba3d9;
   text-align: center;
-  margin-top: 8px;
+  margin-top: 12px;
   opacity: 0.8;
 }
 
@@ -730,8 +736,8 @@ footer {
       </div>
     </div>
     <div class="hero-right">
-      <canvas id="parts-canvas" width="460" height="380"></canvas>
-      <div class="parts-label" id="parts-label">Торсионная пружина</div>
+      <canvas id="parts-canvas" width="1380" height="1140"></canvas>
+      <div class="parts-label" id="parts-label">Torsion Spring</div>
     </div>
   </div>
 </section>
@@ -888,14 +894,14 @@ footer {
   const cv=document.getElementById('parts-canvas');
   if(!cv)return;
   const ct=cv.getContext('2d');
-  const W=460,H=380,CX=230,CY=175,FOV=360;
+  const S=3,W=460*S,H=380*S,CX=230*S,CY=175*S,FOV=360;
   let t=0,phase=0,aTimer=0,AD=280;
-  const NAMES=['Торсионная пружина','Garage Door Opener','Петля / Кронштейн','Ролик','Кабельный барабан'];
+  const NAMES=['Torsion Spring','Garage Door Opener','Hinge / Bracket','Roller','Cable Drum'];
 
   function proj(x,y,z,rx,ry){
     const y1=y*Math.cos(rx)-z*Math.sin(rx),z1=y*Math.sin(rx)+z*Math.cos(rx);
     const x2=x*Math.cos(ry)+z1*Math.sin(ry),z2=-x*Math.sin(ry)+z1*Math.cos(ry);
-    const sc=FOV/(FOV+z2);return{x:CX+x2*sc,y:CY+y1*sc,z:z2,s:sc};
+    const sc=FOV/(FOV+z2);return{x:CX+x2*sc*S,y:CY+y1*sc*S,z:z2,s:sc*S};
   }
   function L(x1,y1,z1,x2,y2,z2,rx,ry,al,col){
     const p1=proj(x1,y1,z1,rx,ry),p2=proj(x2,y2,z2,rx,ry);
@@ -1007,7 +1013,7 @@ footer {
     ct.clearRect(0,0,W,H);
     aTimer++;
     if(aTimer>=AD){aTimer=0;phase=(phase+1)%5;const lbl=document.getElementById('parts-label');if(lbl)lbl.textContent=NAMES[phase];}
-    const ry=t*0.016,rx=Math.sin(t*0.007)*0.2;
+    const ry=t*0.05,rx=Math.sin(t*0.022)*0.65;
     ct.lineWidth=1.2;DRS[phase](rx,ry);
     t++;requestAnimationFrame(frame);
   }
