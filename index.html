@@ -701,7 +701,7 @@ nav {
   margin: 0 auto;
   padding: 0 32px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
   align-items: stretch;
 }
@@ -839,11 +839,6 @@ nav {
       0 0 24px rgba(91, 163, 217, 0.45);
     border-color: rgba(252, 211, 77, 0.75);
   }
-}
-
-.stat-item--callback .stat-num {
-  font-size: clamp(26px, 2.5vw, 34px);
-  letter-spacing: 0.8px;
 }
 
 .stat-item--callback .stat-num span {
@@ -1729,6 +1724,7 @@ footer {
 
   .hero-content { margin-left: 10%; padding: 0 16px 0 0; }
   .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 16px; }
+  .stat-item--callback { grid-column: 1 / -1; }
   .section-screen { padding: calc(var(--nav-h) + 20px) 20px 20px; }
   .services-head { flex-direction: column; align-items: flex-start; gap: 16px; }
   .services-grid { grid-template-columns: 1fr 1fr; }
@@ -1810,14 +1806,18 @@ footer {
 <!-- STATS -->
 <div class="stats-bar" data-van-tone="dark">
   <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-num">Same<span>-</span>Day</div>
+      <div class="stat-label">Service Available</div>
+    </div>
+    <div class="stat-item stat-item--warranty">
+      <div class="stat-num">Up to 1 <span>Year</span></div>
+      <div class="stat-label">Labor Warranty</div>
+    </div>
     <div class="stat-item stat-item--callback">
       <button type="button" class="stat-callback-hit" data-open-callback aria-label="Request a callback"></button>
       <div class="stat-num">Request <span>Callback</span></div>
       <div class="stat-label">Free Estimate</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">7 <span>DAYS</span></div>
-      <div class="stat-label">A Week</div>
     </div>
     <div class="stat-item stat-item--reviews">
       <a class="stat-tt-link" target="_blank" rel="noopener noreferrer" href="https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690" aria-label="See 67 reviews on Thumbtack"></a>
@@ -1827,9 +1827,9 @@ footer {
       </div>
       <div class="stat-label">67 Reviews · Thumbtack</div>
     </div>
-    <div class="stat-item">
-      <div class="stat-num">Same<span>-</span>Day</div>
-      <div class="stat-label">Service Available</div>
+    <div class="stat-item stat-item--parts-warranty">
+      <div class="stat-num">1<span>–5</span> Years</div>
+      <div class="stat-label">Parts Warranty</div>
     </div>
   </div>
 </div>
