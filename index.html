@@ -1610,6 +1610,53 @@ nav {
 
 .reviews-thumbtack-link:hover { color: #5ba3d9; }
 
+.reviews-social {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.reviews-social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 1px solid rgba(46, 109, 164, 0.2);
+  color: var(--navy-mid);
+  text-decoration: none;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  box-shadow: 0 2px 8px rgba(15, 35, 64, 0.06);
+}
+
+.reviews-social-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(46, 109, 164, 0.14);
+}
+
+.reviews-social-link--facebook:hover {
+  color: #1877f2;
+  border-color: rgba(24, 119, 242, 0.35);
+}
+
+.reviews-social-link--instagram:hover {
+  color: #e4405f;
+  border-color: rgba(228, 64, 95, 0.35);
+}
+
+.reviews-social-link--google:hover {
+  border-color: rgba(66, 133, 244, 0.35);
+}
+
+.reviews-social-link svg {
+  display: block;
+  flex-shrink: 0;
+}
+
 /* CTA */
 .cta {
   background: rgba(244, 247, 251, 0.86);
@@ -2033,6 +2080,18 @@ footer {
             </div>
 
             <a class="reviews-thumbtack-link" target="_blank" rel="noopener noreferrer" href="https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690">See all 67 reviews on Thumbtack →</a>
+
+            <div class="reviews-social">
+              <a class="reviews-social-link reviews-social-link--facebook" target="_blank" rel="noopener noreferrer" href="https://www.facebook.com/garage.guys.oc" aria-label="Garage Guys on Facebook">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              </a>
+              <a class="reviews-social-link reviews-social-link--instagram" target="_blank" rel="noopener noreferrer" href="https://www.instagram.com/garage.doors.oc/" aria-label="Garage Guys on Instagram">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zm0 10.162a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+              </a>
+              <a class="reviews-social-link reviews-social-link--google" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&query=Garage+Guys+garage+door+Orange+County+CA" aria-label="Garage Guys on Google">
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+              </a>
+            </div>
           </div>
         </div>
       </div>
