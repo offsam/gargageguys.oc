@@ -2273,17 +2273,6 @@ updateVanTone();
     errorEl.hidden = false;
   }
 
-  function openSmsFallback(payload) {
-    const text = [
-      'Hi Garage Guys, please call me back.',
-      `Name: ${payload.name}`,
-      `Phone: ${payload.phone}`,
-      `ZIP: ${payload.zip}`,
-      `Job: ${payload.message}`,
-    ].join('\n');
-    window.location.href = 'sms:+19495390009?&body=' + encodeURIComponent(text);
-  }
-
   document.querySelectorAll('[data-open-callback]').forEach(btn => {
     btn.addEventListener('click', openModal);
   });
@@ -2317,8 +2306,6 @@ updateVanTone();
       submitBtn.textContent = 'Sending…';
     }
 
-    let sent = false;
-
     if (CALLBACK_API_URL) {
       try {
         const res = await fetch(CALLBACK_API_URL, {
@@ -2328,51 +2315,22 @@ updateVanTone();
         });
 
         if (res.ok) {
-          sent = true;
           showSuccess(payload.phone);
-        } else if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-          openSmsFallback(payload);
-          showSuccess(payload.phone);
-          sent = true;
         } else {
-          showError('Could not send your request. Please call (949) 539-0009.');
+          const data = await res.json().catch(() => ({}));
+          showError(data.error || 'Could not send your request. Please call (949) 539-0009.');
         }
       } catch {
-        if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-          openSmsFallback(payload);
-          showSuccess(payload.phone);
-          sent = true;
-        } else {
-          showError('Connection error. Please call (949) 539-0009.');
-        }
+        showError('Connection error. Please call (949) 539-0009.');
       }
-    }
-
-    if (!sent && !CALLBACK_API_URL) {
-      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        openSmsFallback(payload);
-        showSuccess(payload.phone);
-        sent = true;
-      } else {
-        showError('SMS alerts are not set up yet. Please call (949) 539-0009 or text us from your phone.');
-      }
+    } else {
+      showError('Callback is not configured yet. Please call (949) 539-0009.');
     }
 
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Send My Request';
     }
-  });
-})();
-
-(function () {
-  if (!window.matchMedia('(pointer: coarse)').matches) return;
-
-  document.querySelectorAll('.phone-link').forEach((phoneLink) => {
-    phoneLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.location.href = 'tel:+19495390009';
-    });
   });
 })();
 

@@ -1,4 +1,6 @@
 const ALLOWED_ORIGINS = new Set([
+  'https://garageguysoc.com',
+  'https://www.garageguysoc.com',
   'https://pullgaragedoor.com',
   'https://www.pullgaragedoor.com',
   'http://localhost:8765',
