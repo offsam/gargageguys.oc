@@ -1685,16 +1685,23 @@ footer {
   .cta-box { padding: 48px 28px; }
   footer { flex-direction: column; gap: 12px; text-align: center; }
 
-  /* Mobile hero: softer vertical overlay + show van services (not door phone) */
+  /* Mobile hero: show van services list, avoid cropping */
   .site-van-bg {
+    inset: 0;
     background-attachment: scroll;
-    background-position: 32% center;
+    background-size: cover;
+    background-position: 45% center;
   }
 
   .site-van-bg[data-tone="hero"] {
-    background-position: 28% center;
-    transform: scale(1.14) translateX(25%);
+    background-position: 48% center;
+    transform: none;
     filter: blur(0) brightness(0.9) saturate(0.9);
+  }
+
+  .site-van-bg[data-tone="light"],
+  .site-van-bg[data-tone="dark"] {
+    transform: none;
   }
 
   nav,
