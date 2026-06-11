@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Garage Guys — Complete Garage Service | Orange County & Inland Empire</title>
-<meta name="description" content="Garage door repair, installation, painting, epoxy floors and custom storage solutions. Serving Orange County & Inland Empire, CA. Call (949) 359-0009.">
+<meta name="description" content="Garage door repair, installation, painting, epoxy floors and custom storage solutions. Serving Orange County & Inland Empire, CA. Call (949) 539-0009.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -19,17 +19,94 @@
   --off-white: #f4f7fb;
   --gray: #8a9bb0;
   --text: #1a2a3a;
+  --nav-h: 70px;
+  --stats-h: 112px;
+  --hero-gap: 14px;
+  --grad-navy-end: 26%;
+  --grad-glow-start: 66%;
+  --van-image: url('Pictures/VAN.png');
+  --hero-overlay:
+    linear-gradient(
+      90deg,
+      rgba(15,35,64,0.94) 0%,
+      rgba(15,35,64,0.82) 12%,
+      rgba(15,35,64,0.72) var(--grad-navy-end),
+      rgba(15,35,64,0.38) 34%,
+      rgba(15,35,64,0.10) 38%,
+      rgba(15,35,64,0.22) 44%,
+      rgba(15,35,64,0.06) 50%,
+      rgba(15,35,64,0.14) 56%,
+      rgba(15,35,64,0.04) 62%,
+      rgba(15,35,64,0.02) var(--grad-glow-start),
+      rgba(15,35,64,0.02) 100%
+    );
 }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  scroll-snap-type: y proximity;
+  scroll-padding-top: var(--nav-h);
+}
+
+.section-screen {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  padding: calc(var(--nav-h) + 32px) 40px 32px;
+  box-sizing: border-box;
+}
+
+.section-screen > .section-inner,
+.section-screen > .cta-box {
+  width: 100%;
+}
 
 body {
   font-family: 'Inter', sans-serif;
-  background: var(--white);
+  background: transparent;
   color: var(--text);
   font-size: 16px;
   line-height: 1.6;
   overflow-x: hidden;
+}
+
+/* Fixed VAN — far background layer, visible through all sections */
+.site-van-bg {
+  position: fixed;
+  inset: -6%;
+  z-index: 0;
+  background: var(--van-image) center center / cover no-repeat fixed;
+  transform: scale(1.08);
+  pointer-events: none;
+  transition: filter 0.7s ease, transform 0.7s ease;
+  filter: blur(2px) brightness(0.84) saturate(0.82);
+}
+
+.site-van-bg[data-tone="hero"] {
+  filter: blur(0) brightness(0.92) saturate(0.88);
+  transform: scale(1);
+}
+
+.site-van-bg[data-tone="light"] {
+  filter: blur(3px) brightness(1.02) saturate(0.84);
+  transform: scale(1.1);
+}
+
+.site-van-bg[data-tone="dark"] {
+  filter: blur(2.5px) brightness(0.62) saturate(0.72);
+  transform: scale(1.1);
+}
+
+.hero,
+.stats-bar,
+.services,
+.why,
+.cta,
+footer {
+  position: relative;
+  z-index: 1;
 }
 
 /* NAV */
@@ -37,31 +114,26 @@ nav {
   position: fixed;
   top: 0; left: 0; right: 0;
   z-index: 100;
-  background: rgba(15, 35, 64, 0.97);
-  backdrop-filter: blur(12px);
+  background-color: transparent;
+  background-image: var(--hero-overlay);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 40px;
   height: 70px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: none;
+  box-shadow: none;
 }
 
 .nav-logo img {
-  height: 44px;
-  filter: brightness(0) invert(1);
+  height: 58px;
+  width: auto;
+  display: block;
 }
-
-.nav-phone {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 22px;
-  color: var(--white);
-  text-decoration: none;
-  letter-spacing: 1px;
-  transition: color 0.2s;
-}
-
-.nav-phone:hover { color: #5ba3d9; }
 
 .nav-links {
   display: flex;
@@ -84,19 +156,24 @@ nav {
 /* HERO */
 .hero {
   position: relative;
-  min-height: 100vh;
+  min-height: calc(100svh - var(--stats-h));
   display: flex;
   align-items: center;
   overflow: hidden;
-  background: var(--navy);
+  background: transparent;
 }
 
 .hero-bg {
   position: absolute;
   inset: 0;
-  background: 
-    linear-gradient(135deg, rgba(15,35,64,0.97) 0%, rgba(15,35,64,0.85) 50%, rgba(26,58,92,0.9) 100%),
-    url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1600&q=80') center/cover no-repeat;
+  overflow: hidden;
+  background-color: transparent;
+  background-image: var(--hero-overlay);
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+  background-attachment: fixed;
+  pointer-events: none;
 }
 
 .hero-grid {
@@ -108,66 +185,92 @@ nav {
   background-size: 60px 60px;
 }
 
-.hero-glow {
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  right: -100px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: radial-gradient(circle, rgba(46,109,164,0.25) 0%, transparent 70%);
-  pointer-events: none;
-}
-
 .hero-content {
   position: relative;
   z-index: 2;
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 120px 40px 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--hero-gap);
+  max-width: 680px;
   width: 100%;
+  margin: 0;
+  margin-left: 15%;
+  padding: 0 24px 0 0;
 }
 
 .hero-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
+  font-size: clamp(15px, 1.2vw, 18px);
   font-weight: 600;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   color: #5ba3d9;
-  margin-bottom: 24px;
+  margin: 0;
+  line-height: 1.1;
 }
 
 .hero-eyebrow::before {
   content: '';
   display: block;
-  width: 32px;
-  height: 1px;
+  width: clamp(24px, 2.5vw, 36px);
+  height: 2px;
   background: #5ba3d9;
+  flex-shrink: 0;
+}
+
+.hero-handyman {
+  display: inline-flex;
+  align-items: center;
+  font-size: clamp(13px, 1.05vw, 16px);
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  margin: 0;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(91, 163, 217, 0.45);
+  background: rgba(46, 109, 164, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+}
+
+.hero-handyman::before {
+  content: '✦';
+  margin-right: 10px;
+  color: #5ba3d9;
+  font-size: 10px;
+}
+
+.hero-handyman:hover {
+  color: var(--white);
+  background: rgba(46, 109, 164, 0.38);
+  border-color: rgba(91, 163, 217, 0.75);
+  transform: translateY(-1px);
 }
 
 .hero-title {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(64px, 9vw, 120px);
-  line-height: 0.95;
+  font-size: clamp(48px, 7vw, 88px);
+  line-height: 1;
   color: var(--white);
-  margin-bottom: 32px;
+  margin: 0;
   letter-spacing: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hero-gap);
 }
 
-.hero-title span {
+.hero-title__line {
   display: block;
-  color: #5ba3d9;
 }
 
-.hero-sub {
-  font-size: 18px;
-  color: rgba(255,255,255,0.65);
-  max-width: 500px;
-  margin-bottom: 48px;
-  line-height: 1.7;
+.hero-title__line--accent {
+  color: #5ba3d9;
 }
 
 .hero-actions {
@@ -185,9 +288,9 @@ nav {
   color: var(--white);
   text-decoration: none;
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 20px;
+  font-size: 18px;
   letter-spacing: 1.5px;
-  padding: 16px 36px;
+  padding: 14px 32px;
   border-radius: 4px;
   transition: all 0.25s;
   border: none;
@@ -208,9 +311,9 @@ nav {
   color: var(--white);
   text-decoration: none;
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 20px;
+  font-size: 18px;
   letter-spacing: 1.5px;
-  padding: 16px 36px;
+  padding: 14px 32px;
   border-radius: 4px;
   border: 1px solid rgba(255,255,255,0.25);
   transition: all 0.25s;
@@ -221,65 +324,378 @@ nav {
   background: rgba(255,255,255,0.07);
 }
 
+.btn-callback {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 280px;
+  background: linear-gradient(135deg, #8ecbf5 0%, #5ba3d9 55%, #f59e0b 100%);
+  color: var(--white);
+  font-family: 'Inter', sans-serif;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+  padding: 18px 44px 16px;
+  cursor: pointer;
+  transition: all 0.25s;
+  text-align: center;
+  box-shadow:
+    0 10px 32px rgba(91, 163, 217, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.btn-callback:hover {
+  background: linear-gradient(135deg, #a8d8f8 0%, #6bb5e8 50%, #fbbf24 100%);
+  border-color: rgba(255, 255, 255, 0.85);
+  transform: translateY(-3px);
+  box-shadow:
+    0 14px 40px rgba(245, 166, 35, 0.35),
+    0 0 28px rgba(91, 163, 217, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn-callback strong {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(26px, 2.4vw, 32px);
+  letter-spacing: 3px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.btn-callback span {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.btn-callback--cta {
+  position: relative;
+  z-index: 1;
+  margin-top: 12px;
+  min-width: 300px;
+  padding: 20px 48px 18px;
+}
+
+.btn-callback--cta strong { font-size: clamp(28px, 2.6vw, 34px); }
+.btn-callback--cta span { color: rgba(255, 255, 255, 0.9); }
+
+/* CALLBACK MODAL */
+.callback-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.callback-modal.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.callback-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 22, 42, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.callback-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: var(--white);
+  border-radius: 16px;
+  padding: 32px 28px 28px;
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.35);
+  transform: translateY(16px) scale(0.98);
+  transition: transform 0.25s ease;
+}
+
+.callback-modal.is-open .callback-dialog {
+  transform: translateY(0) scale(1);
+}
+
+.callback-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--off-white);
+  color: var(--navy);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.callback-close:hover { background: #dce5f0; }
+
+.callback-dialog h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px;
+  letter-spacing: 2px;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+
+.callback-dialog > p {
+  font-size: 14px;
+  color: var(--gray);
+  line-height: 1.5;
+  margin-bottom: 22px;
+}
+
+.callback-form label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--navy-mid);
+  margin-bottom: 14px;
+}
+
+.callback-form input,
+.callback-form textarea {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 14px;
+  border: 1px solid #dce5f0;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--off-white);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.callback-form input:focus,
+.callback-form textarea:focus {
+  outline: none;
+  border-color: var(--blue-accent);
+  box-shadow: 0 0 0 3px rgba(46, 109, 164, 0.15);
+  background: var(--white);
+}
+
+.callback-form textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.callback-submit {
+  width: 100%;
+  margin-top: 6px;
+  padding: 15px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #8ecbf5 0%, #5ba3d9 55%, #f59e0b 100%);
+  color: var(--white);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(91, 163, 217, 0.35);
+}
+
+.callback-submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+  transform: none;
+}
+
+.callback-error {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.callback-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.callback-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 24px rgba(245, 166, 35, 0.35),
+    0 0 20px rgba(91, 163, 217, 0.4);
+}
+
+.callback-success {
+  text-align: center;
+  padding: 12px 0 4px;
+}
+
+.callback-success-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: #e1f5ee;
+  color: #085041;
+  font-size: 28px;
+  line-height: 56px;
+}
+
+.callback-success h4 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: var(--navy);
+  margin-bottom: 10px;
+}
+
+.callback-success p {
+  font-size: 14px;
+  color: var(--gray);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.callback-success-phone {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px;
+  color: var(--blue-accent);
+  letter-spacing: 2px;
+}
+
+.callback-done {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  background: var(--navy);
+  color: var(--white);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+
 .hero-phone-big {
-  margin-top: 56px;
-  padding-top: 40px;
-  border-top: 1px solid rgba(255,255,255,0.1);
+  margin: 0;
+  width: 100%;
 }
 
 .hero-phone-label {
-  font-size: 11px;
+  font-size: clamp(14px, 1.25vw, 18px);
   font-weight: 600;
-  letter-spacing: 3px;
+  letter-spacing: 2.5px;
   text-transform: uppercase;
-  color: var(--gray);
-  margin-bottom: 8px;
+  color: #5ba3d9;
+  margin-bottom: 10px;
 }
 
 .hero-phone-number {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(40px, 6vw, 72px);
+  font-size: clamp(36px, 5vw, 58px);
   color: var(--white);
   text-decoration: none;
   letter-spacing: 3px;
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
   line-height: 1;
   transition: color 0.2s;
+  cursor: pointer;
 }
 
-.hero-phone-number:hover { color: #5ba3d9; }
+.hero-phone-number:hover {
+  color: #5ba3d9;
+}
+
+.hero-phone-icon {
+  display: flex;
+  align-items: center;
+  color: #5ba3d9;
+  flex-shrink: 0;
+}
+
+.hero-phone-hint {
+  margin-top: 10px;
+  font-size: clamp(13px, 1.05vw, 15px);
+  color: rgba(255, 255, 255, 0.62);
+  letter-spacing: 0.4px;
+}
 
 /* STATS BAR */
 .stats-bar {
-  background: var(--navy-mid);
-  border-top: 1px solid rgba(255,255,255,0.06);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  position: relative;
+  z-index: 3;
+  margin-top: 0;
+  padding: 14px 0 16px;
+  background: linear-gradient(180deg, rgba(30, 65, 102, 0.94) 0%, rgba(26, 58, 92, 0.95) 55%, rgba(21, 46, 72, 0.96) 100%);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  box-shadow:
+    0 -8px 24px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .stats-inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 40px;
+  padding: 0 32px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  align-items: stretch;
 }
 
 .stat-item {
-  padding: 28px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 82px;
+  padding: 14px 12px;
   text-align: center;
-  border-right: 1px solid rgba(255,255,255,0.06);
   position: relative;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.03) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 2px solid rgba(0,0,0,0.28);
+  box-shadow:
+    0 4px 10px rgba(0,0,0,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.stat-item:last-child { border-right: none; }
+.stat-item:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 14px rgba(0,0,0,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.15);
+}
 
 .stat-num {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 42px;
+  font-size: clamp(30px, 2.8vw, 38px);
   color: var(--white);
   letter-spacing: 2px;
   line-height: 1;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.35);
 }
 
 .stat-num span { color: #5ba3d9; }
@@ -287,16 +703,485 @@ nav {
 .stat-label {
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: var(--gray);
+  color: rgba(138, 155, 176, 0.95);
+  line-height: 1.25;
+}
+
+.stat-item--reviews .stat-num {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.stat-review-score {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(30px, 2.8vw, 38px);
+  color: var(--white);
+  letter-spacing: 2px;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.35);
+}
+
+.stat-review-stars {
+  color: #f59e0b;
+  font-size: clamp(13px, 1.2vw, 16px);
+  letter-spacing: 3px;
+  line-height: 1;
+}
+
+.stat-tt-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 8px;
+}
+
+.stat-callback-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.stat-item--callback {
+  border-color: rgba(126, 196, 239, 0.75);
+  background: linear-gradient(145deg, rgba(91, 163, 217, 0.42) 0%, rgba(126, 196, 239, 0.28) 55%, rgba(245, 166, 35, 0.18) 100%);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 0 22px rgba(91, 163, 217, 0.35);
+  animation: callback-pulse 3s ease-in-out infinite;
+  cursor: pointer;
+}
+
+.stat-item--callback::after {
+  content: '✦';
+  position: absolute;
+  top: 7px;
+  right: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fcd34d;
+  line-height: 1;
+  pointer-events: none;
+}
+
+@keyframes callback-pulse {
+  0%, 100% {
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 0 18px rgba(91, 163, 217, 0.28);
+    border-color: rgba(126, 196, 239, 0.65);
+  }
+  50% {
+    box-shadow:
+      0 4px 18px rgba(0, 0, 0, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.26),
+      0 0 30px rgba(245, 166, 35, 0.28),
+      0 0 24px rgba(91, 163, 217, 0.45);
+    border-color: rgba(252, 211, 77, 0.75);
+  }
+}
+
+.stat-item--callback .stat-num {
+  font-size: clamp(26px, 2.5vw, 34px);
+  letter-spacing: 1.5px;
+}
+
+.stat-item--callback .stat-num span {
+  color: #fcd34d;
+}
+
+.stat-item--callback .stat-label {
+  color: #a8d4f5;
+}
+
+.stat-item--callback:hover {
+  transform: translateY(-3px);
+  border-color: rgba(252, 211, 77, 0.9);
+  background: linear-gradient(145deg, rgba(91, 163, 217, 0.52) 0%, rgba(126, 196, 239, 0.38) 55%, rgba(245, 166, 35, 0.28) 100%);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 0 36px rgba(245, 166, 35, 0.32),
+    0 0 28px rgba(91, 163, 217, 0.45);
+  animation: none;
+}
+
+/* FLOATING ACTION BAR */
+.fab-bar {
+  position: fixed;
+  bottom: 22px;
+  right: 22px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(14px) scale(0.96);
+  transition: opacity 0.35s ease, visibility 0.35s ease, transform 0.35s ease;
+}
+
+.fab-bar.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.fab-call {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px 12px 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(91, 163, 217, 0.65);
+  background: linear-gradient(135deg, #2e6da4 0%, #3a82c4 55%, #5ba3d9 100%);
+  color: var(--white);
+  text-decoration: none;
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.35),
+    0 0 24px rgba(46, 109, 164, 0.45);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.fab-bar:hover .fab-call,
+.fab-bar:hover .fab-callback {
+  animation: none;
+}
+
+.fab-call:hover {
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.4),
+    0 0 36px rgba(91, 163, 217, 0.55);
+  transform: translateY(-2px);
+}
+
+.fab-callback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 128px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: linear-gradient(135deg, #8ecbf5 0%, #5ba3d9 45%, #f59e0b 100%);
+  color: var(--white);
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.28),
+    0 0 26px rgba(91, 163, 217, 0.45);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  animation: fab-callback-pulse 3s ease-in-out infinite;
+}
+
+.fab-callback:hover {
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.32),
+    0 0 38px rgba(245, 166, 35, 0.4),
+    0 0 28px rgba(91, 163, 217, 0.5);
+  transform: translateY(-2px) scale(1.02);
+}
+
+.fab-callback-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(18px, 1.8vw, 22px);
+  letter-spacing: 2px;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(15, 35, 64, 0.2);
+}
+
+.fab-callback-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #fff8dc;
+}
+
+@keyframes fab-callback-pulse {
+  0%, 100% {
+    box-shadow:
+      0 10px 32px rgba(0, 0, 0, 0.28),
+      0 0 20px rgba(91, 163, 217, 0.35);
+    border-color: rgba(255, 255, 255, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 12px 38px rgba(0, 0, 0, 0.3),
+      0 0 32px rgba(245, 166, 35, 0.38),
+      0 0 28px rgba(91, 163, 217, 0.5);
+    border-color: rgba(252, 211, 77, 0.85);
+  }
+}
+
+.fab-call-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.fab-call-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1;
+}
+
+.fab-call-label {
+  font-size: clamp(11px, 1vw, 13px);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.fab-call-number {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(20px, 2vw, 24px);
+  letter-spacing: 1.5px;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .fab-bar {
+    bottom: 14px;
+    right: 14px;
+    left: 14px;
+  }
+
+  .fab-call,
+  .fab-callback {
+    width: 100%;
+    justify-content: center;
+    border-radius: 12px;
+    padding: 14px 18px;
+  }
+
+  .fab-callback {
+    min-width: 0;
+  }
 }
 
 /* SERVICES */
 .services {
-  padding: 100px 40px;
-  background: var(--off-white);
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.94) 0%, rgba(228, 240, 252, 0.88) 45%, rgba(255,255,255,0.92) 100%);
+  overflow: hidden;
 }
+
+.services::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      -32deg,
+      transparent,
+      transparent 48px,
+      rgba(46,109,164,0.035) 48px,
+      rgba(46,109,164,0.035) 49px
+    );
+  pointer-events: none;
+}
+
+.services::after {
+  content: 'GG';
+  position: absolute;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(180px, 28vw, 320px);
+  color: rgba(46,109,164,0.04);
+  right: -20px;
+  bottom: -40px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.services > .section-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.services-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.services-head .section-title {
+  margin-bottom: 0;
+}
+
+.services-badge {
+  flex-shrink: 0;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--blue-accent), #5ba3d9);
+  color: var(--white);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 2px;
+  line-height: 1;
+  box-shadow: 0 8px 24px rgba(46,109,164,0.35);
+}
+
+.services-badge span {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.85;
+  margin-top: 4px;
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+}
+
+.service-card {
+  grid-column: span 2;
+  background: linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(248, 251, 255, 0.95) 100%);
+  padding: 26px 24px 28px;
+  border-radius: 14px;
+  border: 1px solid rgba(46,109,164,0.14);
+  box-shadow:
+    0 10px 30px rgba(15,35,64,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.service-card:nth-child(4),
+.service-card:nth-child(5) {
+  grid-column: span 3;
+}
+
+.service-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--blue-accent), #5ba3d9, #7ec4ef);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s ease;
+}
+
+.service-card::after {
+  content: attr(data-num);
+  position: absolute;
+  right: 12px;
+  bottom: -8px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 72px;
+  line-height: 1;
+  color: rgba(46,109,164,0.07);
+  pointer-events: none;
+  transition: color 0.25s ease;
+}
+
+.service-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(91,163,217,0.45);
+  box-shadow:
+    0 18px 40px rgba(46,109,164,0.16),
+    inset 0 1px 0 rgba(255,255,255,1);
+}
+
+.service-card:hover::before { transform: scaleX(1); }
+.service-card:hover::after { color: rgba(46,109,164,0.12); }
+
+.service-icons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px 20px;
+  margin-bottom: 22px;
+  min-height: 56px;
+}
+
+.service-icons--wide {
+  gap: 18px 22px;
+}
+
+.service-icons svg,
+.service-icons .lucide {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  color: var(--blue-accent);
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.75;
+  transition: transform 0.35s ease, color 0.25s ease;
+}
+
+.service-card:hover .service-icons svg:nth-child(1),
+.service-card:hover .service-icons .lucide:nth-child(1) { transform: translateY(-4px) rotate(-2deg); }
+.service-card:hover .service-icons svg:nth-child(2),
+.service-card:hover .service-icons .lucide:nth-child(2) { transform: translateY(-2px); }
+.service-card:hover .service-icons svg:nth-child(3),
+.service-card:hover .service-icons .lucide:nth-child(3) { transform: translateY(2px) rotate(2deg); }
+.service-card:hover .service-icons svg:nth-child(4),
+.service-card:hover .service-icons .lucide:nth-child(4) { transform: translateY(-3px); }
+.service-card:hover .service-icons svg:nth-child(5),
+.service-card:hover .service-icons .lucide:nth-child(5) { transform: translateY(3px) rotate(-1deg); }
+
+.service-card:hover .service-icons svg,
+.service-card:hover .service-icons .lucide {
+  color: #1a5a8a;
+}
+
+.service-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(20px, 2vw, 26px);
+  letter-spacing: 1.5px;
+  color: var(--navy);
+  margin-bottom: 8px;
+  transition: color 0.25s ease;
+}
+
+.service-card:hover .service-name { color: var(--blue-accent); }
+
+.service-desc {
+  font-size: 13px;
+  color: #5a6d82;
+  line-height: 1.55;
+  transition: color 0.25s ease;
+}
+
+.service-card:hover .service-desc { color: var(--navy-mid); }
 
 .section-inner {
   max-width: 1200px;
@@ -321,99 +1206,9 @@ nav {
   margin-bottom: 60px;
 }
 
-.services-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2px;
-  background: #dce5f0;
-  border: 2px solid #dce5f0;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.service-card:nth-child(4) {
-  grid-column: span 1;
-}
-
-.services-grid .service-card:nth-last-child(2),
-.services-grid .service-card:last-child {
-  grid-column: span 1;
-}
-
-/* Center last row of 2 cards */
-.services-grid {
-  justify-items: stretch;
-}
-
-.service-card {
-  background: var(--white);
-  padding: 40px 36px;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
-}
-
-.service-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--blue-accent);
-  transform: scaleX(0);
-  transition: transform 0.3s;
-}
-
-.service-card:hover { background: var(--navy); }
-.service-card:hover::before { transform: scaleX(1); }
-
-.service-icon {
-  width: 48px;
-  height: 48px;
-  background: var(--off-white);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
-  transition: background 0.3s;
-}
-
-.service-card:hover .service-icon { background: rgba(255,255,255,0.1); }
-
-.service-icon svg {
-  width: 24px;
-  height: 24px;
-  stroke: var(--blue-accent);
-  fill: none;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.service-name {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 22px;
-  letter-spacing: 1.5px;
-  color: var(--navy);
-  margin-bottom: 10px;
-  transition: color 0.3s;
-}
-
-.service-card:hover .service-name { color: var(--white); }
-
-.service-desc {
-  font-size: 14px;
-  color: var(--gray);
-  line-height: 1.6;
-  transition: color 0.3s;
-}
-
-.service-card:hover .service-desc { color: rgba(255,255,255,0.6); }
-
 /* WHY US */
 .why {
-  padding: 100px 40px;
-  background: var(--navy);
+  background: rgba(15, 35, 64, 0.93);
   position: relative;
   overflow: hidden;
 }
@@ -431,26 +1226,36 @@ nav {
   pointer-events: none;
 }
 
-.why .section-title { color: var(--white); }
+.why .section-eyebrow {
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.why .section-title {
+  color: var(--white);
+  font-size: clamp(48px, 6vw, 76px);
+  margin-bottom: 32px;
+}
 
 .why-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 80px;
+  gap: 48px;
   align-items: center;
+  width: 100%;
 }
 
 .why-list {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
 }
 
 .why-item {
   display: flex;
-  gap: 20px;
+  gap: 22px;
   align-items: flex-start;
-  padding: 24px;
+  padding: 22px 24px;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: 6px;
@@ -464,80 +1269,242 @@ nav {
 
 .why-num {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 36px;
+  font-size: clamp(40px, 3.5vw, 48px);
   color: rgba(91,163,217,0.4);
   line-height: 1;
-  min-width: 44px;
+  min-width: 52px;
 }
 
 .why-text h4 {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 20px;
-  letter-spacing: 1px;
+  font-size: clamp(24px, 2.4vw, 28px);
+  letter-spacing: 1.5px;
   color: var(--white);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .why-text p {
-  font-size: 14px;
-  color: var(--gray);
-  line-height: 1.6;
+  font-size: clamp(16px, 1.35vw, 18px);
+  color: rgba(180, 195, 210, 0.95);
+  line-height: 1.65;
 }
 
-.why-image {
+.why-reviews {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.why-image-frame {
-  border-radius: 8px;
-  overflow: hidden;
-  aspect-ratio: 4/5;
-  background: var(--navy-mid);
-}
-
-.why-image-frame img {
+.why-trust-spotlight {
+  position: relative;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.85;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 8px;
 }
 
-.why-badge {
+.why-trust-glow {
   position: absolute;
-  bottom: -20px;
-  left: -20px;
-  background: #2e6da4;
-  color: var(--white);
-  padding: 20px 24px;
-  border-radius: 6px;
+  inset: 10% 5%;
+  background: radial-gradient(circle, rgba(91,163,217,0.35) 0%, transparent 70%);
+  filter: blur(24px);
+  pointer-events: none;
+  animation: trust-pulse 4s ease-in-out infinite;
 }
 
-.why-badge-num {
+@keyframes trust-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.06); }
+}
+
+.why-trust-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #5ba3d9, #2e6da4, #f5a623, #5ba3d9);
+  background-size: 300% 300%;
+  animation: trust-ring 8s ease infinite;
+  opacity: 0.55;
+}
+
+@keyframes trust-ring {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.reviews-slider {
+  position: relative;
+  background: linear-gradient(165deg, #ffffff 0%, #f4f9ff 100%);
+  border-radius: 18px;
+  padding: 24px 22px 20px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.reviews-slider-title {
+  text-align: center;
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 48px;
-  line-height: 1;
+  font-size: clamp(24px, 2.2vw, 28px);
   letter-spacing: 2px;
+  color: var(--navy);
+  margin-bottom: 18px;
+  line-height: 1.2;
 }
 
-.why-badge-text {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  opacity: 0.8;
+.reviews-slider-title em {
+  font-style: normal;
+  color: #f59e0b;
 }
+
+.reviews-track {
+  position: relative;
+  overflow: hidden;
+  min-height: 230px;
+}
+
+.review-card {
+  display: none;
+  text-align: left;
+  animation: reviewFadeIn 0.45s ease;
+}
+
+.review-card.active { display: block; }
+
+@keyframes reviewFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.review-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+
+.review-avatar--blue   { background: #e6f1fb; color: #0c447c; }
+.review-avatar--teal   { background: #e1f5ee; color: #085041; }
+.review-avatar--amber  { background: #faeeda; color: #633806; }
+.review-avatar--purple { background: #eeedfe; color: #3c3489; }
+.review-avatar--coral  { background: #faece7; color: #712b13; }
+
+.reviewer-name {
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--navy);
+  margin-bottom: 4px;
+}
+
+.review-stars {
+  color: #f59e0b;
+  font-size: 18px;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+
+.review-text {
+  font-size: clamp(15px, 1.2vw, 17px);
+  color: #3a4a5c;
+  line-height: 1.65;
+  margin-bottom: 12px;
+}
+
+.review-detail {
+  font-size: 13px;
+  color: #8a9bb0;
+  line-height: 1.4;
+}
+
+.reviews-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.reviews-btn {
+  background: var(--white);
+  border: 1px solid rgba(46,109,164,0.2);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+  font-size: 17px;
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.reviews-btn:hover {
+  background: #eef4fb;
+  border-color: rgba(46,109,164,0.4);
+  transform: scale(1.05);
+}
+
+.reviews-dots {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.reviews-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d0dce8;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.3s;
+  border: none;
+  padding: 0;
+}
+
+.reviews-dot.active {
+  background: #f59e0b;
+  transform: scale(1.3);
+}
+
+.reviews-thumbtack-link {
+  display: block;
+  margin-top: 16px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue-accent);
+  text-decoration: none;
+  letter-spacing: 0.3px;
+  transition: color 0.2s;
+}
+
+.reviews-thumbtack-link:hover { color: #5ba3d9; }
 
 /* CTA */
 .cta {
-  padding: 100px 40px;
-  background: var(--off-white);
+  background: rgba(244, 247, 251, 0.86);
   text-align: center;
 }
 
 .cta-box {
   max-width: 800px;
   margin: 0 auto;
-  background: var(--navy);
+  background: rgba(15, 35, 64, 0.94);
   border-radius: 12px;
   padding: 72px 60px;
   position: relative;
@@ -607,7 +1574,7 @@ nav {
 
 /* FOOTER */
 footer {
-  background: #07162a;
+  background: rgba(7, 22, 42, 0.95);
   padding: 32px 40px;
   display: flex;
   align-items: center;
@@ -616,9 +1583,10 @@ footer {
 }
 
 .footer-logo img {
-  height: 36px;
-  filter: brightness(0) invert(1);
-  opacity: 0.6;
+  height: 40px;
+  width: auto;
+  display: block;
+  opacity: 0.85;
 }
 
 .footer-copy {
@@ -642,225 +1610,163 @@ footer {
 @media (max-width: 900px) {
   nav { padding: 0 20px; }
   .nav-links { display: none; }
-  .hero-content { padding: 100px 20px 60px; }
-  .hero-content--split { flex-direction: column; }
-  .hero-right { display: none; }
-  .stats-inner { grid-template-columns: repeat(2, 1fr); }
-  .services { padding: 60px 20px; }
+  .hero-content { margin-left: 10%; padding: 0 16px 0 0; }
+  .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 16px; }
+  .section-screen { padding: calc(var(--nav-h) + 20px) 20px 20px; }
+  .services-head { flex-direction: column; align-items: flex-start; gap: 16px; }
   .services-grid { grid-template-columns: 1fr 1fr; }
-  .why { padding: 60px 20px; }
-  .why-grid { grid-template-columns: 1fr; gap: 40px; }
-  .why-image { display: none; }
-  .cta { padding: 60px 20px; }
+  .service-card,
+  .service-card:nth-child(4),
+  .service-card:nth-child(5) { grid-column: span 1; }
+  .why-grid { grid-template-columns: 1fr; gap: 32px; }
+  .why-reviews { max-width: 100%; }
+  .why-trust-spotlight { max-width: 100%; }
   .cta-box { padding: 48px 28px; }
   footer { flex-direction: column; gap: 12px; text-align: center; }
 }
 
-.hero-content--split {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 40px;
-}
-
-.hero-left { flex: 1; max-width: 560px; }
-
-.hero-right {
-  flex: 1;
-  min-width: 0;
-  max-width: 900px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-}
-
-.garage-diagram {
-  position: relative;
-  width: 100%;
-  line-height: 0;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.35);
-}
-
-.garage-diagram__img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.garage-diagram__overlay {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.garage-diagram .hl {
-  fill: rgba(255, 40, 40, 0.2);
-  stroke: #ff3333;
-  stroke-width: 3;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-
-.garage-diagram .hl.active {
-  opacity: 1;
-  animation: hlPulse 1.8s ease-in-out infinite;
-}
-
-@keyframes hlPulse {
-  0%, 100% { fill: rgba(255, 40, 40, 0.18); stroke-width: 3; }
-  50% { fill: rgba(255, 40, 40, 0.32); stroke-width: 4.5; }
-}
-
-.parts-label {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(22px, 2.4vw, 32px);
-  letter-spacing: 3px;
-  color: rgba(255, 255, 255, 0.35);
-  text-align: center;
-  margin-top: 14px;
-  min-height: 1.2em;
-  transition: color 0.5s ease, text-shadow 0.5s ease;
-}
-
-.parts-label.active {
-  color: #ff3333;
-  text-shadow: 0 0 28px rgba(255, 51, 51, 0.65);
-}
-
 @media (max-width: 600px) {
   .services-grid { grid-template-columns: 1fr; }
+  .service-card,
+  .service-card:nth-child(4),
+  .service-card:nth-child(5) { grid-column: span 1; }
   .stats-inner { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 </head>
 <body>
 
+<div class="site-van-bg" data-tone="hero" aria-hidden="true"></div>
+
 <!-- NAV -->
 <nav>
-  <div class="nav-logo">
-    <img src="sticker.png" alt="Garage Guys">
-  </div>
   <ul class="nav-links">
     <li><a href="#services">Services</a></li>
     <li><a href="#why">Why Us</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
-  <a href="tel:+19493590009" class="nav-phone">(949) 359-0009</a>
+  <div class="nav-logo">
+    <img src="Pictures/Logo.png" alt="Garage Guys">
+  </div>
 </nav>
 
 <!-- HERO -->
-<section class="hero">
+<section class="hero" data-van-tone="hero">
   <div class="hero-bg"></div>
   <div class="hero-grid"></div>
-  <div class="hero-glow"></div>
-  <div class="hero-content hero-content--split">
-    <div class="hero-left">
-      <div class="hero-eyebrow">Orange County & Inland Empire</div>
-      <h1 class="hero-title">
-        Complete<br>
-        <span>Garage</span><br>
-        Service
-      </h1>
-      <p class="hero-sub">Installation, repair, painting, epoxy floors and custom storage solutions — all in one call.</p>
-      <div class="hero-actions">
-        <a href="tel:+19493590009" class="btn-primary">Call Now</a>
-        <a href="#services" class="btn-secondary">See All Services</a>
-      </div>
-      <div class="hero-phone-big">
-        <div class="hero-phone-label">Free estimate — call or text</div>
-        <a href="tel:+19493590009" class="hero-phone-number">(949) 359-0009</a>
-      </div>
-    </div>
-    <div class="hero-right">
-      <div class="garage-diagram" id="garage-diagram">
-        <img src="Pictures/Neon Garage.png" alt="Garage door system diagram" class="garage-diagram__img" width="1536" height="1024">
-        <svg class="garage-diagram__overlay" viewBox="0 0 1536 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <filter id="redGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="4" result="blur"/>
-              <feMerge>
-                <feMergeNode in="blur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-          <g id="part-highlights" filter="url(#redGlow)"></g>
-        </svg>
-      </div>
-      <div class="parts-label active" id="parts-label">Torsion Spring</div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">Orange County & Inland Empire</div>
+    <a href="#services" class="hero-handyman">Handyman Services</a>
+    <h1 class="hero-title">
+      <span class="hero-title__line">Complete</span>
+      <span class="hero-title__line hero-title__line--accent">Garage</span>
+      <span class="hero-title__line">Service</span>
+    </h1>
+    <div class="hero-phone-big">
+      <div class="hero-phone-label">Tap to call · free estimate</div>
+      <a href="tel:+19495390009" class="hero-phone-number" aria-label="Call (949) 539-0009">
+        <span class="hero-phone-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </span>
+        (949) 539-0009
+      </a>
+      <div class="hero-phone-hint">Click the number to call now</div>
     </div>
   </div>
 </section>
 
 <!-- STATS -->
-<div class="stats-bar">
+<div class="stats-bar" data-van-tone="dark">
   <div class="stats-inner">
+    <div class="stat-item stat-item--callback">
+      <button type="button" class="stat-callback-hit" data-open-callback aria-label="Request a callback"></button>
+      <div class="stat-num">Request <span>Callback</span></div>
+      <div class="stat-label">Free Estimate</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">7 <span>DAYS</span></div>
+      <div class="stat-label">A Week</div>
+    </div>
+    <div class="stat-item stat-item--reviews">
+      <a class="stat-tt-link" target="_blank" rel="noopener noreferrer" href="https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690" aria-label="See 67 reviews on Thumbtack"></a>
+      <div class="stat-num">
+        <span class="stat-review-score">5.0</span>
+        <span class="stat-review-stars">★★★★★</span>
+      </div>
+      <div class="stat-label">67 Reviews · Thumbtack</div>
+    </div>
     <div class="stat-item">
       <div class="stat-num">Same<span>-</span>Day</div>
       <div class="stat-label">Service Available</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">7<span>d</span></div>
-      <div class="stat-label">Days a Week</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">100<span>%</span></div>
-      <div class="stat-label">Satisfaction</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">OC<span>+</span>IE</div>
-      <div class="stat-label">Coverage Area</div>
     </div>
   </div>
 </div>
 
 <!-- SERVICES -->
-<section class="services" id="services">
+<section class="services section-screen" id="services" data-van-tone="light">
   <div class="section-inner">
-    <div class="section-eyebrow reveal">What We Do</div>
-    <h2 class="section-title reveal">Every Garage Problem,<br>One Call Away</h2>
+    <div class="services-head">
+      <div>
+        <div class="section-eyebrow reveal">What We Do</div>
+        <h2 class="section-title reveal">Every Garage Problem,<br>One Call Away</h2>
+      </div>
+      <div class="services-badge reveal">
+        5 Services
+        <span>One crew · one call</span>
+      </div>
+    </div>
     <div class="services-grid">
 
-      <div class="service-card reveal">
-        <div class="service-icon">
-          <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      <div class="service-card reveal" data-num="01">
+        <div class="service-icons">
+          <i data-lucide="door-open"></i>
+          <i data-lucide="cable"></i>
+          <i data-lucide="wrench"></i>
         </div>
         <div class="service-name">Repair & Diagnostics</div>
         <div class="service-desc">Broken springs, cables, rollers, panels — fast diagnosis and a lasting fix.</div>
       </div>
 
-      <div class="service-card reveal">
-        <div class="service-icon">
-          <svg viewBox="0 0 24 24"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" Y1="15" x2="9" y2="15"/></svg>
+      <div class="service-card reveal" data-num="02">
+        <div class="service-icons">
+          <i data-lucide="paintbrush"></i>
+          <i data-lucide="paint-roller"></i>
+          <i data-lucide="spray-can"></i>
+          <i data-lucide="ladder"></i>
         </div>
         <div class="service-name">Door Painting</div>
         <div class="service-desc">Professional prep, primer and paint. Refresh your curb appeal without replacing the door.</div>
       </div>
 
-      <div class="service-card reveal">
-        <div class="service-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 22C6.48 22 2 17.52 2 12S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10zm0-18c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm1 13h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+      <div class="service-card reveal" data-num="03">
+        <div class="service-icons">
+          <i data-lucide="wrench"></i>
+          <i data-lucide="spray-can"></i>
+          <i data-lucide="gauge"></i>
         </div>
         <div class="service-name">Tune-Up & Maintenance</div>
         <div class="service-desc">Lubrication, balance check, hardware tightening — keep your door running quietly for years.</div>
       </div>
 
-      <div class="service-card reveal">
-        <div class="service-icon">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      <div class="service-card reveal" data-num="04">
+        <div class="service-icons service-icons--wide">
+          <i data-lucide="box"></i>
+          <i data-lucide="smartphone"></i>
+          <i data-lucide="keyboard"></i>
+          <i data-lucide="wifi"></i>
+          <i data-lucide="link"></i>
         </div>
         <div class="service-name">Opener Installation</div>
         <div class="service-desc">Belt, chain, or smart Wi-Fi openers. App control, camera, keypad — full setup included.</div>
       </div>
 
-      <div class="service-card reveal">
-        <div class="service-icon">
-          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <div class="service-card reveal" data-num="05">
+        <div class="service-icons service-icons--wide">
+          <i data-lucide="library"></i>
+          <i data-lucide="archive"></i>
+          <i data-lucide="package"></i>
+          <i data-lucide="panel-top"></i>
+          <i data-lucide="layout-grid"></i>
         </div>
         <div class="service-name">Custom Garage Solutions</div>
         <div class="service-desc">Wall shelving, ceiling racks, overhead storage and any custom project for your garage space.</div>
@@ -871,7 +1777,7 @@ footer {
 </section>
 
 <!-- WHY US -->
-<section class="why" id="why">
+<section class="why section-screen" id="why" data-van-tone="dark">
   <div class="section-inner">
     <div class="why-grid">
       <div>
@@ -908,13 +1814,83 @@ footer {
           </div>
         </div>
       </div>
-      <div class="why-image reveal">
-        <div class="why-image-frame">
-          <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80" alt="Garage service">
-        </div>
-        <div class="why-badge">
-          <div class="why-badge-num">100%</div>
-          <div class="why-badge-text">Satisfaction</div>
+      <div class="why-reviews reveal">
+        <div class="why-trust-spotlight">
+          <div class="why-trust-glow"></div>
+          <div class="why-trust-ring"></div>
+          <div class="reviews-slider" id="reviews-slider">
+            <p class="reviews-slider-title"><em>★ 5.0</em> &nbsp;·&nbsp; 67 Reviews on Thumbtack</p>
+
+            <div class="reviews-track">
+              <div class="review-card active">
+                <div class="review-header">
+                  <div class="review-avatar review-avatar--blue">YW</div>
+                  <div>
+                    <p class="reviewer-name">Yang W.</p>
+                    <div class="review-stars">★★★★★</div>
+                  </div>
+                </div>
+                <p class="review-text">Sam is very responsive to my repair request and is very efficient identifying the issues and fixing the garage motor and spring. I would recommend Sam to anyone that needs garage repairs.</p>
+                <p class="review-detail">Repair · Other parts of the system · Vinyl · Home</p>
+              </div>
+
+              <div class="review-card">
+                <div class="review-header">
+                  <div class="review-avatar review-avatar--teal">SA</div>
+                  <div>
+                    <p class="reviewer-name">Saleh A.</p>
+                    <div class="review-stars">★★★★★</div>
+                  </div>
+                </div>
+                <p class="review-text">Sam was punctual and had great communication. His price was very reasonable and he quickly diagnosed the issue. He started the repairs right away and completed the job in less than an hour. Will definitely use again. Highly recommended!</p>
+                <p class="review-detail">Repair · Track or rollers · Aluminum · Home</p>
+              </div>
+
+              <div class="review-card">
+                <div class="review-header">
+                  <div class="review-avatar review-avatar--amber">TM</div>
+                  <div>
+                    <p class="reviewer-name">Travis M.</p>
+                    <div class="review-stars">★★★★★</div>
+                  </div>
+                </div>
+                <p class="review-text">I was very impressed by Sam's responsiveness and overall quality. He not only helped us the same day, but he did so with a fair price. I definitely recommend Sam for your garage door needs!</p>
+                <p class="review-detail">Repair · Drum or torsion spring · Home</p>
+              </div>
+
+              <div class="review-card">
+                <div class="review-header">
+                  <div class="review-avatar review-avatar--purple">NW</div>
+                  <div>
+                    <p class="reviewer-name">Nina W.</p>
+                    <div class="review-stars">★★★★★</div>
+                  </div>
+                </div>
+                <p class="review-text">Sam was able to come out and do a same-day estimate and same-day work. He gave us options, worked with our budget, and left the garage cleaner than he found it. Very glad to have found Sam. Would hire again!</p>
+                <p class="review-detail">Installation · Motor opener · Aluminum · Home</p>
+              </div>
+
+              <div class="review-card">
+                <div class="review-header">
+                  <div class="review-avatar review-avatar--coral">DL</div>
+                  <div>
+                    <p class="reviewer-name">Diane L.</p>
+                    <div class="review-stars">★★★★★</div>
+                  </div>
+                </div>
+                <p class="review-text">Great service from start to finish. Sam was professional, on time, and got the job done quickly. Would absolutely recommend Garage Guys to anyone in the area!</p>
+                <p class="review-detail">Repair · Drum or torsion spring · Aluminum · Home</p>
+              </div>
+            </div>
+
+            <div class="reviews-controls">
+              <button class="reviews-btn" id="reviews-prev" type="button" aria-label="Previous review">&#8592;</button>
+              <div class="reviews-dots" id="reviews-dots"></div>
+              <button class="reviews-btn" id="reviews-next" type="button" aria-label="Next review">&#8594;</button>
+            </div>
+
+            <a class="reviews-thumbtack-link" target="_blank" rel="noopener noreferrer" href="https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690">See all 67 reviews on Thumbtack →</a>
+          </div>
         </div>
       </div>
     </div>
@@ -922,12 +1898,16 @@ footer {
 </section>
 
 <!-- CTA -->
-<section class="cta" id="contact">
+<section class="cta section-screen" id="contact" data-van-tone="light">
   <div class="cta-box">
     <div class="cta-eyebrow">Free Estimate — 7 Days a Week</div>
     <h2 class="cta-title">Ready to Get<br>It Done?</h2>
-    <p class="cta-sub">Call or text — we'll get back to you fast.</p>
-    <a href="tel:+19493590009" class="cta-phone">(949) 359-0009</a>
+    <p class="cta-sub">Call or text — or leave your number and we'll call you.</p>
+    <a href="tel:+19495390009" class="cta-phone">(949) 539-0009</a>
+    <button type="button" class="btn-callback btn-callback--cta" data-open-callback>
+      <strong>Request a Callback</strong>
+      <span>Free · no obligation · same-day response</span>
+    </button>
     <div class="cta-areas">
       <strong>Serving:</strong> Newport Beach · Irvine · Anaheim · Huntington Beach · Costa Mesa<br>
       Santa Ana · Orange · Fullerton · Riverside · Ontario · Rancho Cucamonga
@@ -936,111 +1916,68 @@ footer {
 </section>
 
 <!-- FOOTER -->
-<footer>
+<div class="fab-bar" id="fab-bar">
+  <a href="tel:+19495390009" class="fab-call" aria-label="Call (949) 539-0009">
+    <span class="fab-call-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    </span>
+    <span class="fab-call-text">
+      <span class="fab-call-label">Tap to call</span>
+      <span class="fab-call-number">(949) 539-0009</span>
+    </span>
+  </a>
+  <button type="button" class="fab-callback" data-open-callback aria-label="Request a callback">
+    <span class="fab-callback-label">Free estimate</span>
+    <span class="fab-callback-title">Request Callback</span>
+  </button>
+</div>
+
+<div class="callback-modal" id="callback-modal" aria-hidden="true">
+  <div class="callback-backdrop" data-close-callback></div>
+  <div class="callback-dialog" role="dialog" aria-labelledby="callback-title" aria-modal="true">
+    <button type="button" class="callback-close" data-close-callback aria-label="Close">&times;</button>
+    <div id="callback-form-wrap">
+      <h3 id="callback-title">We'll Call You Back</h3>
+      <p>Leave your name, number and ZIP — Sam usually responds within the hour.</p>
+      <form class="callback-form" id="callback-form">
+        <label>Your Name
+          <input type="text" name="name" required autocomplete="name" placeholder="John Smith">
+        </label>
+        <label>Your Phone
+          <input type="tel" name="phone" required autocomplete="tel" placeholder="(949) 555-0000">
+        </label>
+        <label>ZIP Code
+          <input type="text" name="zip" required autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" maxlength="10" placeholder="92660">
+        </label>
+        <label>What do you need? <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span>
+          <textarea name="message" placeholder="Garage door won't open, need repair..."></textarea>
+        </label>
+        <label class="callback-honeypot" aria-hidden="true">
+          Leave blank
+          <input type="text" name="_gotcha" tabindex="-1" autocomplete="off">
+        </label>
+        <p class="callback-error" id="callback-error" hidden></p>
+        <button type="submit" class="callback-submit">Send My Request</button>
+      </form>
+    </div>
+    <div class="callback-success" id="callback-success" hidden>
+      <div class="callback-success-icon">✓</div>
+      <h4>You're on the list!</h4>
+      <p>We'll call you back at<br><span class="callback-success-phone"></span><br>Usually within the hour — 7 days a week.</p>
+      <button type="button" class="callback-done" data-close-callback>Got it</button>
+    </div>
+  </div>
+</div>
+
+<footer data-van-tone="dark">
   <div class="footer-logo">
-    <img src="sticker.png" alt="Garage Guys">
+    <img src="Pictures/Logo.png" alt="Garage Guys">
   </div>
   <div class="footer-copy">© 2026 Garage Guys · Orange County & Inland Empire, CA</div>
 </footer>
 
+<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 <script>
-// ===== GARAGE DIAGRAM PART HIGHLIGHTS =====
-(function(){
-  const svg=document.getElementById('part-highlights');
-  const label=document.getElementById('parts-label');
-  if(!svg||!label)return;
-
-  const PARTS=[
-    {
-      name:'Torsion Spring',
-      shapes:[
-        {t:'ellipse',cx:520,cy:178,rx:145,ry:38},
-        {t:'ellipse',cx:1016,cy:178,rx:145,ry:38}
-      ]
-    },
-    {
-      name:'Garage Door Opener',
-      shapes:[
-        {t:'rect',x:1040,y:118,w:185,h:88,rx:6},
-        {t:'rect',x:640,y:248,w:410,h:16,rx:3},
-        {t:'rect',x:575,y:268,w:78,h:48,rx:4},
-        {t:'rect',x:555,y:316,w:28,h:90,rx:3}
-      ]
-    },
-    {
-      name:'Hinge / Bracket',
-      shapes:[
-        {t:'ellipse',cx:478,cy:378,rx:22,ry:14},
-        {t:'ellipse',cx:478,cy:518,rx:22,ry:14},
-        {t:'ellipse',cx:478,cy:658,rx:22,ry:14},
-        {t:'ellipse',cx:478,cy:798,rx:22,ry:14},
-        {t:'ellipse',cx:1058,cy:378,rx:22,ry:14},
-        {t:'ellipse',cx:1058,cy:518,rx:22,ry:14},
-        {t:'ellipse',cx:1058,cy:658,rx:22,ry:14},
-        {t:'ellipse',cx:1058,cy:798,rx:22,ry:14}
-      ]
-    },
-    {
-      name:'Roller',
-      shapes:[
-        {t:'circle',cx:408,cy:368,r:20},
-        {t:'circle',cx:408,cy:488,r:20},
-        {t:'circle',cx:408,cy:608,r:20},
-        {t:'circle',cx:408,cy:728,r:20},
-        {t:'circle',cx:1128,cy:368,r:20},
-        {t:'circle',cx:1128,cy:488,r:20},
-        {t:'circle',cx:1128,cy:608,r:20},
-        {t:'circle',cx:1128,cy:728,r:20}
-      ]
-    },
-    {
-      name:'Cable Drum',
-      shapes:[
-        {t:'circle',cx:388,cy:182,r:36},
-        {t:'circle',cx:1148,cy:182,r:36}
-      ]
-    }
-  ];
-
-  const SLIDE_MS=3500;
-  let phase=0;
-  const groups=PARTS.map((part,i)=>{
-    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
-    g.dataset.part=String(i);
-    part.shapes.forEach(s=>{
-      let el;
-      if(s.t==='ellipse'){
-        el=document.createElementNS('http://www.w3.org/2000/svg','ellipse');
-        el.setAttribute('cx',s.cx);el.setAttribute('cy',s.cy);
-        el.setAttribute('rx',s.rx);el.setAttribute('ry',s.ry);
-      }else if(s.t==='circle'){
-        el=document.createElementNS('http://www.w3.org/2000/svg','circle');
-        el.setAttribute('cx',s.cx);el.setAttribute('cy',s.cy);el.setAttribute('r',s.r);
-      }else{
-        el=document.createElementNS('http://www.w3.org/2000/svg','rect');
-        el.setAttribute('x',s.x);el.setAttribute('y',s.y);
-        el.setAttribute('width',s.w);el.setAttribute('height',s.h);
-        if(s.rx)el.setAttribute('rx',s.rx);
-      }
-      el.classList.add('hl');
-      g.appendChild(el);
-    });
-    svg.appendChild(g);
-    return g;
-  });
-
-  function showPart(i){
-    groups.forEach((g,j)=>g.querySelectorAll('.hl').forEach(el=>{
-      el.classList.toggle('active',j===i);
-    }));
-    label.textContent=PARTS[i].name;
-    label.classList.add('active');
-  }
-
-  showPart(0);
-  setInterval(()=>{phase=(phase+1)%PARTS.length;showPart(phase);},SLIDE_MS);
-})();
-
 // Scroll reveal
 const reveals = document.querySelectorAll('.reveal');
 const observer = new IntersectionObserver((entries) => {
@@ -1052,6 +1989,233 @@ const observer = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.1 });
 reveals.forEach(el => observer.observe(el));
+
+// VAN background tone follows active section
+const vanBg = document.querySelector('.site-van-bg');
+const toneSections = document.querySelectorAll('[data-van-tone]');
+
+function updateVanTone() {
+  const mid = window.innerHeight * 0.45;
+  let active = null;
+  let best = Infinity;
+
+  toneSections.forEach(section => {
+    const rect = section.getBoundingClientRect();
+    if (rect.bottom <= 0 || rect.top >= window.innerHeight) return;
+    const center = rect.top + rect.height / 2;
+    const dist = Math.abs(center - mid);
+    if (dist < best) {
+      best = dist;
+      active = section;
+    }
+  });
+
+  if (active) vanBg.dataset.tone = active.dataset.vanTone;
+}
+
+window.addEventListener('scroll', updateVanTone, { passive: true });
+window.addEventListener('resize', updateVanTone);
+updateVanTone();
+
+(function () {
+  const fab = document.getElementById('fab-bar');
+  const modal = document.getElementById('callback-modal');
+  if (!fab) return;
+
+  function updateFab() {
+    const pastHero = window.scrollY > window.innerHeight * 0.55;
+    const modalOpen = modal && modal.classList.contains('is-open');
+    fab.classList.toggle('is-visible', pastHero && !modalOpen);
+  }
+
+  window.addEventListener('scroll', updateFab, { passive: true });
+  window.addEventListener('resize', updateFab);
+  document.querySelectorAll('[data-open-callback], [data-close-callback]').forEach(el => {
+    el.addEventListener('click', () => setTimeout(updateFab, 50));
+  });
+  updateFab();
+})();
+
+// Reviews slider
+(function () {
+  const slider = document.getElementById('reviews-slider');
+  if (!slider) return;
+
+  const cards = slider.querySelectorAll('.review-card');
+  const dotsWrap = document.getElementById('reviews-dots');
+  const prevBtn = document.getElementById('reviews-prev');
+  const nextBtn = document.getElementById('reviews-next');
+  let current = 0;
+  let timer;
+
+  cards.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'reviews-dot' + (i === 0 ? ' active' : '');
+    dot.setAttribute('aria-label', 'Go to review ' + (i + 1));
+    dot.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(dot);
+  });
+
+  function goTo(n) {
+    cards[current].classList.remove('active');
+    dotsWrap.children[current].classList.remove('active');
+    current = (n + cards.length) % cards.length;
+    cards[current].classList.add('active');
+    dotsWrap.children[current].classList.add('active');
+    resetTimer();
+  }
+
+  function resetTimer() {
+    clearInterval(timer);
+    timer = setInterval(() => goTo(current + 1), 5000);
+  }
+
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+  nextBtn.addEventListener('click', () => goTo(current + 1));
+  slider.addEventListener('mouseenter', () => clearInterval(timer));
+  slider.addEventListener('mouseleave', resetTimer);
+
+  resetTimer();
+})();
+
+// Callback request modal
+(function () {
+  const CALLBACK_API_URL = 'https://gargageguysoc.vercel.app/api/callback';
+
+  const modal = document.getElementById('callback-modal');
+  const form = document.getElementById('callback-form');
+  const formWrap = document.getElementById('callback-form-wrap');
+  const success = document.getElementById('callback-success');
+  const successPhone = success.querySelector('.callback-success-phone');
+  const errorEl = document.getElementById('callback-error');
+  const submitBtn = form && form.querySelector('.callback-submit');
+  if (!modal || !form) return;
+
+  function openModal() {
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    form.reset();
+    formWrap.hidden = false;
+    success.hidden = true;
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+  }
+
+  function closeModal() {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  function showSuccess(phone) {
+    successPhone.textContent = phone;
+    formWrap.hidden = true;
+    success.hidden = false;
+  }
+
+  function showError(message) {
+    if (!errorEl) return;
+    errorEl.textContent = message;
+    errorEl.hidden = false;
+  }
+
+  function openSmsFallback(payload) {
+    const text = [
+      'Hi Garage Guys, please call me back.',
+      `Name: ${payload.name}`,
+      `Phone: ${payload.phone}`,
+      `ZIP: ${payload.zip}`,
+      `Job: ${payload.message}`,
+    ].join('\n');
+    window.location.href = 'sms:+19495390009?&body=' + encodeURIComponent(text);
+  }
+
+  document.querySelectorAll('[data-open-callback]').forEach(btn => {
+    btn.addEventListener('click', openModal);
+  });
+
+  document.querySelectorAll('[data-close-callback]').forEach(el => {
+    el.addEventListener('click', closeModal);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const payload = {
+      name: form.name.value.trim(),
+      phone: form.phone.value.trim(),
+      zip: form.zip.value.trim(),
+      message: form.message.value.trim() || 'Callback requested from website',
+      _gotcha: form._gotcha.value.trim(),
+    };
+
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending…';
+    }
+
+    let sent = false;
+
+    if (CALLBACK_API_URL) {
+      try {
+        const res = await fetch(CALLBACK_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          sent = true;
+          showSuccess(payload.phone);
+        } else if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+          openSmsFallback(payload);
+          showSuccess(payload.phone);
+          sent = true;
+        } else {
+          showError('Could not send your request. Please call (949) 539-0009.');
+        }
+      } catch {
+        if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+          openSmsFallback(payload);
+          showSuccess(payload.phone);
+          sent = true;
+        } else {
+          showError('Connection error. Please call (949) 539-0009.');
+        }
+      }
+    }
+
+    if (!sent && !CALLBACK_API_URL) {
+      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        openSmsFallback(payload);
+        showSuccess(payload.phone);
+        sent = true;
+      } else {
+        showError('SMS alerts are not set up yet. Please call (949) 539-0009 or text us from your phone.');
+      }
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send My Request';
+    }
+  });
+})();
+
+if (window.lucide) lucide.createIcons();
 </script>
 
 </body>
