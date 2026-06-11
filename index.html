@@ -727,10 +727,14 @@ nav {
 }
 
 .stat-review-stars {
-  color: #f59e0b;
+  color: #fbbf24;
   font-size: clamp(13px, 1.2vw, 16px);
   letter-spacing: 3px;
   line-height: 1;
+}
+
+.stat-item--reviews .stat-num .stat-review-stars {
+  color: #fbbf24;
 }
 
 .stat-tt-link {
@@ -1355,7 +1359,7 @@ nav {
 
 .reviews-slider-title em {
   font-style: normal;
-  color: #f59e0b;
+  color: #fbbf24;
 }
 
 .reviews-track {
@@ -1411,7 +1415,7 @@ nav {
 }
 
 .review-stars {
-  color: #f59e0b;
+  color: #fbbf24;
   font-size: 18px;
   letter-spacing: 2px;
   line-height: 1;
@@ -2025,7 +2029,22 @@ updateVanTone();
   function updateFab() {
     const pastHero = window.scrollY > window.innerHeight * 0.55;
     const modalOpen = modal && modal.classList.contains('is-open');
-    fab.classList.toggle('is-visible', pastHero && !modalOpen);
+    const mid = window.innerHeight * 0.45;
+    let activeId = null;
+    let best = Infinity;
+
+    document.querySelectorAll('.section-screen').forEach(section => {
+      const rect = section.getBoundingClientRect();
+      if (rect.bottom <= 0 || rect.top >= window.innerHeight) return;
+      const dist = Math.abs(rect.top + rect.height / 2 - mid);
+      if (dist < best) {
+        best = dist;
+        activeId = section.id;
+      }
+    });
+
+    const onContact = activeId === 'contact';
+    fab.classList.toggle('is-visible', pastHero && !modalOpen && !onContact);
   }
 
   window.addEventListener('scroll', updateFab, { passive: true });
