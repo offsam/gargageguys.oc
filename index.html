@@ -1671,7 +1671,11 @@ footer {
 @media (max-width: 900px) {
   nav { padding: 0 20px; }
   .nav-links { display: none; }
-  .hero-content { margin-left: 10%; padding: 0 16px 0 0; }
+  .hero-content {
+    margin-left: 6%;
+    padding: 0 12px 0 0;
+    max-width: 52%;
+  }
   .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 16px; }
   .section-screen { padding: calc(var(--nav-h) + 20px) 20px 20px; }
   .services-head { flex-direction: column; align-items: flex-start; gap: 16px; }
@@ -1685,17 +1689,17 @@ footer {
   .cta-box { padding: 48px 28px; }
   footer { flex-direction: column; gap: 12px; text-align: center; }
 
-  /* Mobile hero: show van services list, avoid cropping */
+  /* Mobile hero: services on van visible beside overlay text */
   .site-van-bg {
     inset: 0;
     background-attachment: scroll;
     background-size: cover;
-    background-position: 45% center;
+    background-position: 40% center;
   }
 
   .site-van-bg[data-tone="hero"] {
-    background-position: 48% center;
-    transform: none;
+    background-position: 38% center;
+    transform: translateX(10%);
     filter: blur(0) brightness(0.9) saturate(0.9);
   }
 
