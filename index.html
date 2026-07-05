@@ -1373,6 +1373,40 @@ nav {
 
 .service-card:hover .service-desc { color: var(--navy-mid); }
 
+a.service-card {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.service-hub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+  justify-content: center;
+}
+
+.service-hub a {
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(46,109,164,0.25);
+  background: rgba(255,255,255,0.9);
+  color: var(--navy-mid);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.2s;
+}
+
+.service-hub a:hover {
+  border-color: var(--blue-accent);
+  color: var(--blue-accent);
+  background: var(--white);
+  transform: translateY(-2px);
+}
+
 .section-inner {
   max-width: 1200px;
   margin: 0 auto;
@@ -2028,7 +2062,7 @@ footer {
     </div>
     <div class="services-grid">
 
-      <div class="service-card reveal" data-num="01">
+      <a href="/garage-door-repair/" class="service-card service-card--link reveal" data-num="01">
         <div class="service-icons">
           <i data-lucide="door-open"></i>
           <i data-lucide="cable"></i>
@@ -2036,7 +2070,7 @@ footer {
         </div>
         <div class="service-name">Repair & Diagnostics</div>
         <div class="service-desc">Broken springs, cables, rollers, panels — fast diagnosis and a lasting fix.</div>
-      </div>
+      </a>
 
       <div class="service-card reveal" data-num="02">
         <div class="service-icons">
@@ -2059,7 +2093,7 @@ footer {
         <div class="service-desc">Lubrication, balance check, hardware tightening — keep your door running quietly for years.</div>
       </div>
 
-      <div class="service-card reveal" data-num="04">
+      <a href="/garage-door-opener-repair/" class="service-card service-card--link reveal" data-num="04">
         <div class="service-icons service-icons--wide">
           <i data-lucide="box"></i>
           <i data-lucide="smartphone"></i>
@@ -2069,7 +2103,7 @@ footer {
         </div>
         <div class="service-name">Opener Installation</div>
         <div class="service-desc">Belt, chain, or smart Wi-Fi openers. App control, camera, keypad — full setup included.</div>
-      </div>
+      </a>
 
       <div class="service-card reveal" data-num="05">
         <div class="service-icons service-icons--wide">
@@ -2084,6 +2118,11 @@ footer {
       </div>
 
     </div>
+    <nav class="service-hub reveal" aria-label="Core garage door services">
+      <a href="/garage-door-repair/">Garage Door Repair</a>
+      <a href="/garage-door-spring-repair/">Spring Repair</a>
+      <a href="/garage-door-opener-repair/">Opener Repair</a>
+    </nav>
   </div>
 </section>
 
