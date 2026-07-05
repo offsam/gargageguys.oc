@@ -81,6 +81,25 @@ async function sendTwilioSms(body) {
   return true;
 }
 
+async function sendAiCouncil(lead) {
+  const baseUrl = String(process.env.AI_COUNCIL_BASE_URL || '').trim().replace(/\/$/, '');
+  const secret = process.env.GARAGE_GUYS_LEAD_WEBHOOK_SECRET;
+  if (!baseUrl || !secret) return;
+
+  const res = await fetch(`${baseUrl}/api/public/garage-guys/leads`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${secret}`,
+    },
+    body: JSON.stringify(lead),
+  });
+
+  if (!res.ok) {
+    console.error('AI Council lead webhook failed:', await res.text());
+  }
+}
+
 module.exports = async function handler(req, res) {
   setCors(req, res);
 
@@ -140,6 +159,14 @@ module.exports = async function handler(req, res) {
     if (!telegramOk) {
       return res.status(502).json({ error: 'Failed to send notification' });
     }
+
+    sendAiCouncil({
+      name: safeName,
+      phone: safePhone,
+      zip: safeZip,
+      message: safeMessage,
+      source: 'garageguysoc.com',
+    }).catch((err) => console.error('AI Council lead webhook failed:', err));
   }
 
   if (hasTwilio) {
