@@ -9,6 +9,9 @@
     "api/callback.js": {
       "maxDuration": 10
     },
+    "api/ai-chat.js": {
+      "maxDuration": 60
+    },
     "api/seo-sync.js": {
       "maxDuration": 30
     }
