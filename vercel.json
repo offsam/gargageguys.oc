@@ -1,7 +1,16 @@
 {
+  "crons": [
+    {
+      "path": "/api/seo-sync",
+      "schedule": "0 14 * * *"
+    }
+  ],
   "functions": {
     "api/callback.js": {
       "maxDuration": 10
+    },
+    "api/seo-sync.js": {
+      "maxDuration": 30
     }
   }
 }
