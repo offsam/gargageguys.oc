@@ -20,6 +20,42 @@
 
   var AVATAR_ICON_SVG = LAUNCHER_ICON_SVG.replace('width="44" height="44"', 'width="22" height="22"');
 
+  var THINKING_MIN_MS = 2400;
+  var THINKING_STEP_MS = 1600;
+
+  var THINKING_SEQUENCES = {
+    spring: [
+      "Okay — a spring issue, got it…",
+      "Could be a broken torsion or extension spring…",
+      "Definitely don't try to lift it by hand…",
+      "Let me figure out the best way to help…",
+    ],
+    opener: [
+      "Opener trouble — I hear you.",
+      "Might be the motor, remote, or safety sensors…",
+      "Or sometimes it's just a disconnected trolley…",
+      "Thinking through what to ask next…",
+    ],
+    track: [
+      "Door off track — that's no fun.",
+      "Could've bent a roller or knocked a panel loose…",
+      "We'd want to see how bad the alignment is…",
+      "Working out the right next step…",
+    ],
+    stuck: [
+      "Door won't budge — I understand.",
+      "Could be the spring, opener, or a locked position…",
+      "Might also be a cable or sensor thing…",
+      "Let me think what fits your situation…",
+    ],
+    default: [
+      "Got it — reading what you wrote…",
+      "Hmm, let me think this through…",
+      "Could be a few different things here…",
+      "Okay — working out the best next question…",
+    ],
+  };
+
   var sessionId =
     typeof crypto !== "undefined" && crypto.randomUUID
       ? crypto.randomUUID()
@@ -35,6 +71,11 @@
   var submittedInboxItemId = null;
   var loading = false;
   var panelOpen = false;
+  var thinkingRow = null;
+  var thinkingTimer = null;
+  var thinkingStartedAt = 0;
+  var headerStatusEl = null;
+  var headerDefaultStatus = "Online · Orange County";
 
   var root = document.createElement("div");
   root.className = "gg-ai-chat-root";
@@ -82,9 +123,12 @@
     '<div class="gg-ai-chat-header__copy">' +
     '<strong class="gg-ai-chat-header__title">Alex · Garage Guys</strong>' +
     '<span class="gg-ai-chat-header__status">' +
-    '<span class="gg-ai-chat-header__dot"></span>Online · Orange County</span>' +
+    '<span class="gg-ai-chat-header__dot"></span>' +
+    '<span class="gg-ai-chat-header__status-text">' + headerDefaultStatus + "</span></span>" +
     "</div></div>" +
     '<button type="button" class="gg-ai-chat-close" aria-label="Close chat">&times;</button>';
+
+  headerStatusEl = header.querySelector(".gg-ai-chat-header__status-text");
 
   var chipsWrap = document.createElement("div");
   chipsWrap.className = "gg-ai-chat-chips-wrap";
@@ -161,6 +205,105 @@
   launcherWrap.appendChild(launcherGlow2);
   launcherWrap.appendChild(launcher);
 
+  function pickThinkingSequence(userText) {
+    var lower = userText.toLowerCase();
+    if (lower.indexOf("spring") >= 0) return THINKING_SEQUENCES.spring;
+    if (lower.indexOf("opener") >= 0 || lower.indexOf("remote") >= 0) return THINKING_SEQUENCES.opener;
+    if (lower.indexOf("track") >= 0 || lower.indexOf("off track") >= 0) return THINKING_SEQUENCES.track;
+    if (
+      lower.indexOf("won't open") >= 0
+      || lower.indexOf("wont open") >= 0
+      || lower.indexOf("stuck") >= 0
+      || lower.indexOf("won't close") >= 0
+      || lower.indexOf("wont close") >= 0
+    ) {
+      return THINKING_SEQUENCES.stuck;
+    }
+    return THINKING_SEQUENCES.default;
+  }
+
+  function setHeaderActivity(text) {
+    if (!headerStatusEl) return;
+    header.classList.add("gg-ai-chat-header--thinking");
+    headerStatusEl.textContent = text;
+  }
+
+  function resetHeaderActivity() {
+    if (!headerStatusEl) return;
+    header.classList.remove("gg-ai-chat-header--thinking");
+    headerStatusEl.textContent = headerDefaultStatus;
+  }
+
+  function showThinkingIndicator(userText) {
+    hideThinkingIndicator();
+
+    var steps = pickThinkingSequence(userText);
+    var stepIndex = 0;
+    thinkingStartedAt = Date.now();
+
+    thinkingRow = document.createElement("div");
+    thinkingRow.className = "gg-ai-chat-row gg-ai-chat-row--bot gg-ai-chat-row--thinking";
+    thinkingRow.setAttribute("aria-live", "polite");
+    thinkingRow.setAttribute("aria-busy", "true");
+
+    var avatar = document.createElement("div");
+    avatar.className = "gg-ai-chat-row__avatar";
+    avatar.innerHTML = AVATAR_ICON_SVG;
+
+    var bubble = document.createElement("div");
+    bubble.className = "gg-ai-chat-bubble gg-ai-chat-bubble--bot gg-ai-chat-bubble--thinking";
+
+    var thought = document.createElement("span");
+    thought.className = "gg-ai-chat-thought";
+
+    var dots = document.createElement("span");
+    dots.className = "gg-ai-chat-thinking-dots";
+    dots.setAttribute("aria-hidden", "true");
+    dots.innerHTML = "<span></span><span></span><span></span>";
+
+    bubble.appendChild(thought);
+    bubble.appendChild(dots);
+    thinkingRow.appendChild(avatar);
+    thinkingRow.appendChild(bubble);
+    log.appendChild(thinkingRow);
+    log.scrollTop = log.scrollHeight;
+
+    function applyStep(text) {
+      thought.classList.add("gg-ai-chat-thought--fade");
+      window.setTimeout(function () {
+        thought.textContent = text;
+        thought.classList.remove("gg-ai-chat-thought--fade");
+        setHeaderActivity(text);
+        log.scrollTop = log.scrollHeight;
+      }, 220);
+    }
+
+    applyStep(steps[0]);
+
+    thinkingTimer = window.setInterval(function () {
+      stepIndex = (stepIndex + 1) % steps.length;
+      applyStep(steps[stepIndex]);
+    }, THINKING_STEP_MS);
+  }
+
+  function hideThinkingIndicator() {
+    if (thinkingTimer) {
+      window.clearInterval(thinkingTimer);
+      thinkingTimer = null;
+    }
+    if (thinkingRow) {
+      thinkingRow.remove();
+      thinkingRow = null;
+    }
+    resetHeaderActivity();
+  }
+
+  function afterThinkingPause(callback) {
+    var elapsed = Date.now() - thinkingStartedAt;
+    var wait = Math.max(0, THINKING_MIN_MS - elapsed);
+    window.setTimeout(callback, wait);
+  }
+
   function appendBubble(role, content) {
     var row = document.createElement("div");
     row.className =
@@ -234,6 +377,7 @@
 
     messages.push({ role: "user", content: userText });
     appendBubble("user", userText);
+    showThinkingIndicator(userText);
 
     fetch(API_URL, {
       method: "POST",
@@ -253,19 +397,25 @@
         });
       })
       .then(function (payload) {
-        if (payload.reply) {
-          messages.push({ role: "assistant", content: payload.reply });
-          appendBubble("assistant", payload.reply);
-        }
-        if (payload.leadSubmitted && payload.inboxItemId) {
-          markSubmitted(payload.inboxItemId);
-        }
+        afterThinkingPause(function () {
+          hideThinkingIndicator();
+          if (payload.reply) {
+            messages.push({ role: "assistant", content: payload.reply });
+            appendBubble("assistant", payload.reply);
+          }
+          if (payload.leadSubmitted && payload.inboxItemId) {
+            markSubmitted(payload.inboxItemId);
+          }
+        });
       })
       .catch(function () {
-        appendBubble(
-          "assistant",
-          "Sorry, something went wrong. Please call (949) 539-0009 or use Request Callback.",
-        );
+        afterThinkingPause(function () {
+          hideThinkingIndicator();
+          appendBubble(
+            "assistant",
+            "Sorry, something went wrong. Please call (949) 539-0009 or use Request Callback.",
+          );
+        });
       })
       .finally(function () {
         loading = false;
