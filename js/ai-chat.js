@@ -92,15 +92,17 @@
   teaser.className = "gg-ai-chat-teaser";
   teaser.innerHTML =
     '<span class="gg-ai-chat-teaser__label">Free consultation</span>' +
-    '<span class="gg-ai-chat-teaser__text">Ask Alex about your door</span>';
+    '<span class="gg-ai-chat-teaser__text">with our AI specialist</span>';
 
   var teaserArrow = document.createElement("div");
   teaserArrow.className = "gg-ai-chat-teaser-arrow";
   teaserArrow.setAttribute("aria-hidden", "true");
   teaserArrow.innerHTML =
-    '<svg viewBox="0 0 20 32" width="16" height="26" fill="none">' +
-    '<path d="M10 2v20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>' +
-    '<path d="M3 20l7 8 7-8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<svg viewBox="0 0 44 52" width="22" height="26" fill="none" aria-hidden="true">' +
+    '<path d="M32 3 C26 10, 22 18, 19 26 C16 34, 13 38, 11 42" ' +
+    'stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>' +
+    '<path d="M11 42 C9 44, 7 46, 6 48" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>' +
+    '<path d="M6 48 L2 50 M6 48 L10 51" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
     "</svg>";
 
   teaserStack.appendChild(teaser);

@@ -24,9 +24,10 @@
 .gg-ai-chat-teaser-stack {
   display: none;
   flex-direction: column;
-  align-items: center;
-  width: var(--gg-launcher);
-  margin-bottom: 2px;
+  align-items: flex-end;
+  gap: 0;
+  padding-left: 56px;
+  margin-bottom: 0;
 }
 
 .gg-ai-chat-root--teaser .gg-ai-chat-teaser-stack {
@@ -36,15 +37,15 @@
 .gg-ai-chat-teaser {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  width: 200px;
-  margin-left: calc((var(--gg-launcher) - 200px) / 2);
+  align-items: flex-start;
+  gap: 4px;
+  width: 220px;
+  margin-left: 0;
   padding: 0;
   border: none;
   background: transparent;
   color: #fff;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
   box-shadow: none;
 }
@@ -56,7 +57,7 @@
 .gg-ai-chat-teaser__label {
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--gg-gold);
   text-shadow:
@@ -66,17 +67,19 @@
 }
 
 .gg-ai-chat-teaser__text {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  line-height: 1.3;
-  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.92);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
 }
 
 .gg-ai-chat-teaser-arrow {
+  align-self: flex-end;
+  margin: 2px 28px 0 0;
   color: var(--gg-amber);
   filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.7));
-  animation: gg-ai-arrow-bounce 1.3s ease-in-out infinite;
+  animation: gg-ai-arrow-bounce 1.4s ease-in-out infinite;
   pointer-events: none;
   line-height: 0;
 }
@@ -648,11 +651,11 @@
 @keyframes gg-ai-arrow-bounce {
   0%,
   100% {
-    transform: translateY(0);
-    opacity: 0.85;
+    transform: translate(0, 0);
+    opacity: 0.88;
   }
   50% {
-    transform: translateY(6px);
+    transform: translate(-2px, 5px);
     opacity: 1;
   }
 }
@@ -727,8 +730,16 @@
   }
 
   .gg-ai-chat-teaser {
-    width: 180px;
-    margin-left: calc((var(--gg-launcher) - 180px) / 2);
+    width: 200px;
+    padding-left: 0;
+  }
+
+  .gg-ai-chat-teaser-stack {
+    padding-left: 44px;
+  }
+
+  .gg-ai-chat-teaser-arrow {
+    margin-right: 22px;
   }
 
   .gg-ai-chat-send__label {
