@@ -10,26 +10,15 @@
     "Door off track",
   ];
 
-  var CHAT_ICON_SVG =
-    '<svg viewBox="0 0 32 32" width="32" height="32" fill="none" aria-hidden="true">' +
-    '<path d="M6 9.5C6 7.57 7.57 6 9.5 6h13C23.43 6 25 7.57 25 9.5V17c0 1.93-1.57 3.5-3.5 3.5h-4.1L15 24v-3.5H9.5C7.57 20.5 6 18.93 6 17V9.5z" fill="#fff"/>' +
-    '<circle cx="11.5" cy="13.5" r="1.6" fill="#2e6da4"/>' +
-    '<circle cx="16" cy="13.5" r="1.6" fill="#2e6da4"/>' +
-    '<circle cx="20.5" cy="13.5" r="1.6" fill="#2e6da4"/>' +
+  var LAUNCHER_ICON_SVG =
+    '<svg viewBox="0 0 48 48" width="44" height="44" fill="none" aria-hidden="true">' +
+    '<path d="M7 12.5C7 9.46 9.46 7 12.5 7h23C38.54 7 41 9.46 41 12.5v16c0 3.04-2.46 5.5-5.5 5.5h-12l-7.5 9v-9H12.5C9.46 34 7 31.54 7 28.5v-16z" fill="#fff"/>' +
+    '<rect x="15" y="14.5" width="18" height="13" rx="1.5" fill="#1a3a5c" opacity="0.12"/>' +
+    '<path d="M15 18.5h18M15 22.5h18M15 26.5h12" stroke="#1a3a5c" stroke-width="2" stroke-linecap="round"/>' +
+    '<circle cx="24" cy="25.5" r="1.4" fill="#f59e0b"/>' +
     "</svg>";
 
-  var WRENCH_BADGE_SVG =
-    '<svg viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true">' +
-    '<path d="M14.5 5.5a3.5 3.5 0 0 0-4.9 4.9L5 15l2 2 4.6-4.6a3.5 3.5 0 0 0 2.9-8.9z" fill="#fff" stroke="#0f2340" stroke-width="1.2" stroke-linejoin="round"/>' +
-    "</svg>";
-
-  var DOOR_ICON_SVG =
-    '<svg class="gg-ai-chat-header__door" viewBox="0 0 52 44" width="44" height="36" fill="none" aria-hidden="true">' +
-    '<rect x="4" y="6" width="44" height="32" rx="3" stroke="currentColor" stroke-width="1.8" opacity="0.9"/>' +
-    '<path d="M4 14h44M4 22h44M4 30h44" stroke="currentColor" stroke-width="1" opacity="0.35"/>' +
-    '<rect x="23" y="28" width="6" height="10" rx="1" fill="currentColor" opacity="0.85"/>' +
-    '<circle cx="27" cy="33" r="1" fill="#0f2340"/>' +
-    "</svg>";
+  var AVATAR_ICON_SVG = LAUNCHER_ICON_SVG.replace('width="44" height="44"', 'width="22" height="22"');
 
   var sessionId =
     typeof crypto !== "undefined" && crypto.randomUUID
@@ -51,6 +40,9 @@
   root.className = "gg-ai-chat-root";
   root.id = "gg-ai-chat-root";
 
+  var anchor = document.createElement("div");
+  anchor.className = "gg-ai-chat-anchor";
+
   var teaserStack = document.createElement("div");
   teaserStack.className = "gg-ai-chat-teaser-stack";
 
@@ -58,19 +50,16 @@
   teaser.type = "button";
   teaser.className = "gg-ai-chat-teaser";
   teaser.innerHTML =
-    '<span class="gg-ai-chat-teaser__icon" aria-hidden="true">' + CHAT_ICON_SVG.replace('width="32" height="32"', 'width="22" height="22"') + "</span>" +
-    '<span class="gg-ai-chat-teaser__body">' +
     '<span class="gg-ai-chat-teaser__label">Free consultation</span>' +
-    '<span class="gg-ai-chat-teaser__text">Ask our AI expert — springs, openers, stuck doors.</span>' +
-    "</span>";
+    '<span class="gg-ai-chat-teaser__text">Ask Alex about your door</span>';
 
   var teaserArrow = document.createElement("div");
   teaserArrow.className = "gg-ai-chat-teaser-arrow";
   teaserArrow.setAttribute("aria-hidden", "true");
   teaserArrow.innerHTML =
-    '<svg viewBox="0 0 32 48" width="24" height="40" fill="none">' +
-    '<path d="M16 4v30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>' +
-    '<path d="M7 30l9 10 9-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<svg viewBox="0 0 20 32" width="16" height="26" fill="none">' +
+    '<path d="M10 2v20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>' +
+    '<path d="M3 20l7 8 7-8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
     "</svg>";
 
   teaserStack.appendChild(teaser);
@@ -81,18 +70,28 @@
   panel.setAttribute("role", "dialog");
   panel.setAttribute("aria-label", "Garage door repair assistant");
   panel.setAttribute("aria-hidden", "true");
-  panel.innerHTML = '<div class="gg-ai-chat-panel__glow" aria-hidden="true"></div>';
+  panel.innerHTML =
+    '<div class="gg-ai-chat-panel__shine" aria-hidden="true"></div>' +
+    '<div class="gg-ai-chat-panel__glow" aria-hidden="true"></div>';
 
   var header = document.createElement("header");
   header.className = "gg-ai-chat-header";
   header.innerHTML =
     '<div class="gg-ai-chat-header__brand">' +
-    DOOR_ICON_SVG +
+    '<div class="gg-ai-chat-header__avatar" aria-hidden="true">A</div>' +
     '<div class="gg-ai-chat-header__copy">' +
-    '<strong class="gg-ai-chat-header__title">Garage Door Expert</strong>' +
-    '<span class="gg-ai-chat-header__sub">Springs · Openers · Same-day OC</span>' +
+    '<strong class="gg-ai-chat-header__title">Alex · Garage Guys</strong>' +
+    '<span class="gg-ai-chat-header__status">' +
+    '<span class="gg-ai-chat-header__dot"></span>Online · Orange County</span>' +
     "</div></div>" +
     '<button type="button" class="gg-ai-chat-close" aria-label="Close chat">&times;</button>';
+
+  var chipsWrap = document.createElement("div");
+  chipsWrap.className = "gg-ai-chat-chips-wrap";
+
+  var chipsLabel = document.createElement("p");
+  chipsLabel.className = "gg-ai-chat-chips__label";
+  chipsLabel.textContent = "Quick picks";
 
   var chips = document.createElement("div");
   chips.className = "gg-ai-chat-chips";
@@ -109,6 +108,8 @@
     });
     chips.appendChild(chip);
   });
+  chipsWrap.appendChild(chipsLabel);
+  chipsWrap.appendChild(chips);
 
   var status = document.createElement("div");
   status.className = "gg-ai-chat-status";
@@ -125,7 +126,7 @@
 
   var input = document.createElement("textarea");
   input.rows = 2;
-  input.placeholder = "Describe the problem with your garage door…";
+  input.placeholder = "Describe what's happening…";
   input.setAttribute("aria-label", "Message");
 
   var send = document.createElement("button");
@@ -154,8 +155,7 @@
   launcher.setAttribute("aria-label", "Open garage door repair assistant");
   launcher.setAttribute("aria-expanded", "false");
   launcher.innerHTML =
-    '<span class="gg-ai-chat-launcher__icon" aria-hidden="true">' + CHAT_ICON_SVG + "</span>" +
-    '<span class="gg-ai-chat-launcher__badge" aria-hidden="true">' + WRENCH_BADGE_SVG + "</span>";
+    '<span class="gg-ai-chat-launcher__icon" aria-hidden="true">' + LAUNCHER_ICON_SVG + "</span>";
 
   launcherWrap.appendChild(launcherGlow1);
   launcherWrap.appendChild(launcherGlow2);
@@ -171,7 +171,7 @@
     if (role === "assistant") {
       var avatar = document.createElement("div");
       avatar.className = "gg-ai-chat-row__avatar";
-      avatar.innerHTML = CHAT_ICON_SVG.replace('width="32" height="32"', 'width="20" height="20"');
+      avatar.innerHTML = AVATAR_ICON_SVG;
       row.appendChild(avatar);
     }
 
@@ -312,13 +312,14 @@
   form.appendChild(input);
   form.appendChild(send);
   panel.appendChild(header);
-  panel.appendChild(chips);
+  panel.appendChild(chipsWrap);
   panel.appendChild(status);
   panel.appendChild(log);
   panel.appendChild(form);
-  root.appendChild(teaserStack);
-  root.appendChild(panel);
-  root.appendChild(launcherWrap);
+  anchor.appendChild(panel);
+  anchor.appendChild(teaserStack);
+  anchor.appendChild(launcherWrap);
+  root.appendChild(anchor);
   document.body.appendChild(root);
   updateTeaser();
 })();
