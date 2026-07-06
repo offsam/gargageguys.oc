@@ -11,7 +11,7 @@
   ];
 
   var LAUNCHER_ICON_SVG =
-    '<svg viewBox="0 0 48 48" width="44" height="44" fill="none" aria-hidden="true">' +
+    '<svg viewBox="0 0 48 48" width="52" height="52" fill="none" aria-hidden="true">' +
     '<path d="M7 12.5C7 9.46 9.46 7 12.5 7h23C38.54 7 41 9.46 41 12.5v16c0 3.04-2.46 5.5-5.5 5.5h-12l-7.5 9v-9H12.5C9.46 34 7 31.54 7 28.5v-16z" fill="#fff"/>' +
     '<rect x="15" y="14.5" width="18" height="13" rx="1.5" fill="#1a3a5c" opacity="0.12"/>' +
     '<path d="M15 18.5h18M15 22.5h18M15 26.5h12" stroke="#1a3a5c" stroke-width="2" stroke-linecap="round"/>' +
@@ -94,19 +94,7 @@
     '<span class="gg-ai-chat-teaser__label">Free consultation</span>' +
     '<span class="gg-ai-chat-teaser__text">with our AI specialist</span>';
 
-  var teaserArrow = document.createElement("div");
-  teaserArrow.className = "gg-ai-chat-teaser-arrow";
-  teaserArrow.setAttribute("aria-hidden", "true");
-  teaserArrow.innerHTML =
-    '<svg viewBox="0 0 44 52" width="22" height="26" fill="none" aria-hidden="true">' +
-    '<path d="M32 3 C26 10, 22 18, 19 26 C16 34, 13 38, 11 42" ' +
-    'stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>' +
-    '<path d="M11 42 C9 44, 7 46, 6 48" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>' +
-    '<path d="M6 48 L2 50 M6 48 L10 51" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
-    "</svg>";
-
   teaserStack.appendChild(teaser);
-  teaserStack.appendChild(teaserArrow);
 
   var panel = document.createElement("div");
   panel.className = "gg-ai-chat-panel";
