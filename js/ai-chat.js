@@ -40,7 +40,7 @@
     {
       role: "assistant",
       content:
-        "Hi — I'm your Garage Guys repair assistant. Tell me what's wrong with your door (won't open, spring, opener, noise…) and I'll help get your free estimate started.",
+        "Hey there — I'm Alex with Garage Guys. What's going on with your door today? Stuck shut, broken spring, opener acting up… tell me what you're seeing and we'll figure out the next step.",
     },
   ];
   var submittedInboxItemId = null;
