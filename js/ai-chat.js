@@ -3,7 +3,6 @@
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
   var API_URL = "/api/ai-chat";
-  var TEASER_KEY = "gg-ai-chat-teaser-seen";
   var QUICK_PROMPTS = [
     "My door won't open",
     "Broken spring",
@@ -11,14 +10,17 @@
     "Door off track",
   ];
 
-  var BOT_AVATAR_SVG =
-    '<svg viewBox="0 0 32 32" width="28" height="28" fill="none" aria-hidden="true">' +
-    '<circle cx="16" cy="17" r="10" fill="#fff"/>' +
-    '<circle cx="12.5" cy="16" r="1.5" fill="#1a3a5c"/>' +
-    '<circle cx="19.5" cy="16" r="1.5" fill="#1a3a5c"/>' +
-    '<path d="M12 20.5c1 1.2 2.4 1.8 4 1.8s3-.6 4-1.8" stroke="#2e6da4" stroke-width="1.3" stroke-linecap="round"/>' +
-    '<path d="M16 4v3" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>' +
-    '<circle cx="16" cy="3" r="1.5" fill="#f59e0b"/>' +
+  var CHAT_ICON_SVG =
+    '<svg viewBox="0 0 32 32" width="32" height="32" fill="none" aria-hidden="true">' +
+    '<path d="M6 9.5C6 7.57 7.57 6 9.5 6h13C23.43 6 25 7.57 25 9.5V17c0 1.93-1.57 3.5-3.5 3.5h-4.1L15 24v-3.5H9.5C7.57 20.5 6 18.93 6 17V9.5z" fill="#fff"/>' +
+    '<circle cx="11.5" cy="13.5" r="1.6" fill="#2e6da4"/>' +
+    '<circle cx="16" cy="13.5" r="1.6" fill="#2e6da4"/>' +
+    '<circle cx="20.5" cy="13.5" r="1.6" fill="#2e6da4"/>' +
+    "</svg>";
+
+  var WRENCH_BADGE_SVG =
+    '<svg viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true">' +
+    '<path d="M14.5 5.5a3.5 3.5 0 0 0-4.9 4.9L5 15l2 2 4.6-4.6a3.5 3.5 0 0 0 2.9-8.9z" fill="#fff" stroke="#0f2340" stroke-width="1.2" stroke-linejoin="round"/>' +
     "</svg>";
 
   var DOOR_ICON_SVG =
@@ -56,16 +58,19 @@
   teaser.type = "button";
   teaser.className = "gg-ai-chat-teaser";
   teaser.innerHTML =
+    '<span class="gg-ai-chat-teaser__icon" aria-hidden="true">' + CHAT_ICON_SVG.replace('width="32" height="32"', 'width="22" height="22"') + "</span>" +
+    '<span class="gg-ai-chat-teaser__body">' +
     '<span class="gg-ai-chat-teaser__label">Free consultation</span>' +
-    '<span class="gg-ai-chat-teaser__text">Ask our AI expert about springs, openers, or a stuck door.</span>';
+    '<span class="gg-ai-chat-teaser__text">Ask our AI expert — springs, openers, stuck doors.</span>' +
+    "</span>";
 
   var teaserArrow = document.createElement("div");
   teaserArrow.className = "gg-ai-chat-teaser-arrow";
   teaserArrow.setAttribute("aria-hidden", "true");
   teaserArrow.innerHTML =
-    '<svg viewBox="0 0 24 40" width="18" height="32" fill="none">' +
-    '<path d="M12 2v26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
-    '<path d="M5 24l7 8 7-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<svg viewBox="0 0 32 48" width="24" height="40" fill="none">' +
+    '<path d="M16 4v30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>' +
+    '<path d="M7 30l9 10 9-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
     "</svg>";
 
   teaserStack.appendChild(teaser);
@@ -132,25 +137,29 @@
     '<path d="M3 10l14-7-4 7 4 7L3 10z" fill="currentColor"/>' +
     "</svg>";
 
+  var launcherWrap = document.createElement("div");
+  launcherWrap.className = "gg-ai-chat-launcher-wrap";
+
+  var launcherGlow1 = document.createElement("span");
+  launcherGlow1.className = "gg-ai-chat-launcher__glow";
+  launcherGlow1.setAttribute("aria-hidden", "true");
+
+  var launcherGlow2 = document.createElement("span");
+  launcherGlow2.className = "gg-ai-chat-launcher__glow gg-ai-chat-launcher__glow--outer";
+  launcherGlow2.setAttribute("aria-hidden", "true");
+
   var launcher = document.createElement("button");
   launcher.type = "button";
   launcher.className = "gg-ai-chat-launcher";
   launcher.setAttribute("aria-label", "Open garage door repair assistant");
   launcher.setAttribute("aria-expanded", "false");
   launcher.innerHTML =
-    '<span class="gg-ai-chat-launcher__avatar" aria-hidden="true">' +
-    '<svg viewBox="0 0 40 40" width="30" height="30" fill="none">' +
-    '<circle cx="20" cy="22" r="11" fill="rgba(255,255,255,0.95)"/>' +
-    '<circle cx="16" cy="21" r="1.8" fill="#1a3a5c"/>' +
-    '<circle cx="24" cy="21" r="1.8" fill="#1a3a5c"/>' +
-    '<path d="M16 25.5c1.2 1.4 2.8 2.1 4 2.1s2.8-.7 4-2.1" stroke="#2e6da4" stroke-width="1.5" stroke-linecap="round"/>' +
-    '<path d="M20 6v4" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round"/>' +
-    '<circle cx="20" cy="5" r="2" fill="#f59e0b"/>' +
-    "</svg></span>" +
-    '<span class="gg-ai-chat-launcher__badge" aria-hidden="true">' +
-    '<svg viewBox="0 0 20 20" width="13" height="13" fill="none">' +
-    '<path d="M3 4.5A2.5 2.5 0 0 1 5.5 2h9A2.5 2.5 0 0 1 17 4.5v6A2.5 2.5 0 0 1 14.5 13H9l-3.5 3v-3H5.5A2.5 2.5 0 0 1 3 10.5v-6Z" fill="#fff" stroke="#0f2340" stroke-width="1.1"/>' +
-    "</svg></span>";
+    '<span class="gg-ai-chat-launcher__icon" aria-hidden="true">' + CHAT_ICON_SVG + "</span>" +
+    '<span class="gg-ai-chat-launcher__badge" aria-hidden="true">' + WRENCH_BADGE_SVG + "</span>";
+
+  launcherWrap.appendChild(launcherGlow1);
+  launcherWrap.appendChild(launcherGlow2);
+  launcherWrap.appendChild(launcher);
 
   function appendBubble(role, content) {
     var row = document.createElement("div");
@@ -162,7 +171,7 @@
     if (role === "assistant") {
       var avatar = document.createElement("div");
       avatar.className = "gg-ai-chat-row__avatar";
-      avatar.innerHTML = BOT_AVATAR_SVG;
+      avatar.innerHTML = CHAT_ICON_SVG.replace('width="32" height="32"', 'width="20" height="20"');
       row.appendChild(avatar);
     }
 
@@ -185,22 +194,8 @@
   }
 
   function updateTeaser() {
-    var seen = false;
-    try {
-      seen = window.localStorage.getItem(TEASER_KEY) === "1";
-    } catch (e) {
-      seen = false;
-    }
-    var show = !panelOpen && !seen && !submittedInboxItemId;
+    var show = !panelOpen && !submittedInboxItemId;
     root.classList.toggle("gg-ai-chat-root--teaser", show);
-    if (panelOpen && !seen) {
-      try {
-        window.localStorage.setItem(TEASER_KEY, "1");
-      } catch (e) {
-        /* ignore */
-      }
-      root.classList.remove("gg-ai-chat-root--teaser");
-    }
   }
 
   function setPanelOpen(open) {
@@ -323,7 +318,7 @@
   panel.appendChild(form);
   root.appendChild(teaserStack);
   root.appendChild(panel);
-  root.appendChild(launcher);
+  root.appendChild(launcherWrap);
   document.body.appendChild(root);
   updateTeaser();
 })();
