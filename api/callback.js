@@ -84,7 +84,10 @@ async function sendTwilioSms(body) {
 async function sendAiCouncil(lead) {
   const baseUrl = String(process.env.AI_COUNCIL_BASE_URL || '').trim().replace(/\/$/, '');
   const secret = process.env.GARAGE_GUYS_LEAD_WEBHOOK_SECRET;
-  if (!baseUrl || !secret) return;
+  if (!baseUrl || !secret) {
+    console.warn('AI Council lead webhook skipped: AI_COUNCIL_BASE_URL or GARAGE_GUYS_LEAD_WEBHOOK_SECRET missing');
+    return { attempted: false, ok: false };
+  }
 
   const res = await fetch(`${baseUrl}/api/public/garage-guys/leads`, {
     method: 'POST',
@@ -96,8 +99,12 @@ async function sendAiCouncil(lead) {
   });
 
   if (!res.ok) {
-    console.error('AI Council lead webhook failed:', await res.text());
+    const detail = await res.text();
+    console.error('AI Council lead webhook failed:', res.status, detail);
+    return { attempted: true, ok: false, status: res.status, detail };
   }
+
+  return { attempted: true, ok: true };
 }
 
 module.exports = async function handler(req, res) {
@@ -117,8 +124,12 @@ module.exports = async function handler(req, res) {
     process.env.TWILIO_AUTH_TOKEN &&
     process.env.TWILIO_PHONE_NUMBER
   );
+  const hasAiCouncil = Boolean(
+    String(process.env.AI_COUNCIL_BASE_URL || '').trim() &&
+    process.env.GARAGE_GUYS_LEAD_WEBHOOK_SECRET
+  );
 
-  if (!hasTelegram && !hasTwilio) {
+  if (!hasTelegram && !hasTwilio && !hasAiCouncil) {
     return res.status(503).json({ error: 'Notifications not configured' });
   }
 
@@ -137,6 +148,14 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
+  const leadPayload = {
+    name: safeName,
+    phone: safePhone,
+    zip: safeZip,
+    message: safeMessage,
+    source: 'garageguysoc.com',
+  };
+
   const plainText = [
     'Garage Guys — callback request',
     `Name: ${safeName}`,
@@ -154,24 +173,38 @@ module.exports = async function handler(req, res) {
     `<b>Job:</b> ${escapeHtml(safeMessage)}`,
   ].join('\n');
 
+  let notified = false;
+
   if (hasTelegram) {
     const telegramOk = await sendTelegram(telegramText);
     if (!telegramOk) {
       return res.status(502).json({ error: 'Failed to send notification' });
     }
-
-    sendAiCouncil({
-      name: safeName,
-      phone: safePhone,
-      zip: safeZip,
-      message: safeMessage,
-      source: 'garageguysoc.com',
-    }).catch((err) => console.error('AI Council lead webhook failed:', err));
+    notified = true;
   }
 
   if (hasTwilio) {
-    await sendTwilioSms(plainText);
+    const twilioOk = await sendTwilioSms(plainText);
+    if (twilioOk) notified = true;
   }
 
-  return res.status(200).json({ ok: true });
+  const aiCouncil = await sendAiCouncil(leadPayload);
+
+  if (hasAiCouncil) {
+    if (!aiCouncil.ok) {
+      console.error('AI Council ingest failed for callback submit', aiCouncil);
+      return res.status(502).json({
+        error: 'Could not register your request. Please call (949) 539-0009.',
+        aiCouncil: false,
+      });
+    }
+
+    return res.status(200).json({ ok: true, aiCouncil: true });
+  }
+
+  if (!notified) {
+    return res.status(503).json({ error: 'Notifications not configured' });
+  }
+
+  return res.status(200).json({ ok: true, aiCouncil: false });
 };

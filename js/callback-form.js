@@ -1,5 +1,5 @@
 (function () {
-  const CALLBACK_API_URL = 'https://gargageguysoc.vercel.app/api/callback';
+  const CALLBACK_API_URL = '/api/callback';
 
   const modal = document.getElementById('callback-modal');
   const form = document.getElementById('callback-form');
