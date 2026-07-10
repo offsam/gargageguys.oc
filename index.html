@@ -1946,6 +1946,8 @@ footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
   border-top: 1px solid rgba(255,255,255,0.05);
 }
 
@@ -1969,6 +1971,19 @@ footer {
 .footer-copy {
   font-size: 13px;
   color: rgba(255,255,255,0.3);
+}
+
+.footer-disclaimer {
+  margin: 0;
+  width: 100%;
+  flex-basis: 100%;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.18);
+  max-width: none;
+  text-align: right;
 }
 
 /* SCROLL ANIMATIONS */
@@ -2013,6 +2028,7 @@ footer {
   .service-area-regions { grid-template-columns: 1fr; gap: 14px; }
   .service-area-intro { margin-bottom: 28px; }
   footer { flex-direction: column; gap: 12px; text-align: center; }
+  .footer-disclaimer { text-align: center; margin: 0 auto; }
 
   .site-van-bg {
     background-attachment: scroll;
@@ -2424,6 +2440,7 @@ footer {
     <img src="Pictures/Logo.png" alt="Garage Guys">
   </a>
   <div class="footer-copy">© 2026 Garage Guys · Orange County & Inland Empire, CA</div>
+  <p class="footer-disclaimer">Not a licensed contractor. All work performed under $1,000 per project.</p>
 </footer>
 
 <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
