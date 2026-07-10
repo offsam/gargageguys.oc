@@ -72,8 +72,9 @@ nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 40px;
-  height: var(--nav-h);
+  padding: 10px 40px;
+  min-height: var(--nav-h);
+  height: auto;
 }
 
 .nav-logo {
@@ -95,20 +96,22 @@ nav {
 
 .nav-links {
   display: flex;
-  gap: 24px;
+  gap: 18px;
   list-style: none;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: center;
+  max-width: calc(100% - 160px);
 }
 
 .nav-links a {
   color: rgba(255,255,255,0.7);
   text-decoration: none;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.25px;
+  letter-spacing: 0.2px;
   text-transform: uppercase;
   transition: color 0.2s;
+  white-space: nowrap;
 }
 
 .nav-links a:hover,
@@ -121,12 +124,7 @@ nav {
   display: flex;
   align-items: center;
   padding: calc(var(--nav-h) + 48px) 40px 48px;
-  background-color: transparent;
-  background-image: var(--hero-overlay);
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center center;
-  background-attachment: fixed;
+  background: transparent;
 }
 
 .service-hero__inner {
@@ -630,8 +628,16 @@ footer {
 }
 
 @media (max-width: 900px) {
-  nav { padding: 0 20px; }
-  .nav-links { display: none; }
+  nav { padding: 8px 20px; }
+  .nav-links {
+    display: flex;
+    gap: 14px;
+    max-width: calc(100% - 120px);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nav-links::-webkit-scrollbar { display: none; }
   nav { background-attachment: scroll; }
   .service-hero {
     padding: calc(var(--nav-h) + 32px) 20px 32px;
