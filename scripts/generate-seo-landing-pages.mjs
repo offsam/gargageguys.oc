@@ -2,6 +2,7 @@ import { mkdir, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { newCityPages } from './seo-city-batch.mjs';
+import { problemPages } from './seo-problem-pages.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const today = '2026-07-11';
@@ -21,6 +22,16 @@ export const SEO_CITIES = [
   'lake-forest-ca',
   'laguna-niguel-ca',
   'orange-ca',
+];
+
+const PROBLEM_PATHS = [
+  'garage-door-wont-open',
+  'garage-door-off-track',
+  'broken-garage-door-spring',
+  'garage-door-cable-repair',
+  'garage-door-wont-close',
+  'garage-door-torsion-spring-repair',
+  'garage-door-spring-repair-cost',
 ];
 
 const OC_LANDING_PATHS = [
@@ -1241,6 +1252,7 @@ const pages = [
 const allPages = [
   ...pages.filter((p) => !p.path.includes('/tustin-ca')),
   ...newCityPages,
+  ...problemPages,
 ];
 
 for (const slug of ['garage-door-repair/tustin-ca', 'garage-door-spring-repair/tustin-ca', 'garage-door-opener-repair/tustin-ca']) {
@@ -1256,6 +1268,7 @@ for (const page of allPages) {
 
 const sitemapPaths = ['/', '/garage-door-repair/', '/garage-door-spring-repair/', '/garage-door-opener-repair/'];
 for (const oc of OC_LANDING_PATHS) sitemapPaths.push(`/${oc}/`);
+for (const p of PROBLEM_PATHS) sitemapPaths.push(`/${p}/`);
 for (const service of ['garage-door-repair', 'garage-door-spring-repair', 'garage-door-opener-repair']) {
   for (const city of SEO_CITIES) sitemapPaths.push(`/${service}/${city}/`);
 }
