@@ -1980,11 +1980,13 @@ footer {
 
 /* RESPONSIVE */
 @media (max-width: 900px) {
-  nav { padding: 8px 20px; }
+  html { scroll-snap-type: none; }
+
+  nav { padding: 8px 16px; }
   .nav-links {
     display: flex;
-    gap: 14px;
-    max-width: calc(100% - 120px);
+    gap: 12px;
+    max-width: calc(100% - 110px);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -2002,22 +2004,54 @@ footer {
     background-attachment: scroll;
   }
 
-  .hero-content { margin-left: 10%; padding: 0 16px 0 0; }
+  .hero {
+    min-height: auto;
+    padding: calc(var(--nav-h) + 24px) 20px 20px;
+    align-items: flex-start;
+  }
+
+  .hero-content {
+    margin-left: 0;
+    padding: 0;
+    max-width: 100%;
+  }
+
   .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 16px; }
-  .section-screen { padding: calc(var(--nav-h) + 20px) 20px 20px; }
+  .section-screen {
+    min-height: auto;
+    padding: calc(var(--nav-h) + 24px) 20px 32px;
+    scroll-snap-stop: normal;
+  }
+  .section-title { margin-bottom: 36px; }
   .services-head { flex-direction: column; align-items: flex-start; gap: 16px; }
-  .services-grid { grid-template-columns: 1fr 1fr; }
+  .services-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
   .service-card,
   .service-card:nth-child(4),
   .service-card:nth-child(5) { grid-column: span 1; }
-  .why-grid { grid-template-columns: 1fr; gap: 32px; }
+  .service-card { padding: 20px 18px 22px; }
+  .why-grid { grid-template-columns: 1fr; gap: 28px; }
   .why-reviews { max-width: 100%; }
   .why-trust-spotlight { max-width: 100%; }
-  .cta-box { padding: 48px 28px; }
+  .why-item { padding: 18px 16px; gap: 16px; }
+  .cta-box { padding: 40px 24px; }
+  .cta-sub { margin-bottom: 32px; }
+  .cta-phone { margin-bottom: 28px; }
   .service-area-regions { grid-template-columns: 1fr; gap: 14px; }
   .service-area-intro { margin-bottom: 28px; }
-  footer { flex-direction: column; gap: 12px; text-align: center; }
+  footer {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+    padding: 28px 20px;
+  }
   .footer-disclaimer { text-align: center; margin: 0 auto; }
+
+  .btn-callback,
+  .btn-callback--cta {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
 
   .site-van-bg {
     background-attachment: scroll;
@@ -2036,11 +2070,80 @@ footer {
 }
 
 @media (max-width: 600px) {
-  .service-area-card { padding: 24px 20px 22px; }
+  :root {
+    --nav-h: 62px;
+    --stats-h: 96px;
+  }
+
+  body {
+    padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+  }
+
+  nav { padding: 6px 14px; }
+  .nav-logo { padding: 4px 8px; }
+  .nav-logo img { height: 44px; max-width: 100px; }
+  .nav-links { gap: 10px; max-width: calc(100% - 96px); }
+  .nav-links a { font-size: 10px; letter-spacing: 0.1px; }
+
+  .hero { padding: calc(var(--nav-h) + 16px) 16px 16px; }
+  .hero-title { font-size: clamp(40px, 11vw, 56px); }
+  .hero-phone-number {
+    font-size: clamp(28px, 8vw, 40px);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .hero-phone-icon svg { width: 22px; height: 22px; }
+  .hero-callback-btn { max-width: 100%; }
+
+  .stat-item { min-height: 72px; padding: 10px 8px; }
+  .stat-num { font-size: clamp(24px, 6vw, 30px); }
+  .stat-label { font-size: 10px; }
+
+  .section-screen { padding: calc(var(--nav-h) + 16px) 16px 28px; }
+  .section-title { margin-bottom: 28px; font-size: clamp(32px, 8vw, 44px); }
+  .services-badge { width: 100%; }
+  .service-card { padding: 18px 14px 20px; }
+  .service-icons { gap: 10px 12px; margin-bottom: 14px; min-height: 44px; }
+  .service-icons svg,
+  .service-icons .lucide { width: 32px; height: 32px; }
+  .service-name { font-size: clamp(17px, 4.5vw, 22px); }
+  .service-desc { font-size: 12px; }
+
+  .why .section-title { font-size: clamp(36px, 9vw, 52px); margin-bottom: 24px; }
+  .why-item { padding: 16px 14px; gap: 12px; }
+  .why-num { min-width: 40px; font-size: clamp(32px, 8vw, 40px); }
+  .reviews-slider { padding: 20px 16px 16px; }
+  .reviews-track { min-height: 200px; }
+
+  .service-area-card { padding: 22px 18px 20px; }
+  .service-area-card__title { font-size: clamp(28px, 7vw, 40px); }
+
+  .cta-box { padding: 32px 20px; border-radius: 10px; }
+  .cta-title { font-size: clamp(36px, 9vw, 52px); }
+  .cta-phone { font-size: clamp(32px, 9vw, 48px); letter-spacing: 1px; }
+  .cta-areas { font-size: 12px; line-height: 1.7; }
+
+  .callback-modal { padding: 12px; }
+  .callback-dialog { padding: 28px 20px 24px; max-height: calc(100vh - 24px); overflow-y: auto; }
+  .callback-dialog h3 { font-size: 28px; }
+
+  footer { padding: 24px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+
   .service-card,
   .service-card:nth-child(4),
   .service-card:nth-child(5) { grid-column: span 1; }
+  .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 6px; padding: 0 12px; }
+}
+
+@media (max-width: 480px) {
+  .services-grid { grid-template-columns: 1fr; }
+  .services-grid .service-card,
+  .services-grid .service-card:nth-child(4),
+  .services-grid .service-card:nth-child(5) { grid-column: span 1; }
   .stats-inner { grid-template-columns: repeat(2, 1fr); }
+  .hero-handyman { font-size: 11px; padding: 7px 12px; }
+  .hero-eyebrow { font-size: 13px; }
+  .fab-bar { width: 92%; max-width: none; }
 }
 </style>
 <script src="/api/analytics.js" defer></script>

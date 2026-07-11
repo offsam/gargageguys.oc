@@ -681,11 +681,11 @@ footer {
 }
 
 @media (max-width: 900px) {
-  nav { padding: 8px 20px; }
+  nav { padding: 8px 16px; }
   .nav-links {
     display: flex;
-    gap: 14px;
-    max-width: calc(100% - 120px);
+    gap: 12px;
+    max-width: calc(100% - 110px);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -693,12 +693,118 @@ footer {
   .nav-links::-webkit-scrollbar { display: none; }
   nav { background-attachment: scroll; }
   .service-hero {
-    padding: calc(var(--nav-h) + 32px) 20px 32px;
+    min-height: auto;
+    padding: calc(var(--nav-h) + 28px) 20px 32px;
     background-attachment: scroll;
+    align-items: flex-start;
   }
-  .service-main { padding: 48px 20px 56px; }
-  .service-cta { padding: 48px 20px; }
-  footer { flex-direction: column; gap: 12px; text-align: center; padding: 28px 20px; }
+  .service-hero__actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .service-hero__phone {
+    justify-content: center;
+    text-align: center;
+    flex-wrap: wrap;
+  }
+  .btn-callback-inline,
+  .btn-call-now {
+    width: 100%;
+    text-align: center;
+  }
+  .service-main { padding: 40px 20px 48px; }
+  .service-cta { padding: 40px 20px; }
+  footer {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+    padding: 28px 20px;
+  }
   .footer-disclaimer { text-align: center; }
   .site-van-bg { background-attachment: scroll; }
+  .callback-dialog { max-height: calc(100vh - 40px); overflow-y: auto; }
+}
+
+@media (max-width: 600px) {
+  :root { --nav-h: 62px; }
+
+  body {
+    padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+  }
+
+  nav { padding: 6px 14px; }
+  .nav-logo { padding: 4px 8px; }
+  .nav-logo img { height: 44px; max-width: 100px; }
+  .nav-links { gap: 10px; max-width: calc(100% - 96px); }
+  .nav-links a { font-size: 10px; letter-spacing: 0.1px; }
+
+  .service-hero {
+    padding: calc(var(--nav-h) + 20px) 16px 24px;
+  }
+  .service-hero__title { font-size: clamp(34px, 9vw, 48px); }
+  .service-hero__phone { font-size: clamp(24px, 7vw, 32px); }
+  .service-main { padding: 32px 16px 40px; }
+  .service-cta { padding: 32px 16px; }
+  .service-cta__phone { font-size: clamp(28px, 8vw, 36px); }
+
+  .callback-modal { padding: 12px; }
+  .callback-dialog { padding: 28px 20px 24px; }
+  .callback-dialog h3 { font-size: 28px; }
+
+  footer { padding: 24px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+
+  .fab-bar {
+    bottom: 14px;
+    left: 50%;
+    right: auto;
+    width: 78%;
+    max-width: 323px;
+    transform: translateX(-50%) translateY(14px);
+  }
+
+  .fab-bar.is-visible {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .fab-call,
+  .fab-callback {
+    width: 100%;
+    min-height: 58px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    padding: 12px 16px;
+  }
+
+  .fab-call {
+    flex-direction: row;
+    gap: 14px;
+    text-align: center;
+  }
+
+  .fab-call-text {
+    align-items: center;
+    text-align: center;
+    flex: 0 1 auto;
+    min-width: 0;
+    gap: 3px;
+  }
+
+  .fab-call-icon {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+
+  .fab-call-label { font-size: 10px; letter-spacing: 1px; }
+  .fab-call-number { font-size: clamp(17px, 4.5vw, 20px); letter-spacing: 1px; }
+  .fab-callback-title { font-size: clamp(16px, 4.2vw, 19px); }
+  .fab-callback-label { font-size: 10px; letter-spacing: 1px; }
+  .fab-callback { min-width: 0; }
+}
+
+@media (max-width: 480px) {
+  .fab-bar { width: 92%; max-width: none; }
+  .service-related__links a { font-size: 13px; padding: 8px 14px; }
 }

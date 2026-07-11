@@ -710,24 +710,40 @@
 
 @media (max-width: 640px) {
   .gg-ai-chat-root {
-    bottom: 32px;
-    left: 18px;
+    --gg-launcher: 68px;
+    left: 16px;
+    bottom: calc(148px + env(safe-area-inset-bottom, 0px));
   }
 
   .gg-ai-chat-panel {
-    width: min(360px, calc(100vw - 32px));
-    height: min(72vh, 540px);
+    width: min(360px, calc(100vw - 24px));
+    height: min(52vh, calc(100vh - 252px));
+    max-height: calc(100vh - 252px);
+  }
+
+  .gg-ai-chat-root--open .gg-ai-chat-panel {
+    position: fixed;
+    left: 50%;
+    bottom: auto;
+    top: calc(72px + env(safe-area-inset-top, 0px));
+    transform: translateX(-50%) translateY(0) scale(1);
+    width: calc(100vw - 20px);
+    height: calc(100vh - 200px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    max-height: none;
   }
 
   .gg-ai-chat-teaser {
-    width: 200px;
+    width: min(200px, calc(100vw - 120px));
     padding-left: 0;
   }
 
   .gg-ai-chat-teaser-stack {
-    padding-left: 48px;
-    margin-bottom: 8px;
+    padding-left: 40px;
+    margin-bottom: 6px;
   }
+
+  .gg-ai-chat-teaser__label { font-size: 11px; }
+  .gg-ai-chat-teaser__text { font-size: 12px; }
 
   .gg-ai-chat-send__label {
     display: none;
@@ -735,5 +751,28 @@
 
   .gg-ai-chat-send {
     padding: 11px 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .gg-ai-chat-root {
+    --gg-launcher: 60px;
+    left: 12px;
+    bottom: calc(142px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .gg-ai-chat-panel {
+    width: calc(100vw - 20px);
+    height: min(50vh, calc(100vh - 238px));
+    max-height: calc(100vh - 238px);
+  }
+
+  .gg-ai-chat-root--open .gg-ai-chat-panel {
+    top: calc(64px + env(safe-area-inset-top, 0px));
+    height: calc(100vh - 188px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+
+  .gg-ai-chat-teaser-stack {
+    padding-left: 32px;
   }
 }
