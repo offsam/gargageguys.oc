@@ -24,6 +24,8 @@ export const SEO_CITIES = [
   'orange-ca',
 ];
 
+const SERVICE_AREA_CITIES = [...SEO_CITIES, 'tustin-ca'];
+
 const PROBLEM_PATHS = [
   'garage-door-wont-open',
   'garage-door-off-track',
@@ -1272,6 +1274,8 @@ for (const p of PROBLEM_PATHS) sitemapPaths.push(`/${p}/`);
 for (const service of ['garage-door-repair', 'garage-door-spring-repair', 'garage-door-opener-repair']) {
   for (const city of SEO_CITIES) sitemapPaths.push(`/${service}/${city}/`);
 }
+sitemapPaths.push('/service-areas/');
+for (const city of SERVICE_AREA_CITIES) sitemapPaths.push(`/service-areas/${city}/`);
 
 let sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 for (const p of sitemapPaths) {
