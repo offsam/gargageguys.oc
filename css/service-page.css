@@ -119,6 +119,59 @@ nav {
   color: var(--white);
 }
 
+nav.nav-seo {
+  justify-content: flex-end;
+}
+
+nav.nav-seo .nav-logo {
+  margin-left: auto;
+}
+
+.btn-call-now {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 28px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: linear-gradient(135deg, #f59e0b 0%, #e88b04 100%);
+  color: var(--white);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 1px;
+  text-decoration: none;
+  text-transform: uppercase;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-call-now:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+  color: var(--white);
+}
+
+.btn-call-now--cta {
+  margin-bottom: 12px;
+}
+
+.service-home-link {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.service-home-link a {
+  color: var(--blue-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.service-home-link a:hover {
+  text-decoration: underline;
+}
+
 .service-hero {
   min-height: 52svh;
   display: flex;
