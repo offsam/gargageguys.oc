@@ -1,9 +1,34 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { newCityPages } from './seo-city-batch.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const today = '2026-07-11';
+
+export const SEO_CITIES = [
+  'irvine-ca',
+  'anaheim-ca',
+  'santa-ana-ca',
+  'huntington-beach-ca',
+  'newport-beach-ca',
+  'costa-mesa-ca',
+  'mission-viejo-ca',
+  'yorba-linda-ca',
+  'fullerton-ca',
+  'garden-grove-ca',
+  'fountain-valley-ca',
+  'lake-forest-ca',
+  'laguna-niguel-ca',
+  'orange-ca',
+];
+
+const OC_LANDING_PATHS = [
+  'garage-door-repair/orange-county',
+  'garage-door-spring-repair/orange-county',
+  'garage-door-opener-repair/orange-county',
+  'emergency-garage-door-repair/orange-county',
+];
 
 const sharedTail = `  <div class="fab-bar" id="fab-bar">
   <a href="tel:+19495390009" class="fab-call" aria-label="Call (949) 539-0009">
@@ -127,7 +152,7 @@ function localTrustParagraph(page) {
     : page.path.includes('opener-repair')
       ? 'opener diagnostics and repair'
       : 'garage door repair';
-  return `    <p>Garage Guys handles ${service} across ${city} with upfront quotes and same-day routing when slots are open. Our technician explains findings in plain language — no pressure to replace parts that still have safe life left. The service van carries common hardware so most ${city} appointments wrap in a single trip. We test door balance, safety sensors, and manual release whenever those items are in scope. Labor warranty up to one year on qualifying work.</p>\n`;
+  return `    <p>Garage Guys handles ${service} across ${city} with upfront quotes and same-day routing when slots are open. Our technician explains findings in plain language — no pressure to replace parts that still have safe life left. The service van carries common springs, opener gears, rollers, and cables so most ${city} appointments wrap in a single trip. We test door balance, safety sensors, and manual release whenever those items are in scope. Same-day scheduling is available seven days a week when you call early enough to hold a route slot. Labor warranty up to one year on qualifying work.</p>\n`;
 }
 
 function renderPage(page) {
@@ -1174,13 +1199,81 @@ const pages = [
     ctaText: 'Call for opener repair in Huntington Beach.',
     areaServed: { type: 'City', name: 'Huntington Beach' },
   },
+  {
+    path: 'emergency-garage-door-repair/orange-county',
+    h1: 'Emergency Garage Door Repair in Orange County, CA',
+    title: 'Emergency Garage Door Repair Orange County | 7 Days | Garage Guys',
+    ogTitle: 'Emergency Garage Door Repair Orange County | Garage Guys',
+    description:
+      'Emergency garage door repair in Orange County — door stuck open, off-track, or broken spring. Same-day response. Call (949) 539-0009 now.',
+    schemaDescription:
+      'Emergency same-day garage door repair across Orange County, California including off-track doors, broken springs, and stuck-open situations.',
+    eyebrow: 'Orange County, California',
+    lead:
+      'Door stuck open at night? Car trapped inside? Garage Guys answers emergency garage door repair calls across Orange County — seven days a week.',
+    sectionTitle: '24/7 Emergency Response Across OC',
+    paragraphs: [
+      'Emergency garage door situations include doors off the track, broken springs with the door hung halfway, cables snapped under tension, and openers that fail with vehicles inside. Garage Guys prioritizes calls where security or access is compromised.',
+      'We secure the opening when possible — clearing tracks, resetting cables, or manually lowering a door safely before permanent repair. Never walk under a door supported only by a damaged opener or frayed cable.',
+      'Our cargo van stocks common springs, cables, rollers, and opener parts for Orange County\'s most frequent emergency failures. You receive a clear quote before non-urgent add-ons; life-safety stabilization comes first.',
+      'Serving Irvine, Anaheim, Santa Ana, Huntington Beach, Newport Beach, Costa Mesa, Mission Viejo, Fullerton, Garden Grove, and surrounding OC cities. For non-emergency service see <a href="/garage-door-repair/orange-county/">garage door repair Orange County</a>.',
+      'We are not a licensed contractor; all work performed under $1,000 per project. Emergency does not mean after-midnight only — if your home is exposed or you cannot secure the garage, call now and we will route the nearest available technician.',
+      'Call <a href="tel:+19495390009">(949) 539-0009</a> now or return to the <a href="/">Garage Guys homepage</a> to request a callback.',
+    ],
+    features: [
+      'Stuck-open and off-track emergencies',
+      'Broken spring stabilization',
+      'Vehicle trapped inside priority',
+      'Same-day OC dispatch',
+      '7 days a week availability',
+    ],
+    related: [
+      { href: '/garage-door-repair/orange-county/', label: 'Garage Door Repair OC' },
+      { href: '/garage-door-spring-repair/orange-county/', label: 'Spring Repair OC' },
+      { href: '/', label: 'Garage Guys Home' },
+    ],
+    ctaTitle: 'Need Emergency Repair Now?',
+    ctaText: 'Call immediately — emergency garage door repair across Orange County.',
+    areaServed: { type: 'AdministrativeArea', name: 'Orange County, California' },
+  },
 ];
 
-for (const page of pages) {
+const allPages = [
+  ...pages.filter((p) => !p.path.includes('/tustin-ca')),
+  ...newCityPages,
+];
+
+for (const slug of ['garage-door-repair/tustin-ca', 'garage-door-spring-repair/tustin-ca', 'garage-door-opener-repair/tustin-ca']) {
+  await rm(path.join(root, slug), { recursive: true, force: true });
+}
+
+for (const page of allPages) {
   const dir = path.join(root, page.path);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, 'index.html'), renderPage(page), 'utf8');
   console.log('wrote', page.path);
 }
 
-console.log(`Generated ${pages.length} SEO landing pages.`);
+const sitemapPaths = ['/', '/garage-door-repair/', '/garage-door-spring-repair/', '/garage-door-opener-repair/'];
+for (const oc of OC_LANDING_PATHS) sitemapPaths.push(`/${oc}/`);
+for (const service of ['garage-door-repair', 'garage-door-spring-repair', 'garage-door-opener-repair']) {
+  for (const city of SEO_CITIES) sitemapPaths.push(`/${service}/${city}/`);
+}
+
+let sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+for (const p of sitemapPaths) {
+  const pri =
+    p === '/'
+      ? '1.0'
+      : p.includes('emergency') || p.includes('orange-county')
+        ? '0.85'
+        : p.split('/').filter(Boolean).length === 1
+          ? '0.9'
+          : '0.8';
+  const freq = p === '/' ? 'weekly' : 'monthly';
+  sitemap += `  <url>\n    <loc>https://garageguysoc.com${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${freq}</changefreq>\n    <priority>${pri}</priority>\n  </url>\n`;
+}
+sitemap += '</urlset>\n';
+await writeFile(path.join(root, 'sitemap.xml'), sitemap, 'utf8');
+
+console.log(`Generated ${allPages.length} SEO landing pages. Sitemap: ${sitemapPaths.length} URLs.`);
