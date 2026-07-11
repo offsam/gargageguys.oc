@@ -710,15 +710,15 @@
 
 @media (max-width: 640px) {
   .gg-ai-chat-root {
-    --gg-launcher: 68px;
-    left: 16px;
-    bottom: calc(148px + env(safe-area-inset-bottom, 0px));
+    --gg-launcher: 64px;
+    left: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
   .gg-ai-chat-panel {
     width: min(360px, calc(100vw - 24px));
-    height: min(52vh, calc(100vh - 252px));
-    max-height: calc(100vh - 252px);
+    height: min(52vh, calc(100vh - 180px));
+    max-height: calc(100vh - 180px);
   }
 
   .gg-ai-chat-root--open .gg-ai-chat-panel {
@@ -733,12 +733,12 @@
   }
 
   .gg-ai-chat-teaser {
-    width: min(200px, calc(100vw - 120px));
+    width: min(200px, calc(100vw - 190px));
     padding-left: 0;
   }
 
   .gg-ai-chat-teaser-stack {
-    padding-left: 40px;
+    padding-left: 36px;
     margin-bottom: 6px;
   }
 
@@ -756,15 +756,14 @@
 
 @media (max-width: 480px) {
   .gg-ai-chat-root {
-    --gg-launcher: 60px;
-    left: 12px;
-    bottom: calc(142px + env(safe-area-inset-bottom, 0px));
+    --gg-launcher: 58px;
+    left: 10px;
   }
 
   .gg-ai-chat-panel {
     width: calc(100vw - 20px);
-    height: min(50vh, calc(100vh - 238px));
-    max-height: calc(100vh - 238px);
+    height: min(50vh, calc(100vh - 170px));
+    max-height: calc(100vh - 170px);
   }
 
   .gg-ai-chat-root--open .gg-ai-chat-panel {
@@ -773,6 +772,6 @@
   }
 
   .gg-ai-chat-teaser-stack {
-    padding-left: 32px;
+    padding-left: 28px;
   }
 }
