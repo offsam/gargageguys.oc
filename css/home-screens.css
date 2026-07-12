@@ -358,15 +358,11 @@ body.page-home-unified .fab-bar {
   body.page-home-unified .home-hero-stack .hero-title {
     font-size: clamp(30px, 8.5vw, 42px);
     gap: 6px;
-  }
-
-  body.page-home-unified .home-hero-stack .hero-title__line:not(.hero-title__line--accent) {
     transform: translateY(-50px);
   }
 
   body.page-home-unified .home-hero-stack .hero-title__line--accent {
     margin-top: 30px;
-    transform: translateY(30px);
   }
 
   body.page-home-unified .home-hero-stack .hero-eyebrow {
