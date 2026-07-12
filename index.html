@@ -149,7 +149,7 @@
   --gray: #8a9bb0;
   --text: #1a2a3a;
   --nav-h: 70px;
-  --stats-h: 112px;
+  --stats-h: 148px;
   --hero-gap: 14px;
   --grad-navy-end: 26%;
   --grad-glow-start: 66%;
@@ -297,56 +297,115 @@ nav {
 .nav-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 18px;
   flex-shrink: 0;
+  transform: translateX(-32px);
 }
 
 .nav-deals-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 10px 18px;
-  border-radius: 999px;
+  gap: 10px;
+  padding: 12px 24px 11px;
+  border-radius: 14px;
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 18px;
-  letter-spacing: 1.2px;
   text-transform: uppercase;
   text-decoration: none;
   color: #0f2340;
-  background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
-  border: 2px solid rgba(255, 255, 255, 0.85);
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 38%, #f59e0b 100%);
+  border: 2px solid rgba(255, 255, 255, 0.92);
   box-shadow:
-    0 0 18px rgba(252, 211, 77, 0.55),
-    0 0 36px rgba(245, 158, 11, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  animation: nav-deals-glow 2.4s ease-in-out infinite;
+    0 0 22px rgba(252, 211, 77, 0.65),
+    0 0 44px rgba(245, 158, 11, 0.4),
+    0 8px 20px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  animation: nav-deals-glow 2.2s ease-in-out infinite;
   transition: transform 0.2s, box-shadow 0.2s;
   white-space: nowrap;
+  overflow: hidden;
+}
+
+.nav-deals-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.5) 50%, transparent 65%);
+  transform: translateX(-130%);
+  animation: nav-deals-shimmer 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.nav-deals-btn__spark {
+  font-size: 14px;
+  color: #0f2340;
+  line-height: 1;
+  animation: nav-deals-spark 1.8s ease-in-out infinite;
+}
+
+.nav-deals-btn__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  line-height: 1;
+}
+
+.nav-deals-btn__title {
+  font-size: clamp(20px, 1.6vw, 26px);
+  letter-spacing: 1.4px;
+}
+
+.nav-deals-btn__sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: rgba(15, 35, 64, 0.78);
 }
 
 .nav-deals-btn:hover {
-  transform: translateY(-1px) scale(1.03);
+  transform: translateY(-2px) scale(1.04);
   color: #0f2340;
   box-shadow:
-    0 0 24px rgba(252, 211, 77, 0.8),
-    0 0 48px rgba(245, 158, 11, 0.5);
+    0 0 32px rgba(252, 211, 77, 0.9),
+    0 0 60px rgba(245, 158, 11, 0.55),
+    0 12px 28px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
   animation: none;
+}
+
+.nav-deals-btn:hover::after {
+  animation: none;
+  opacity: 0;
 }
 
 @keyframes nav-deals-glow {
   0%, 100% {
     box-shadow:
-      0 0 14px rgba(252, 211, 77, 0.45),
-      0 0 28px rgba(245, 158, 11, 0.28),
-      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+      0 0 16px rgba(252, 211, 77, 0.5),
+      0 0 32px rgba(245, 158, 11, 0.3),
+      0 6px 16px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
   }
   50% {
     box-shadow:
-      0 0 26px rgba(252, 211, 77, 0.85),
-      0 0 52px rgba(245, 158, 11, 0.5),
-      0 0 70px rgba(252, 211, 77, 0.22),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      0 0 34px rgba(252, 211, 77, 0.95),
+      0 0 68px rgba(245, 158, 11, 0.55),
+      0 0 90px rgba(252, 211, 77, 0.28),
+      0 8px 22px rgba(0, 0, 0, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.65);
   }
+}
+
+@keyframes nav-deals-shimmer {
+  0%, 65%, 100% { transform: translateX(-130%); }
+  40% { transform: translateX(130%); }
+}
+
+@keyframes nav-deals-spark {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
 .nav-links {
@@ -478,16 +537,17 @@ nav {
   transform: translateY(-1px);
 }
 
-.home-hero-stack .hero > .hero-handyman {
-  position: absolute;
-  z-index: 3;
-  right: clamp(24px, 5vw, 56px);
-  top: 50%;
-  transform: translateY(-50%);
+.stats-bar__handyman {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px 10px;
+  display: flex;
+  justify-content: flex-end;
 }
 
-.home-hero-stack .hero > .hero-handyman:hover {
-  transform: translateY(calc(-50% - 1px));
+.stats-bar .hero-handyman {
+  font-size: clamp(12px, 1vw, 15px);
+  padding: 10px 18px;
 }
 
 .hero-title {
@@ -2357,7 +2417,7 @@ footer {
   .nav-links {
     display: flex;
     gap: 12px;
-    max-width: calc(100% - 200px);
+    max-width: calc(100% - 240px);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -2390,16 +2450,11 @@ footer {
 
   .hero-lead { max-width: min(300px, 100%); }
 
-  .home-hero-stack .hero > .hero-handyman {
-    position: static;
-    transform: none;
-    align-self: flex-end;
-    margin: 0 0 4px;
+  .stats-bar__handyman {
+    justify-content: center;
+    padding: 0 16px 8px;
   }
 
-  .home-hero-stack .hero > .hero-handyman:hover {
-    transform: translateY(-1px);
-  }
   .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 16px; }
   .section-screen {
     min-height: auto;
@@ -2459,7 +2514,7 @@ footer {
 @media (max-width: 600px) {
   :root {
     --nav-h: 62px;
-    --stats-h: 96px;
+    --stats-h: 128px;
   }
 
   body {
@@ -2469,10 +2524,12 @@ footer {
   nav { padding: 6px 14px; }
   .nav-logo { padding: 4px 8px; }
   .nav-logo img { height: 44px; max-width: 100px; }
-  .nav-links { gap: 10px; max-width: calc(100% - 180px); }
+  .nav-links { gap: 10px; max-width: calc(100% - 210px); }
   .nav-links a { font-size: 10px; letter-spacing: 0.1px; }
-  .nav-brand { gap: 8px; }
-  .nav-deals-btn { font-size: 15px; padding: 8px 14px; letter-spacing: 1px; }
+  .nav-brand { gap: 12px; transform: translateX(-16px); }
+  .nav-deals-btn { padding: 10px 16px 9px; }
+  .nav-deals-btn__title { font-size: 18px; letter-spacing: 1px; }
+  .nav-deals-btn__sub { font-size: 9px; }
   .nav-logo img { height: 44px; max-width: 96px; }
 
   .hero { padding: calc(var(--nav-h) + 16px) 16px 16px; }
@@ -2528,7 +2585,7 @@ footer {
   .services-grid .service-card:nth-child(4),
   .services-grid .service-card:nth-child(5) { grid-column: span 1; }
   .stats-inner { grid-template-columns: repeat(2, 1fr); }
-  .hero-handyman { font-size: 11px; padding: 7px 12px; }
+  .hero-handyman { font-size: 11px; padding: 8px 14px; }
   .hero-eyebrow { font-size: 13px; }
 }
 </style>
@@ -2554,7 +2611,13 @@ footer {
     <li class="nav-anchor"><a href="#contact">Contact</a></li>
   </ul>
   <div class="nav-brand">
-    <a href="/deals/" class="nav-deals-btn">Deals</a>
+    <a href="/deals/" class="nav-deals-btn">
+      <span class="nav-deals-btn__spark" aria-hidden="true">✦</span>
+      <span class="nav-deals-btn__text">
+        <span class="nav-deals-btn__title">Hot Deals</span>
+        <span class="nav-deals-btn__sub">Openers from $499</span>
+      </span>
+    </a>
     <a href="/" class="nav-logo">
       <img src="Pictures/Logo.png" alt="Garage Guys garage door repair Orange County CA — home">
     </a>
@@ -2566,7 +2629,6 @@ footer {
 <section class="hero">
   <div class="hero-bg"></div>
   <div class="hero-grid"></div>
-  <a href="#services" class="hero-handyman" aria-label="Handyman services — painting, storage, and more">Handyman Services</a>
   <div class="hero-content">
     <div class="hero-eyebrow">Orange County, California</div>
     <h1 class="hero-title">
@@ -2592,6 +2654,9 @@ footer {
 
 <!-- STATS -->
 <div class="stats-bar" data-van-tone="dark">
+  <div class="stats-bar__handyman">
+    <a href="#services" class="hero-handyman" aria-label="Handyman services — painting, storage, and more">Handyman Services</a>
+  </div>
   <div class="stats-inner">
     <div class="stat-item">
       <div class="stat-num">Same<span>-</span>Day</div>
