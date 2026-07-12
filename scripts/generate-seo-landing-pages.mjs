@@ -1249,7 +1249,7 @@ for (const page of allPages) {
   console.log('wrote', page.path);
 }
 
-const sitemapPaths = ['/', '/garage-door-repair/', '/garage-door-spring-repair/', '/garage-door-opener-repair/'];
+const sitemapPaths = ['/', '/garage-door-repair/', '/garage-door-spring-repair/', '/garage-door-opener-repair/', '/deals/'];
 for (const oc of OC_LANDING_PATHS) sitemapPaths.push(`/${oc}/`);
 for (const p of PROBLEM_PATHS) sitemapPaths.push(`/${p}/`);
 sitemapPaths.push('/service-areas/');

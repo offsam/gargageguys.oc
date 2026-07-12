@@ -11,6 +11,7 @@ export function siteNav({ logoAlt = 'Garage Guys — home', active = '' } = {}) 
     <li><a href="/garage-door-repair/"${cur('repair')}>Garage Door Repair</a></li>
     <li><a href="/garage-door-spring-repair/"${cur('spring')}>Spring Repair</a></li>
     <li><a href="/garage-door-opener-repair/"${cur('opener')}>Opener Repair</a></li>
+    <li><a href="/deals/"${cur('deals')}>Deals</a></li>
     <li><a href="/service-areas/"${cur('areas')}>Service Areas</a></li>
   </ul>
   <a href="/" class="nav-logo">
@@ -22,6 +23,7 @@ export function siteNav({ logoAlt = 'Garage Guys — home', active = '' } = {}) 
 export function navActiveFromPath(path) {
   if (path.includes('spring-repair')) return 'spring';
   if (path.includes('opener-repair')) return 'opener';
+  if (path.startsWith('deals')) return 'deals';
   if (path.startsWith('service-areas')) return 'areas';
   return 'repair';
 }

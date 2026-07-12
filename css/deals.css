@@ -1,0 +1,245 @@
+/* Deals page — opener installation specials */
+
+.deals-main {
+  padding: 0 0 64px;
+}
+
+.deals-main__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 40px);
+}
+
+.deals-intro {
+  text-align: center;
+  max-width: 42em;
+  margin: 0 auto 40px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: clamp(15px, 1.1vw, 17px);
+  line-height: 1.6;
+}
+
+.deals-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 32px);
+  align-items: stretch;
+}
+
+.deal-card {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(160deg, rgba(26, 58, 92, 0.96) 0%, rgba(15, 35, 64, 0.98) 100%);
+  border: 1px solid rgba(91, 163, 217, 0.35);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.deal-card__flyer {
+  display: block;
+  width: 100%;
+  line-height: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.deal-card__flyer img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.deal-card__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 16px;
+  padding: 22px 22px 24px;
+}
+
+.deal-card__badge {
+  display: inline-flex;
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #0f2340;
+  background: #fcd34d;
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+
+.deal-card__title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(28px, 3vw, 36px);
+  line-height: 1.05;
+  letter-spacing: 0.5px;
+  color: var(--white);
+  margin: 0;
+}
+
+.deal-card__subtitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #5ba3d9;
+  letter-spacing: 0.04em;
+  margin: -4px 0 0;
+}
+
+.deal-card__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 14px;
+}
+
+.deal-card__was {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: line-through;
+}
+
+.deal-card__now {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(36px, 4.5vw, 48px);
+  line-height: 1;
+  color: #fcd34d;
+  letter-spacing: 0.5px;
+}
+
+.deal-card__includes {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.deal-card__features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.deal-card__features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+}
+
+.deal-card__features li::before {
+  content: '✓';
+  color: #5ba3d9;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.deal-card__warranty {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fcd34d;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(252, 211, 77, 0.1);
+  border: 1px solid rgba(252, 211, 77, 0.28);
+  align-self: flex-start;
+}
+
+.deal-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.deal-card__call {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2e6da4 0%, #1a3a5c 100%);
+  border: 1px solid rgba(91, 163, 217, 0.5);
+  color: var(--white);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.8px;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.deal-card__call:hover {
+  transform: translateY(-2px);
+  color: var(--white);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+}
+
+.deal-card__callback {
+  width: 100%;
+}
+
+.deals-areas {
+  margin-top: 48px;
+  text-align: center;
+  padding: 28px 24px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.deals-areas h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(24px, 3vw, 32px);
+  color: #fcd34d;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.deals-areas p {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 15px;
+  line-height: 1.55;
+  max-width: 48em;
+  margin: 0 auto;
+}
+
+.deals-areas a {
+  color: #5ba3d9;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.deals-areas a:hover {
+  text-decoration: underline;
+}
+
+.deals-note {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .deals-grid {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+}
