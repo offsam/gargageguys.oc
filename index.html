@@ -294,6 +294,61 @@ nav {
   object-fit: contain;
 }
 
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.nav-deals-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #0f2340;
+  background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 0 18px rgba(252, 211, 77, 0.55),
+    0 0 36px rgba(245, 158, 11, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  animation: nav-deals-glow 2.4s ease-in-out infinite;
+  transition: transform 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+
+.nav-deals-btn:hover {
+  transform: translateY(-1px) scale(1.03);
+  color: #0f2340;
+  box-shadow:
+    0 0 24px rgba(252, 211, 77, 0.8),
+    0 0 48px rgba(245, 158, 11, 0.5);
+  animation: none;
+}
+
+@keyframes nav-deals-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 14px rgba(252, 211, 77, 0.45),
+      0 0 28px rgba(245, 158, 11, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 26px rgba(252, 211, 77, 0.85),
+      0 0 52px rgba(245, 158, 11, 0.5),
+      0 0 70px rgba(252, 211, 77, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+}
+
 .nav-links {
   display: flex;
   gap: 20px;
@@ -2302,7 +2357,7 @@ footer {
   .nav-links {
     display: flex;
     gap: 12px;
-    max-width: calc(100% - 110px);
+    max-width: calc(100% - 200px);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -2414,8 +2469,11 @@ footer {
   nav { padding: 6px 14px; }
   .nav-logo { padding: 4px 8px; }
   .nav-logo img { height: 44px; max-width: 100px; }
-  .nav-links { gap: 10px; max-width: calc(100% - 96px); }
+  .nav-links { gap: 10px; max-width: calc(100% - 180px); }
   .nav-links a { font-size: 10px; letter-spacing: 0.1px; }
+  .nav-brand { gap: 8px; }
+  .nav-deals-btn { font-size: 15px; padding: 8px 14px; letter-spacing: 1px; }
+  .nav-logo img { height: 44px; max-width: 96px; }
 
   .hero { padding: calc(var(--nav-h) + 16px) 16px 16px; }
   .hero-title { font-size: clamp(40px, 11vw, 56px); }
@@ -2487,7 +2545,6 @@ footer {
     <li><a href="/garage-door-repair/">Garage Door Repair</a></li>
     <li><a href="/garage-door-spring-repair/">Spring Repair</a></li>
     <li><a href="/garage-door-opener-repair/">Opener Repair</a></li>
-    <li><a href="/deals/">Deals</a></li>
     <li><a href="/service-areas/">Service Areas</a></li>
     <li class="nav-anchor"><a href="#services">Services</a></li>
     <li class="nav-anchor"><a href="#work">Our Work</a></li>
@@ -2496,9 +2553,12 @@ footer {
     <li class="nav-anchor"><a href="#why">Why Us</a></li>
     <li class="nav-anchor"><a href="#contact">Contact</a></li>
   </ul>
-  <a href="/" class="nav-logo">
-    <img src="Pictures/Logo.png" alt="Garage Guys garage door repair Orange County CA — home">
-  </a>
+  <div class="nav-brand">
+    <a href="/deals/" class="nav-deals-btn">Deals</a>
+    <a href="/" class="nav-logo">
+      <img src="Pictures/Logo.png" alt="Garage Guys garage door repair Orange County CA — home">
+    </a>
+  </div>
 </nav>
 
 <!-- HERO -->
