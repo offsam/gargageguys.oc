@@ -1,3 +1,6 @@
+# https://garageguysoc.com/robots.txt
+# All pages are allowed for indexing — nothing is blocked.
+
 User-agent: *
 Allow: /
 

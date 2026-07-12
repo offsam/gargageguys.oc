@@ -22,14 +22,21 @@
   "@type": "LocalBusiness",
   "@id": "https://garageguysoc.com/#business",
   "name": "Garage Guys",
-  "description": "Garage door spring repair and replacement cost estimates in Orange County, California.",
   "telephone": "+19495390009",
   "url": "https://garageguysoc.com/",
   "image": "https://garageguysoc.com/favicon-192x192.png",
   "priceRange": "$$",
-  "areaServed": {
-    "@type": "AdministrativeArea",
-    "name": "Orange County, California"
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Tustin",
+    "addressRegion": "CA",
+    "postalCode": "92780",
+    "addressCountry": "US"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": 33.7458,
+    "longitude": -117.8261
   },
   "openingHoursSpecification": {
     "@type": "OpeningHoursSpecification",
@@ -53,7 +60,12 @@
   },
   "sameAs": [
     "https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690"
-  ]
+  ],
+  "description": "Garage door spring repair and replacement cost estimates in Orange County, California.",
+  "areaServed": {
+    "@type": "AdministrativeArea",
+    "name": "Orange County, California"
+  }
 }
 </script>
 <meta name="theme-color" content="#0f2340">
@@ -61,6 +73,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/service-page.css">
 <script src="/api/analytics.js" defer></script>
@@ -69,9 +82,16 @@
 
 <div class="site-van-bg" aria-hidden="true"></div>
 
-<nav class="nav-seo">
+<nav>
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/garage-door-repair/">Garage Door Repair</a></li>
+    <li><a href="/garage-door-spring-repair/" aria-current="page">Spring Repair</a></li>
+    <li><a href="/garage-door-opener-repair/">Opener Repair</a></li>
+    <li><a href="/service-areas/">Service Areas</a></li>
+  </ul>
   <a href="/" class="nav-logo">
-    <img src="/Pictures/Logo.png" alt="Garage Guys — home">
+    <img src="/Pictures/Logo.png" alt="Garage Guys garage door repair Orange County CA — home">
   </a>
 </nav>
 
@@ -127,7 +147,11 @@
 
   <div class="fab-bar" id="fab-bar">
   <a href="tel:+19495390009" class="fab-call" aria-label="Call (949) 539-0009">
-    <span>(949) 539-0009</span>
+    <span class="fab-call-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+    <span class="fab-call-text">
+      <span class="fab-call-label">Tap to call</span>
+      <span class="fab-call-number">(949) 539-0009</span>
+    </span>
   </a>
   <button type="button" class="fab-callback" data-open-callback aria-label="Request a callback">
     <span class="fab-callback-label">Free estimate</span>
@@ -174,14 +198,15 @@
 
 <footer>
   <a href="/" class="footer-logo">
-    <img src="/Pictures/Logo.png" alt="Garage Guys">
+    <img src="/Pictures/Logo.png" alt="Garage Guys garage door repair Orange County CA">
   </a>
-  <div class="footer-copy">© 2026 Garage Guys · <a href="/">Orange County &amp; Inland Empire, CA</a></div>
-  <p class="footer-disclaimer">Not a licensed contractor. All work performed under $1,000 per project.</p>
+  <div class="footer-copy">© 2026 Garage Guys · <a href="/">Orange County, CA</a></div>
+  <p class="footer-disclaimer">Not a licensed contractor. All work performed under $1,000 per project per California AB 2622.</p>
 </footer>
 
 <script src="/js/callback-form.js"></script>
 <link rel="stylesheet" href="/css/ai-chat.css">
 <script src="/js/ai-chat.js" defer></script>
+<script>window.addEventListener('load',function(){document.querySelector('.site-van-bg')?.classList.add('is-loaded')});</script>
 </body>
 </html>

@@ -1,0 +1,101 @@
+/* Homepage — full-screen sections (same feel as city unified pages) */
+
+html:has(body.page-home-unified) {
+  scroll-snap-type: y proximity;
+  scroll-padding-top: 0;
+}
+
+body.page-home-unified .home-hero-stack {
+  display: flex;
+  flex-direction: column;
+  height: 100svh;
+  min-height: 100svh;
+  max-height: 100svh;
+  overflow: hidden;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  position: relative;
+  z-index: 1;
+}
+
+body.page-home-unified .home-hero-stack .hero {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+}
+
+body.page-home-unified .home-hero-stack .stats-bar {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+body.page-home-unified .section-screen {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  padding: calc(var(--nav-h) + 20px) clamp(20px, 4vw, 40px) clamp(28px, 4vw, 48px);
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+body.page-home-unified .section-screen > .section-inner {
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+body.page-home-unified .home-contact-screen {
+  padding-bottom: 0;
+}
+
+body.page-home-unified .home-contact-screen__inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: calc(100svh - var(--nav-h) - 48px);
+  gap: 0;
+}
+
+body.page-home-unified .home-contact-screen .cta-box {
+  flex: 0 0 auto;
+  margin: auto 0;
+}
+
+body.page-home-unified .home-contact-screen footer {
+  width: 100%;
+  flex-shrink: 0;
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+body.page-home-unified .fab-bar {
+  right: 20px;
+  bottom: 20px;
+  left: auto;
+  z-index: 160;
+}
+
+@media (max-width: 900px) {
+  body.page-home-unified .section-screen {
+    padding: calc(var(--nav-h) + 16px) 20px 28px;
+  }
+
+  body.page-home-unified .home-hero-stack .hero-content {
+    margin-left: 8%;
+  }
+
+  body.page-home-unified .fab-bar {
+    right: 16px;
+    bottom: 16px;
+    max-width: min(280px, calc(100vw - 32px));
+  }
+}

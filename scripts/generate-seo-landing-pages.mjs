@@ -1,30 +1,30 @@
-import { mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { newCityPages } from './seo-city-batch.mjs';
+import { buildAllOcCityPages } from './build-city-pages.mjs';
+import { OC_CITY_SLUGS } from './oc-city-content.mjs';
 import { problemPages } from './seo-problem-pages.mjs';
+import { cityHeroBlock, cityNameFromPage, cityStripServiceItems, isCityLandingPage } from './city-hero.mjs';
+import {
+  isCityPilotUnifiedPath,
+} from './city-unified.mjs';
+import { renderUnifiedCityPage } from './city-pilot-render.mjs';
+import { loadCityMaps } from './city-maps.mjs';
+import { localBusinessFields } from './seo-business.mjs';
+import {
+  ctaBlock,
+  heroActionsBlock,
+  navActiveFromPath,
+  pageTail,
+  siteNav,
+} from './shared-layout.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const today = '2026-07-11';
 
-export const SEO_CITIES = [
-  'irvine-ca',
-  'anaheim-ca',
-  'santa-ana-ca',
-  'huntington-beach-ca',
-  'newport-beach-ca',
-  'costa-mesa-ca',
-  'mission-viejo-ca',
-  'yorba-linda-ca',
-  'fullerton-ca',
-  'garden-grove-ca',
-  'fountain-valley-ca',
-  'lake-forest-ca',
-  'laguna-niguel-ca',
-  'orange-ca',
-];
+export const SEO_CITIES = [...OC_CITY_SLUGS];
 
-const SERVICE_AREA_CITIES = [...SEO_CITIES, 'tustin-ca'];
+const SERVICE_AREA_CITIES = [...OC_CITY_SLUGS];
 
 const PROBLEM_PATHS = [
   'garage-door-wont-open',
@@ -43,67 +43,6 @@ const OC_LANDING_PATHS = [
   'emergency-garage-door-repair/orange-county',
 ];
 
-const sharedTail = `  <div class="fab-bar" id="fab-bar">
-  <a href="tel:+19495390009" class="fab-call" aria-label="Call (949) 539-0009">
-    <span>(949) 539-0009</span>
-  </a>
-  <button type="button" class="fab-callback" data-open-callback aria-label="Request a callback">
-    <span class="fab-callback-label">Free estimate</span>
-    <span class="fab-callback-title">Request Callback</span>
-  </button>
-</div>
-
-<div class="callback-modal" id="callback-modal" aria-hidden="true">
-  <div class="callback-backdrop" data-close-callback></div>
-  <div class="callback-dialog" role="dialog" aria-labelledby="callback-title" aria-modal="true">
-    <button type="button" class="callback-close" data-close-callback aria-label="Close">&times;</button>
-    <div id="callback-form-wrap">
-      <h3 id="callback-title">We'll Call You Back</h3>
-      <p>Leave your name, number and ZIP — Sam usually responds within the hour.</p>
-      <form class="callback-form" id="callback-form">
-        <label>Your Name
-          <input type="text" name="name" required autocomplete="name" placeholder="John Smith">
-        </label>
-        <label>Your Phone
-          <input type="tel" name="phone" required autocomplete="tel" placeholder="(949) 555-0000">
-        </label>
-        <label>ZIP Code
-          <input type="text" name="zip" required autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" maxlength="10" placeholder="92660">
-        </label>
-        <label>What do you need? <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span>
-          <textarea name="message" placeholder="Garage door won't close, need repair..."></textarea>
-        </label>
-        <label class="callback-honeypot" aria-hidden="true">
-          Leave blank
-          <input type="text" name="_gotcha" tabindex="-1" autocomplete="off">
-        </label>
-        <p class="callback-error" id="callback-error" hidden></p>
-        <button type="submit" class="callback-submit">Send My Request</button>
-      </form>
-    </div>
-    <div class="callback-success" id="callback-success" hidden>
-      <div class="callback-success-icon">✓</div>
-      <h4>You're on the list!</h4>
-      <p>We'll call you back at<br><span class="callback-success-phone"></span><br>Usually within the hour — 7 days a week.</p>
-      <button type="button" class="callback-done" data-close-callback>Got it</button>
-    </div>
-  </div>
-</div>
-
-<footer>
-  <a href="/" class="footer-logo">
-    <img src="/Pictures/Logo.png" alt="Garage Guys">
-  </a>
-  <div class="footer-copy">© 2026 Garage Guys · <a href="/">Orange County &amp; Inland Empire, CA</a></div>
-  <p class="footer-disclaimer">Not a licensed contractor. All work performed under $1,000 per project.</p>
-</footer>
-
-<script src="/js/callback-form.js"></script>
-<link rel="stylesheet" href="/css/ai-chat.css">
-<script src="/js/ai-chat.js" defer></script>
-</body>
-</html>`;
-
 function schemaJson(page) {
   const areaServed = page.areaServed.type === 'City'
     ? {
@@ -119,42 +58,56 @@ function schemaJson(page) {
   return JSON.stringify(
     {
       '@context': 'https://schema.org',
-      '@type': 'LocalBusiness',
-      '@id': 'https://garageguysoc.com/#business',
-      name: 'Garage Guys',
-      description: page.schemaDescription,
-      telephone: '+19495390009',
-      url: 'https://garageguysoc.com/',
-      image: 'https://garageguysoc.com/favicon-192x192.png',
-      priceRange: '$$',
-      areaServed,
-      openingHoursSpecification: {
-        '@type': 'OpeningHoursSpecification',
-        dayOfWeek: [
-          'Monday',
-          'Tuesday',
-          'Wednesday',
-          'Thursday',
-          'Friday',
-          'Saturday',
-          'Sunday',
-        ],
-        opens: '07:00',
-        closes: '20:00',
-      },
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: '5.0',
-        reviewCount: '67',
-        bestRating: '5',
-      },
-      sameAs: [
-        'https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690',
-      ],
+      ...localBusinessFields({
+        description: page.schemaDescription,
+        areaServed,
+      }),
     },
     null,
     2,
   );
+}
+
+function cityServiceRelated(page) {
+  const m = page.path.match(/^garage-door-(repair|spring-repair|opener-repair)\/([a-z0-9-]+-ca)$/);
+  if (!m) return null;
+  const [, kind, slug] = m;
+  const name = page.areaServed?.name || slug.replace(/-ca$/, '').replace(/-/g, ' ');
+  const items = [];
+  if (kind !== 'repair') {
+    items.push({ href: `/garage-door-repair/${slug}/`, label: `Garage Door Repair ${name}` });
+  }
+  if (kind !== 'spring-repair') {
+    items.push({ href: `/garage-door-spring-repair/${slug}/`, label: `Spring Repair ${name}` });
+  }
+  if (kind !== 'opener-repair') {
+    items.push({ href: `/garage-door-opener-repair/${slug}/`, label: `Opener Repair ${name}` });
+  }
+  items.push({ href: `/service-areas/${slug}/`, label: `${name} Service Area` });
+  items.push({ href: '/', label: 'Garage Guys Home' });
+  return items;
+}
+
+function logoAlt(page) {
+  if (page.areaServed?.type === 'City') {
+    const service = page.path.includes('spring-repair')
+      ? 'garage door spring repair'
+      : page.path.includes('opener-repair')
+        ? 'garage door opener repair'
+        : 'garage door repair';
+    return `Garage Guys ${service} ${page.areaServed.name} CA`;
+  }
+  if (page.path.includes('orange-county')) {
+    const service = page.path.includes('spring-repair')
+      ? 'garage door spring repair'
+      : page.path.includes('opener-repair')
+        ? 'garage door opener repair'
+        : page.path.includes('emergency')
+          ? 'emergency garage door repair'
+          : 'garage door repair';
+    return `Garage Guys ${service} Orange County CA`;
+  }
+  return 'Garage Guys garage door repair Orange County CA';
 }
 
 function localTrustParagraph(page) {
@@ -168,21 +121,47 @@ function localTrustParagraph(page) {
   return `    <p>Garage Guys handles ${service} across ${city} with upfront quotes and same-day routing when slots are open. Our technician explains findings in plain language — no pressure to replace parts that still have safe life left. The service van carries common springs, opener gears, rollers, and cables so most ${city} appointments wrap in a single trip. We test door balance, safety sensors, and manual release whenever those items are in scope. Same-day scheduling is available seven days a week when you call early enough to hold a route slot. Labor warranty up to one year on qualifying work.</p>\n`;
 }
 
-function renderPage(page) {
+function renderPage(page, cityMaps) {
   const canonical = `https://garageguysoc.com/${page.path}/`;
   const paragraphs = page.paragraphs.map((p) => `    <p>${p}</p>`).join('\n');
   const trust = localTrustParagraph(page);
-  const features = page.features
-    ? `    <ul class="service-features">\n${page.features.map((f) => `      <li>${f}</li>`).join('\n')}\n    </ul>\n`
-    : '';
-  const related = page.related
+  const isCity = isCityLandingPage(page.path);
+  const cityName = isCity ? cityNameFromPage(page) : '';
+  const mapSvg = isCity ? cityMaps.get(cityName) : null;
+  const alt = logoAlt(page);
+  const navActive = navActiveFromPath(page.path);
+  const relatedLinks = cityServiceRelated(page) || page.related;
+  const related = !isCity && relatedLinks
     ? `    <div class="service-related">
       <h3>Related Pages</h3>
       <div class="service-related__links">
-${page.related.map((r) => `        <a href="${r.href}">${r.label}</a>`).join('\n')}
+${relatedLinks.map((r) => `        <a href="${r.href}">${r.label}</a>`).join('\n')}
       </div>
     </div>`
     : '';
+  const featuresBlock = !isCity && page.features
+    ? `    <ul class="service-features">\n${page.features.map((f) => `      <li>${f}</li>`).join('\n')}\n    </ul>\n`
+    : '';
+  const stylesheets = isCity
+    ? `<link rel="stylesheet" href="/css/service-page.css">
+<link rel="stylesheet" href="/css/home-hero.css">`
+    : `<link rel="stylesheet" href="/css/service-page.css">`;
+  const vanBg = isCity
+    ? `<div class="site-van-bg" data-tone="hero" aria-hidden="true"></div>`
+    : `<div class="site-van-bg" aria-hidden="true"></div>`;
+  const heroSection = isCity
+    ? cityHeroBlock(page, mapSvg, {
+        serviceItems: cityStripServiceItems(page),
+        features: page.features ?? [],
+      })
+    : `<header class="service-hero">
+  <div class="service-hero__inner">
+    <div class="service-hero__eyebrow">${page.eyebrow}</div>
+    <h1 class="service-hero__title">${page.h1}</h1>
+    <p class="service-hero__lead">${page.lead}</p>
+${heroActionsBlock()}
+  </div>
+</header>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -210,53 +189,31 @@ ${schemaJson(page)}
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/service-page.css">
+${stylesheets}
 <script src="/api/analytics.js" defer></script>
 </head>
 <body>
 
-<div class="site-van-bg" aria-hidden="true"></div>
+${vanBg}
 
-<nav class="nav-seo">
-  <a href="/" class="nav-logo">
-    <img src="/Pictures/Logo.png" alt="Garage Guys — home">
-  </a>
-</nav>
+${siteNav({ logoAlt: `${alt} — home`, active: navActive })}
 
-<header class="service-hero">
-  <div class="service-hero__inner">
-    <div class="service-hero__eyebrow">${page.eyebrow}</div>
-    <h1 class="service-hero__title">${page.h1}</h1>
-    <p class="service-hero__lead">${page.lead}</p>
-    <div class="service-hero__actions">
-      <a href="tel:+19495390009" class="btn-call-now">Call Now</a>
-      <a href="tel:+19495390009" class="service-hero__phone">(949) 539-0009</a>
-      <button type="button" class="btn-callback-inline" data-open-callback>
-        Request Callback
-        <span>Free Estimate</span>
-      </button>
-    </div>
-  </div>
-</header>
+${heroSection}
 
 <main class="service-main">
   <div class="service-main__inner">
     <h2>${page.sectionTitle}</h2>
 ${paragraphs}
-${trust}${features}${related}
+${trust}${featuresBlock}${related}
     <p class="service-home-link"><a href="/">← Back to Garage Guys home</a></p>
   </div>
 </main>
 
-<section class="service-cta">
-  <h2>${page.ctaTitle}</h2>
-  <p>${page.ctaText}</p>
-  <a href="tel:+19495390009" class="btn-call-now btn-call-now--cta">Call Now</a>
-  <a href="tel:+19495390009" class="service-cta__phone">(949) 539-0009</a>
-</section>
+${ctaBlock({ title: page.ctaTitle, text: page.ctaText })}
 
-${sharedTail}`;
+${pageTail(alt)}`;
 }
 
 const pages = [
@@ -1251,29 +1208,50 @@ const pages = [
   },
 ];
 
-const allPages = [
-  ...pages.filter((p) => !p.path.includes('/tustin-ca')),
-  ...newCityPages,
-  ...problemPages,
-];
-
-for (const slug of ['garage-door-repair/tustin-ca', 'garage-door-spring-repair/tustin-ca', 'garage-door-opener-repair/tustin-ca']) {
-  await rm(path.join(root, slug), { recursive: true, force: true });
+function isOcCitySeoPath(path) {
+  return /^garage-door-(repair|spring-repair|opener-repair|cable-repair|off-track)\/[a-z0-9-]+-ca$/.test(path);
 }
+
+function buildAllPages() {
+  return [
+    ...pages.filter((p) => !isOcCitySeoPath(p.path)),
+    ...problemPages,
+    ...buildAllOcCityPages(),
+  ];
+}
+
+export { buildAllPages };
+
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isMain) {
+const allPages = buildAllPages();
+
+const cityNames = [
+  ...new Set(
+    allPages.filter((p) => isCityLandingPage(p.path)).map((p) => cityNameFromPage(p)),
+  ),
+];
+console.log('Loading city maps (Census TIGER)...', cityNames.length, 'cities');
+const cityMaps = await loadCityMaps(cityNames);
+const pagesByPath = new Map(allPages.map((p) => [p.path, p]));
 
 for (const page of allPages) {
   const dir = path.join(root, page.path);
   await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, 'index.html'), renderPage(page), 'utf8');
+  let html;
+  if (isCityPilotUnifiedPath(page.path)) {
+    html = renderUnifiedCityPage(page, pagesByPath, cityMaps, problemPages);
+  } else {
+    html = renderPage(page, cityMaps);
+  }
+  await writeFile(path.join(dir, 'index.html'), html, 'utf8');
   console.log('wrote', page.path);
 }
 
 const sitemapPaths = ['/', '/garage-door-repair/', '/garage-door-spring-repair/', '/garage-door-opener-repair/'];
 for (const oc of OC_LANDING_PATHS) sitemapPaths.push(`/${oc}/`);
 for (const p of PROBLEM_PATHS) sitemapPaths.push(`/${p}/`);
-for (const service of ['garage-door-repair', 'garage-door-spring-repair', 'garage-door-opener-repair']) {
-  for (const city of SEO_CITIES) sitemapPaths.push(`/${service}/${city}/`);
-}
 sitemapPaths.push('/service-areas/');
 for (const city of SERVICE_AREA_CITIES) sitemapPaths.push(`/service-areas/${city}/`);
 
@@ -1282,11 +1260,13 @@ for (const p of sitemapPaths) {
   const pri =
     p === '/'
       ? '1.0'
-      : p.includes('emergency') || p.includes('orange-county')
+      : p.startsWith('/service-areas/') && p !== '/service-areas/'
         ? '0.85'
-        : p.split('/').filter(Boolean).length === 1
-          ? '0.9'
-          : '0.8';
+        : p.includes('emergency') || p.includes('orange-county')
+          ? '0.85'
+          : p.split('/').filter(Boolean).length === 1
+            ? '0.9'
+            : '0.8';
   const freq = p === '/' ? 'weekly' : 'monthly';
   sitemap += `  <url>\n    <loc>https://garageguysoc.com${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${freq}</changefreq>\n    <priority>${pri}</priority>\n  </url>\n`;
 }
@@ -1294,3 +1274,4 @@ sitemap += '</urlset>\n';
 await writeFile(path.join(root, 'sitemap.xml'), sitemap, 'utf8');
 
 console.log(`Generated ${allPages.length} SEO landing pages. Sitemap: ${sitemapPaths.length} URLs.`);
+}

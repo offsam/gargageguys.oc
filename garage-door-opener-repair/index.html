@@ -23,11 +23,23 @@
   "name": "Garage Door Opener Repair",
   "serviceType": "Garage Door Opener Repair",
   "provider": {
-    "@type": "HomeRepairService",
+    "@type": "LocalBusiness",
     "@id": "https://garageguysoc.com/#business",
     "name": "Garage Guys",
     "telephone": "+19495390009",
-    "url": "https://garageguysoc.com/"
+    "url": "https://garageguysoc.com/",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Tustin",
+      "addressRegion": "CA",
+      "postalCode": "92780",
+      "addressCountry": "US"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": 33.7458,
+      "longitude": -117.8261
+    }
   },
   "areaServed": {
     "@type": "AdministrativeArea",
@@ -42,6 +54,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/service-page.css">
 <script src="/api/analytics.js" defer></script>
@@ -58,7 +71,7 @@
     <li><a href="/garage-door-opener-repair/" aria-current="page">Opener Repair</a></li>
   </ul>
   <a href="/" class="nav-logo">
-    <img src="/Pictures/Logo.png" alt="Garage Guys — home">
+    <img src="/Pictures/Logo.png" alt="Garage Guys garage door opener repair Orange County CA — home">
   </a>
 </nav>
 
@@ -166,14 +179,15 @@
 
 <footer>
   <a href="/" class="footer-logo">
-    <img src="/Pictures/Logo.png" alt="Garage Guys">
+    <img src="/Pictures/Logo.png" alt="Garage Guys garage door opener repair Orange County CA">
   </a>
   <div class="footer-copy">© 2026 Garage Guys · <a href="/">Orange County &amp; Inland Empire, CA</a></div>
-  <p class="footer-disclaimer">Not a licensed contractor. All work performed under $1,000 per project.</p>
+  <p class="footer-disclaimer">Not a licensed contractor. All work performed under $1,000 per project per California AB 2622.</p>
 </footer>
 
 <script src="/js/callback-form.js"></script>
 <link rel="stylesheet" href="/css/ai-chat.css">
 <script src="/js/ai-chat.js" defer></script>
+<script>window.addEventListener('load',function(){document.querySelector('.site-van-bg')?.classList.add('is-loaded')});</script>
 </body>
 </html>

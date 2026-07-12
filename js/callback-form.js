@@ -101,18 +101,28 @@
 (function () {
   const fab = document.getElementById('fab-bar');
   const modal = document.getElementById('callback-modal');
-  const hero = document.querySelector('.service-hero');
-  if (!fab || !hero) return;
+  const hero = document.querySelector('.service-hero, .hero--city, .hero');
+  const isCityUnified = document.body.classList.contains('page-city-unified');
+  if (!fab) return;
+  if (!hero && !isCityUnified) return;
 
   function updateFab() {
     const modalOpen = modal && modal.classList.contains('is-open');
-    const pastHero = hero.getBoundingClientRect().bottom <= 0;
-    fab.classList.toggle('is-visible', pastHero && !modalOpen);
+    let show = true;
+
+    if (hero) {
+      show = hero.getBoundingClientRect().bottom <= 0;
+    } else if (isCityUnified) {
+      const stats = document.querySelector('.stats-bar');
+      show = stats ? stats.getBoundingClientRect().bottom <= window.innerHeight * 0.35 : true;
+    }
+
+    fab.classList.toggle('is-visible', show && !modalOpen);
   }
 
   window.addEventListener('scroll', updateFab, { passive: true });
   window.addEventListener('resize', updateFab);
-  document.querySelectorAll('[data-open-callback], [data-close-callback]').forEach(el => {
+  document.querySelectorAll('[data-open-callback], [data-close-callback]').forEach((el) => {
     el.addEventListener('click', () => setTimeout(updateFab, 50));
   });
   updateFab();
