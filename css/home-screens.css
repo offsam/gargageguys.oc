@@ -208,31 +208,20 @@ body.page-home-unified .fab-bar {
   }
 
   body.page-home-unified .home-hero-stack .stat-item--reviews {
-    grid-column: 1 / -1;
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  body.page-home-unified .home-hero-stack .stat-item--parts-warranty {
+    grid-column: 1;
+    grid-row: 2;
   }
 
   body.page-home-unified .home-hero-stack .stats-handyman-slot {
-    grid-column: 2;
-    justify-content: flex-end;
-    align-items: center;
-    padding: 0;
+    display: none;
   }
 
-  body.page-home-unified .home-hero-stack .stats-bar .hero-handyman {
-    width: auto;
-    min-height: 64px;
-    justify-content: center;
-    white-space: nowrap;
-    text-align: center;
-    font-size: 9px;
-    padding: 8px 10px;
-    letter-spacing: 0.4px;
-  }
-
-  body.page-home-unified .handyman-label-full { display: none; }
-  body.page-home-unified .handyman-label-short { display: inline; }
-
-  body.page-home-unified .section-screen {
+  body.page-home-unified .home-hero-stack .hero-phone-number {
     min-height: auto;
     padding: calc(var(--nav-h) + 16px) 16px 28px;
     scroll-snap-stop: normal;

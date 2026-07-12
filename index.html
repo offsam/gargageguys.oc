@@ -2597,30 +2597,18 @@ footer {
   }
 
   .stat-item--reviews {
-    grid-column: 1 / -1;
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .stat-item--parts-warranty {
+    grid-column: 1;
+    grid-row: 2;
   }
 
   .stats-handyman-slot {
-    grid-column: 2;
-    justify-content: flex-end;
-    align-items: center;
-    min-height: 0;
-    padding: 0;
+    display: none;
   }
-
-  .stats-bar .hero-handyman {
-    width: auto;
-    min-height: 64px;
-    justify-content: center;
-    white-space: nowrap;
-    text-align: center;
-    font-size: 9px;
-    padding: 8px 10px;
-    letter-spacing: 0.4px;
-  }
-
-  .handyman-label-full { display: none; }
-  .handyman-label-short { display: inline; }
 
   .section-screen {
     min-height: auto;
@@ -2666,15 +2654,6 @@ footer {
   .stat-item { min-height: 72px; padding: 10px 8px; }
   .stat-num { font-size: clamp(24px, 6vw, 30px); }
   .stat-label { font-size: 10px; }
-
-  .stats-bar .hero-handyman {
-    font-size: 10px;
-    padding: 8px 10px;
-    letter-spacing: 0.4px;
-  }
-
-  .handyman-label-full { display: none; }
-  .handyman-label-short { display: inline; }
 
   .section-screen { padding: calc(var(--nav-h) + 16px) 16px 28px; }
   .section-title { margin-bottom: 28px; font-size: clamp(32px, 8vw, 44px); }
