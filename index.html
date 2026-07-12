@@ -435,6 +435,8 @@ nav {
   white-space: nowrap;
 }
 
+.nav-label-short { display: none; }
+
 .nav-links a:hover,
 .nav-links a[aria-current="page"] { color: var(--white); }
 
@@ -562,6 +564,8 @@ nav {
   padding: 10px 16px;
   white-space: nowrap;
 }
+
+.handyman-label-short { display: none; }
 
 .hero-title {
   font-family: 'Bebas Neue', sans-serif;
@@ -2474,20 +2478,26 @@ footer {
   }
 
   .stats-handyman-slot {
-    grid-column: 1 / -1;
-    justify-content: center;
-    align-items: stretch;
+    grid-column: 2;
+    justify-content: flex-end;
+    align-items: center;
     min-height: 0;
     padding: 0;
   }
 
   .stats-bar .hero-handyman {
-    width: 100%;
-    min-height: 56px;
+    width: auto;
+    min-height: 64px;
     justify-content: center;
-    white-space: normal;
+    white-space: nowrap;
     text-align: center;
+    font-size: 9px;
+    padding: 8px 10px;
+    letter-spacing: 0.4px;
   }
+
+  .handyman-label-full { display: none; }
+  .handyman-label-short { display: inline; }
 
   .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 16px; }
   .section-screen {
@@ -2556,9 +2566,29 @@ footer {
     transform: none;
   }
 
+  .nav-link--desktop,
+  .nav-links .nav-anchor {
+    display: none;
+  }
+
+  .nav-link--mobile {
+    display: list-item;
+  }
+
+  .nav-label-full { display: none; }
+  .nav-label-short { display: inline; }
+
   .nav-links {
+    flex-wrap: nowrap;
+    gap: 10px;
+    max-width: calc(100% - 200px);
+    overflow: visible;
     overscroll-behavior-x: contain;
     min-width: 0;
+  }
+
+  .nav-links a {
+    font-size: 10px;
   }
 
   .hero-phone-number,
@@ -2581,9 +2611,32 @@ footer {
 
   nav { padding: 6px 14px; }
   .nav-logo { padding: 4px 8px; }
-  .nav-logo img { height: 44px; max-width: 100px; }
-  .nav-links { gap: 10px; max-width: calc(100% - 210px); }
-  .nav-links a { font-size: 10px; letter-spacing: 0.1px; }
+  .nav-logo img { height: 44px; max-width: 96px; }
+
+  .nav-link--desktop,
+  .nav-links .nav-anchor {
+    display: none;
+  }
+
+  .nav-link--mobile {
+    display: list-item;
+  }
+
+  .nav-label-full { display: none; }
+  .nav-label-short { display: inline; }
+
+  .nav-links {
+    flex-wrap: nowrap;
+    gap: 8px;
+    max-width: calc(100% - 168px);
+    overflow: visible;
+  }
+
+  .nav-links a {
+    font-size: 9px;
+    letter-spacing: 0.15px;
+  }
+
   .nav-brand { gap: 12px; transform: none; }
   .nav-deals-btn { padding: 10px 16px 9px; }
   .nav-deals-btn__title { font-size: 18px; letter-spacing: 1px; }
@@ -2622,8 +2675,11 @@ footer {
   .stats-bar .hero-handyman {
     font-size: 10px;
     padding: 8px 10px;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
   }
+
+  .handyman-label-full { display: none; }
+  .handyman-label-short { display: inline; }
 
   .section-screen { padding: calc(var(--nav-h) + 16px) 16px 28px; }
   .section-title { margin-bottom: 28px; font-size: clamp(32px, 8vw, 44px); }
@@ -2678,10 +2734,10 @@ footer {
 <!-- NAV -->
 <nav>
   <ul class="nav-links">
-    <li><a href="/garage-door-repair/">Garage Door Repair</a></li>
-    <li><a href="/garage-door-spring-repair/">Spring Repair</a></li>
-    <li><a href="/garage-door-opener-repair/">Opener Repair</a></li>
-    <li><a href="/service-areas/">Service Areas</a></li>
+    <li class="nav-link--mobile"><a href="/garage-door-repair/"><span class="nav-label-full">Garage Door Repair</span><span class="nav-label-short">Repair</span></a></li>
+    <li class="nav-link--mobile"><a href="/service-areas/"><span class="nav-label-full">Service Areas</span><span class="nav-label-short">Areas</span></a></li>
+    <li class="nav-link--desktop"><a href="/garage-door-spring-repair/">Spring Repair</a></li>
+    <li class="nav-link--desktop"><a href="/garage-door-opener-repair/">Opener Repair</a></li>
     <li class="nav-anchor"><a href="#services">Services</a></li>
     <li class="nav-anchor"><a href="#work">Our Work</a></li>
     <li class="nav-anchor"><a href="#faq">FAQ</a></li>
@@ -2755,7 +2811,7 @@ footer {
       <div class="stat-label">Parts Warranty</div>
     </div>
     <div class="stats-handyman-slot">
-      <a href="#services" class="hero-handyman" aria-label="Handyman services — painting, storage, and more">Handyman Services</a>
+      <a href="#services" class="hero-handyman" aria-label="Handyman services — painting, storage, and more"><span class="handyman-label-full">Handyman Services</span><span class="handyman-label-short">Handyman</span></a>
     </div>
   </div>
 </div>
