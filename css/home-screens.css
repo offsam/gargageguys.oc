@@ -360,7 +360,20 @@ body.page-home-unified .fab-bar {
     gap: 6px;
   }
 
-  body.page-home-unified .home-hero-stack .hero-eyebrow,
+  body.page-home-unified .home-hero-stack .hero-eyebrow {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: nowrap;
+    font-size: clamp(13px, 3.6vw, 16px);
+    letter-spacing: 0.8px;
+  }
+
   body.page-home-unified .home-hero-stack .hero-lead {
     position: absolute;
     width: 1px;
