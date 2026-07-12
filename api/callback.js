@@ -133,7 +133,7 @@ module.exports = async function handler(req, res) {
     return res.status(503).json({ error: 'Notifications not configured' });
   }
 
-  const { name, phone, zip, message, _gotcha } = req.body || {};
+  const { name, phone, zip, message, _gotcha, leadType, dealId, dealTitle, dealPrice } = req.body || {};
 
   if (_gotcha) {
     return res.status(200).json({ ok: true });
@@ -143,6 +143,11 @@ module.exports = async function handler(req, res) {
   const safePhone = clean(phone, 30);
   const safeZip = clean(zip, 10);
   const safeMessage = clean(message, 500) || 'Callback requested from website';
+  const safeLeadType = clean(leadType, 40) || 'callback';
+  const safeDealId = clean(dealId, 40);
+  const safeDealTitle = clean(dealTitle, 120);
+  const safeDealPrice = clean(dealPrice, 12);
+  const isOpenerOrder = safeLeadType === 'opener_install_order';
 
   if (!safeName || !safePhone || !safeZip) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -154,23 +159,38 @@ module.exports = async function handler(req, res) {
     zip: safeZip,
     message: safeMessage,
     source: 'garageguysoc.com',
+    leadType: safeLeadType,
   };
 
+  if (isOpenerOrder) {
+    leadPayload.dealId = safeDealId;
+    leadPayload.dealTitle = safeDealTitle;
+    leadPayload.dealPrice = safeDealPrice;
+  }
+
+  const headline = isOpenerOrder ? 'Garage Guys — opener install order' : 'Garage Guys — callback request';
+
   const plainText = [
-    'Garage Guys — callback request',
+    headline,
+    ...(isOpenerOrder && safeDealTitle ? [`Package: ${safeDealTitle}`] : []),
+    ...(isOpenerOrder && safeDealPrice ? [`Deal price: $${safeDealPrice}`] : []),
+    ...(isOpenerOrder && safeDealId ? [`Deal ID: ${safeDealId}`] : []),
     `Name: ${safeName}`,
     `Phone: ${safePhone}`,
     `ZIP: ${safeZip}`,
-    `Job: ${safeMessage}`,
+    `Details: ${safeMessage}`,
   ].join('\n');
 
   const telegramText = [
-    '<b>Garage Guys — new callback</b>',
+    `<b>${isOpenerOrder ? 'Garage Guys — opener install order' : 'Garage Guys — new callback'}</b>`,
     '',
+    ...(isOpenerOrder && safeDealTitle ? [`<b>Package:</b> ${escapeHtml(safeDealTitle)}`] : []),
+    ...(isOpenerOrder && safeDealPrice ? [`<b>Deal price:</b> $${escapeHtml(safeDealPrice)}`] : []),
+    ...(isOpenerOrder && safeDealId ? [`<b>Deal ID:</b> ${escapeHtml(safeDealId)}`] : []),
     `<b>Name:</b> ${escapeHtml(safeName)}`,
     `<b>Phone:</b> ${escapeHtml(safePhone)}`,
     `<b>ZIP:</b> ${escapeHtml(safeZip)}`,
-    `<b>Job:</b> ${escapeHtml(safeMessage)}`,
+    `<b>Details:</b> ${escapeHtml(safeMessage)}`,
   ].join('\n');
 
   let notified = false;

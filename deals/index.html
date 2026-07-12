@@ -63,7 +63,7 @@
 <link rel="stylesheet" href="/css/deals.css">
 <script src="/api/analytics.js" defer></script>
 </head>
-<body>
+<body class="page-deals">
 
 <div class="site-van-bg" aria-hidden="true"></div>
 
@@ -84,8 +84,8 @@
 <header class="service-hero">
   <div class="service-hero__inner">
     <div class="service-hero__eyebrow">Orange County, California</div>
-    <h1 class="service-hero__title">Opener Installation Deals</h1>
-    <p class="service-hero__lead">Limited-time Genie opener specials — parts, remotes, safety sensors, and professional installation included. Same-day booking when routes are open.</p>
+    <h1 class="service-hero__title">Opener Deals Marketplace</h1>
+    <p class="service-hero__lead">Pick a Genie install special below — tap <strong>Order Installation</strong> on any deal and we will call to confirm price and schedule.</p>
     <div class="service-hero__actions">
       <a href="tel:+19495390009" class="service-hero__phone">(949) 539-0009</a>
       <button type="button" class="btn-callback-inline" data-open-callback>
@@ -98,69 +98,51 @@
 
 <main class="deals-main">
   <div class="deals-main__inner">
-    <p class="deals-intro">Choose the opener that fits your garage and budget. Every deal below includes the unit, standard accessories, full install, force-and-limit setup, and safety reversal testing.</p>
+    <p class="deals-intro">Each plaque is a complete install package — opener, accessories, programming, and safety testing. Choose your deal and submit an install order in under a minute.</p>
 
-    <div class="deals-grid">
+    <div class="deals-marketplace">
 
-      <article class="deal-card" id="chain-drive">
-        <a class="deal-card__flyer" href="/Pictures/deals/genie-chain-drive-opener.png" target="_blank" rel="noopener noreferrer" aria-label="View full Genie chain drive deal flyer">
-          <img src="/Pictures/deals/genie-chain-drive-opener.png" alt="Genie chain drive garage door opener installation special $499 Orange County" width="1024" height="1536" loading="eager">
-        </a>
-        <div class="deal-card__body">
-          <span class="deal-card__badge">Best Value</span>
-          <h2 class="deal-card__title">Genie Chain Drive Opener</h2>
-          <p class="deal-card__subtitle">Reliable · Built to last</p>
-          <div class="deal-card__price">
-            <span class="deal-card__was">Was $699</span>
-            <span class="deal-card__now">Now $499</span>
+      <article class="deal-plaque" id="chain-drive">
+        <div class="deal-plaque__visual">
+          <img src="/Pictures/deals/genie-chain-drive-opener.png" alt="Genie chain drive garage door opener installation deal $499 Orange County" width="1024" height="1536" loading="eager">
+        </div>
+        <div class="deal-plaque__bar">
+          <div class="deal-plaque__meta">
+            <span class="deal-plaque__name">Genie Chain Drive</span>
+            <div class="deal-plaque__price-row">
+              <span class="deal-plaque__was">Was $699</span>
+              <span class="deal-plaque__now">$499</span>
+            </div>
+            <span class="deal-plaque__includes">Parts + installation included</span>
           </div>
-          <p class="deal-card__includes">Parts + installation included</p>
-          <ul class="deal-card__features">
-            <li>5-year motor warranty</li>
-            <li>Durable chain drive</li>
-            <li>Light bulbs included</li>
-            <li>Battery backup</li>
-            <li>Integrated Aladdin Connect®</li>
-          </ul>
-          <span class="deal-card__warranty">✦ 5-year motor warranty</span>
-          <div class="deal-card__actions">
-            <a href="tel:+19495390009" class="deal-card__call">Book Chain Drive — (949) 539-0009</a>
-            <button type="button" class="btn-callback-inline deal-card__callback" data-open-callback>
-              Request Callback
-              <span>Chain drive $499</span>
-            </button>
-          </div>
+          <button type="button" class="deal-plaque__order" data-open-deal-order
+            data-deal-id="genie-chain-drive"
+            data-deal-title="Genie Chain Drive Opener Installation"
+            data-deal-price="499">
+            Order Installation
+          </button>
         </div>
       </article>
 
-      <article class="deal-card" id="belt-drive">
-        <a class="deal-card__flyer" href="/Pictures/deals/genie-belt-drive-opener.png" target="_blank" rel="noopener noreferrer" aria-label="View full Genie belt drive deal flyer">
-          <img src="/Pictures/deals/genie-belt-drive-opener.png" alt="Genie belt drive garage door opener installation special $629 Orange County" width="1024" height="1536" loading="lazy">
-        </a>
-        <div class="deal-card__body">
-          <span class="deal-card__badge">Ultra Quiet</span>
-          <h2 class="deal-card__title">Genie Belt Drive Opener</h2>
-          <p class="deal-card__subtitle">Quiet operation near bedrooms</p>
-          <div class="deal-card__price">
-            <span class="deal-card__was">Was $799</span>
-            <span class="deal-card__now">Now $629</span>
+      <article class="deal-plaque" id="belt-drive">
+        <div class="deal-plaque__visual">
+          <img src="/Pictures/deals/genie-belt-drive-opener.png" alt="Genie belt drive garage door opener installation deal $629 Orange County" width="1024" height="1536" loading="lazy">
+        </div>
+        <div class="deal-plaque__bar">
+          <div class="deal-plaque__meta">
+            <span class="deal-plaque__name">Genie Belt Drive</span>
+            <div class="deal-plaque__price-row">
+              <span class="deal-plaque__was">Was $799</span>
+              <span class="deal-plaque__now">$629</span>
+            </div>
+            <span class="deal-plaque__includes">Parts + installation included</span>
           </div>
-          <p class="deal-card__includes">Parts + installation included</p>
-          <ul class="deal-card__features">
-            <li>1¼ HPc DC motor</li>
-            <li>Ultra-quiet belt drive</li>
-            <li>Integrated battery backup</li>
-            <li>2 remotes included</li>
-            <li>Wireless keypad included</li>
-          </ul>
-          <span class="deal-card__warranty">✦ 5-year motor warranty</span>
-          <div class="deal-card__actions">
-            <a href="tel:+19495390009" class="deal-card__call">Book Belt Drive — (949) 539-0009</a>
-            <button type="button" class="btn-callback-inline deal-card__callback" data-open-callback>
-              Request Callback
-              <span>Belt drive $629</span>
-            </button>
-          </div>
+          <button type="button" class="deal-plaque__order" data-open-deal-order
+            data-deal-id="genie-belt-drive"
+            data-deal-title="Genie Belt Drive Opener Installation"
+            data-deal-price="629">
+            Order Installation
+          </button>
         </div>
       </article>
 
@@ -176,8 +158,8 @@
 </main>
 
 <section class="service-cta">
-  <h2>Ready to Upgrade Your Opener?</h2>
-  <p>Call or request a callback — free estimate, 7 days a week.</p>
+  <h2>Questions About a Deal?</h2>
+  <p>Call anytime — or submit an install order from any plaque above.</p>
   <a href="tel:+19495390009" class="service-cta__phone">(949) 539-0009</a>
   <br>
   <button type="button" class="btn-callback-inline" data-open-callback>
@@ -196,13 +178,30 @@
   </button>
 </div>
 
-<div class="callback-modal" id="callback-modal" aria-hidden="true">
+<div class="callback-modal" id="callback-modal" aria-hidden="true"
+  data-default-title="We'll Call You Back"
+  data-default-intro="Leave your name, number and ZIP — Sam usually responds within the hour."
+  data-default-submit="Send My Request"
+  data-default-message-placeholder="Garage door won't open, need repair..."
+  data-default-success-title="You're on the list!"
+  data-default-success-body="Usually within the hour — 7 days a week."
+  data-deal-title="Order Opener Installation"
+  data-deal-intro="Submit your install order — we will call to confirm your deal price and schedule."
+  data-deal-submit="Submit Installation Order"
+  data-deal-message-placeholder="Garage size, preferred day, or gate code (optional)"
+  data-deal-success-title="Installation order received!"
+  data-deal-success-body="We will call to confirm your opener deal and book install.">
   <div class="callback-backdrop" data-close-callback></div>
   <div class="callback-dialog" role="dialog" aria-labelledby="callback-title" aria-modal="true">
     <button type="button" class="callback-close" data-close-callback aria-label="Close">&times;</button>
     <div id="callback-form-wrap">
       <h3 id="callback-title">We'll Call You Back</h3>
-      <p>Leave your name, number and ZIP — Sam usually responds within the hour.</p>
+      <p id="callback-intro">Leave your name, number and ZIP — Sam usually responds within the hour.</p>
+      <div id="deal-order-summary" class="deal-order-summary" hidden>
+        <span class="deal-order-summary__label">Your selection</span>
+        <strong id="deal-order-summary-title" class="deal-order-summary__title"></strong>
+        <span id="deal-order-summary-price" class="deal-order-summary__price"></span>
+      </div>
       <form class="callback-form" id="callback-form">
         <label>Your Name
           <input type="text" name="name" required autocomplete="name" placeholder="John Smith">
@@ -213,8 +212,8 @@
         <label>ZIP Code
           <input type="text" name="zip" required autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" maxlength="10" placeholder="92660">
         </label>
-        <label>What do you need? <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span>
-          <textarea name="message" placeholder="Genie belt drive install, $629 deal..."></textarea>
+        <label>Notes <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span>
+          <textarea name="message" placeholder="Garage size, preferred day, or gate code (optional)"></textarea>
         </label>
         <label class="callback-honeypot" aria-hidden="true">
           Leave blank
@@ -226,8 +225,8 @@
     </div>
     <div class="callback-success" id="callback-success" hidden>
       <div class="callback-success-icon">✓</div>
-      <h4>You're on the list!</h4>
-      <p>We'll call you back at<br><span class="callback-success-phone"></span><br>Usually within the hour — 7 days a week.</p>
+      <h4 class="callback-success-title">You're on the list!</h4>
+      <p>We'll call you at<br><span class="callback-success-phone"></span><br><span class="callback-success-body">Usually within the hour — 7 days a week.</span></p>
       <button type="button" class="callback-done" data-close-callback>Got it</button>
     </div>
   </div>

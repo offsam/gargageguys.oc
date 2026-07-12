@@ -6,11 +6,68 @@
   const formWrap = document.getElementById('callback-form-wrap');
   const success = document.getElementById('callback-success');
   const successPhone = success && success.querySelector('.callback-success-phone');
+  const successTitle = success && success.querySelector('.callback-success-title');
+  const successBody = success && success.querySelector('.callback-success-body');
   const errorEl = document.getElementById('callback-error');
   const submitBtn = form && form.querySelector('.callback-submit');
+  const modalTitle = document.getElementById('callback-title');
+  const modalIntro = document.getElementById('callback-intro');
+  const dealSummary = document.getElementById('deal-order-summary');
+  const dealSummaryTitle = document.getElementById('deal-order-summary-title');
+  const dealSummaryPrice = document.getElementById('deal-order-summary-price');
+  const messageField = form && form.querySelector('[name="message"]');
+  const messageLabel = messageField && messageField.closest('label');
+
   if (!modal || !form) return;
 
-  function openModal() {
+  let activeDeal = null;
+
+  const defaultCopy = {
+    title: modal.dataset.defaultTitle || "We'll Call You Back",
+    intro: modal.dataset.defaultIntro || 'Leave your name, number and ZIP — Sam usually responds within the hour.',
+    submit: modal.dataset.defaultSubmit || 'Send My Request',
+    messagePlaceholder: modal.dataset.defaultMessagePlaceholder || "Garage door won't open, need repair...",
+    successTitle: modal.dataset.defaultSuccessTitle || "You're on the list!",
+    successBody: modal.dataset.defaultSuccessBody || 'Usually within the hour — 7 days a week.',
+  };
+
+  const dealCopy = {
+    title: modal.dataset.dealTitle || 'Order Opener Installation',
+    intro: modal.dataset.dealIntro || 'Submit your install order — we will call to confirm your deal price and schedule.',
+    submit: modal.dataset.dealSubmit || 'Submit Installation Order',
+    messagePlaceholder: modal.dataset.dealMessagePlaceholder || 'Garage size, preferred day, or gate code (optional)',
+    successTitle: modal.dataset.dealSuccessTitle || 'Installation order received!',
+    successBody: modal.dataset.dealSuccessBody || 'We will call to confirm your opener deal and book install.',
+  };
+
+  function applyModalCopy(mode) {
+    const copy = mode === 'deal' ? dealCopy : defaultCopy;
+    if (modalTitle) modalTitle.textContent = copy.title;
+    if (modalIntro) modalIntro.textContent = copy.intro;
+    if (submitBtn) submitBtn.textContent = copy.submit;
+    if (messageField) messageField.placeholder = copy.messagePlaceholder;
+    if (successTitle) successTitle.textContent = copy.successTitle;
+    if (successBody) successBody.textContent = copy.successBody;
+  }
+
+  function setDealSummary(deal) {
+    if (!dealSummary) return;
+    if (!deal) {
+      dealSummary.hidden = true;
+      return;
+    }
+    dealSummary.hidden = false;
+    if (dealSummaryTitle) dealSummaryTitle.textContent = deal.title;
+    if (dealSummaryPrice) {
+      dealSummaryPrice.textContent = `Deal price: $${deal.price} · parts + installation included`;
+    }
+  }
+
+  function openModal(mode, deal) {
+    activeDeal = mode === 'deal' ? deal : null;
+    applyModalCopy(mode);
+    setDealSummary(activeDeal);
+
     modal.classList.add('is-open');
     modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
@@ -27,6 +84,9 @@
     modal.classList.remove('is-open');
     modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    activeDeal = null;
+    setDealSummary(null);
+    applyModalCopy('callback');
   }
 
   function showSuccess(phone) {
@@ -41,11 +101,32 @@
     errorEl.hidden = false;
   }
 
-  document.querySelectorAll('[data-open-callback]').forEach(btn => {
-    btn.addEventListener('click', openModal);
+  function buildDealMessage(deal, notes) {
+    const lines = [
+      `OPENER INSTALL ORDER — ${deal.title}`,
+      `Deal price: $${deal.price} (parts + installation)`,
+      `Deal ID: ${deal.id}`,
+    ];
+    const trimmed = String(notes || '').trim();
+    if (trimmed) lines.push(`Notes: ${trimmed}`);
+    return lines.join('\n');
+  }
+
+  document.querySelectorAll('[data-open-callback]').forEach((btn) => {
+    btn.addEventListener('click', () => openModal('callback'));
   });
 
-  document.querySelectorAll('[data-close-callback]').forEach(el => {
+  document.querySelectorAll('[data-open-deal-order]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      openModal('deal', {
+        id: btn.dataset.dealId || 'opener-deal',
+        title: btn.dataset.dealTitle || 'Genie Opener Installation',
+        price: btn.dataset.dealPrice || '',
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-close-callback]').forEach((el) => {
     el.addEventListener('click', closeModal);
   });
 
@@ -56,19 +137,30 @@
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    const notes = messageField ? messageField.value.trim() : '';
     const payload = {
       name: form.name.value.trim(),
       phone: form.phone.value.trim(),
       zip: form.zip.value.trim(),
-      message: form.message.value.trim() || 'Callback requested from website',
+      message: activeDeal
+        ? buildDealMessage(activeDeal, notes)
+        : notes || 'Callback requested from website',
       _gotcha: form._gotcha.value.trim(),
     };
+
+    if (activeDeal) {
+      payload.leadType = 'opener_install_order';
+      payload.dealId = activeDeal.id;
+      payload.dealTitle = activeDeal.title;
+      payload.dealPrice = activeDeal.price;
+    }
 
     if (errorEl) {
       errorEl.hidden = true;
       errorEl.textContent = '';
     }
 
+    const defaultSubmitLabel = activeDeal ? dealCopy.submit : defaultCopy.submit;
     if (submitBtn) {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Sending…';
@@ -93,7 +185,7 @@
 
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Send My Request';
+      submitBtn.textContent = defaultSubmitLabel;
     }
   });
 })();
@@ -122,7 +214,7 @@
 
   window.addEventListener('scroll', updateFab, { passive: true });
   window.addEventListener('resize', updateFab);
-  document.querySelectorAll('[data-open-callback], [data-close-callback]').forEach((el) => {
+  document.querySelectorAll('[data-open-callback], [data-open-deal-order], [data-close-callback]').forEach((el) => {
     el.addEventListener('click', () => setTimeout(updateFab, 50));
   });
   updateFab();

@@ -149,7 +149,7 @@
   --gray: #8a9bb0;
   --text: #1a2a3a;
   --nav-h: 70px;
-  --stats-h: 148px;
+  --stats-h: 112px;
   --hero-gap: 14px;
   --grad-navy-end: 26%;
   --grad-glow-start: 66%;
@@ -537,17 +537,23 @@ nav {
   transform: translateY(-1px);
 }
 
-.stats-bar__handyman {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 32px 10px;
+.stats-inner--with-handyman {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(168px, auto);
+  align-items: stretch;
+}
+
+.stats-handyman-slot {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  min-height: 82px;
+  padding: 4px 0 4px 8px;
 }
 
 .stats-bar .hero-handyman {
-  font-size: clamp(12px, 1vw, 15px);
-  padding: 10px 18px;
+  font-size: clamp(11px, 0.95vw, 14px);
+  padding: 10px 16px;
+  white-space: nowrap;
 }
 
 .hero-title {
@@ -2450,9 +2456,11 @@ footer {
 
   .hero-lead { max-width: min(300px, 100%); }
 
-  .stats-bar__handyman {
-    justify-content: center;
-    padding: 0 16px 8px;
+  .stats-handyman-slot {
+    grid-column: 2;
+    justify-content: flex-end;
+    min-height: 0;
+    padding: 0;
   }
 
   .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 16px; }
@@ -2514,7 +2522,7 @@ footer {
 @media (max-width: 600px) {
   :root {
     --nav-h: 62px;
-    --stats-h: 128px;
+    --stats-h: 96px;
   }
 
   body {
@@ -2654,10 +2662,7 @@ footer {
 
 <!-- STATS -->
 <div class="stats-bar" data-van-tone="dark">
-  <div class="stats-bar__handyman">
-    <a href="#services" class="hero-handyman" aria-label="Handyman services — painting, storage, and more">Handyman Services</a>
-  </div>
-  <div class="stats-inner">
+  <div class="stats-inner stats-inner--with-handyman">
     <div class="stat-item">
       <div class="stat-num">Same<span>-</span>Day</div>
       <div class="stat-label">Service Available</div>
@@ -2677,6 +2682,9 @@ footer {
     <div class="stat-item stat-item--parts-warranty">
       <div class="stat-num">1<span>–5</span> Years</div>
       <div class="stat-label">Parts Warranty</div>
+    </div>
+    <div class="stats-handyman-slot">
+      <a href="#services" class="hero-handyman" aria-label="Handyman services — painting, storage, and more">Handyman Services</a>
     </div>
   </div>
 </div>
