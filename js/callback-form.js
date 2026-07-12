@@ -107,11 +107,19 @@
     errorEl.hidden = false;
   }
 
+  function getOrderLabel(deal) {
+    const labels = {
+      opener_install_order: 'OPENER INSTALL ORDER',
+      maintenance_order: 'MAINTENANCE ORDER',
+      roller_replacement_order: 'ROLLER REPLACEMENT ORDER',
+      tuneup_order: 'FULL TUNE UP ORDER',
+    };
+    return labels[deal.leadType] || 'SERVICE ORDER';
+  }
+
   function buildDealMessage(deal, notes) {
-    const orderLabel = deal.leadType === 'maintenance_order'
-      ? 'MAINTENANCE ORDER'
-      : 'OPENER INSTALL ORDER';
-    const priceNote = deal.includes || 'parts + installation';
+    const orderLabel = getOrderLabel(deal);
+    const priceNote = deal.includes || 'service included';
     const lines = [
       `${orderLabel} — ${deal.title}`,
       `Deal price: ${formatDealPrice(deal)} (${priceNote})`,

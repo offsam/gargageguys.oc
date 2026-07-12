@@ -27,6 +27,16 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;');
 }
 
+function dealOrderHeadline(leadType, dealTitle) {
+  const labels = {
+    opener_install_order: 'Garage Guys — opener install order',
+    maintenance_order: 'Garage Guys — maintenance order',
+    roller_replacement_order: 'Garage Guys — roller replacement order',
+    tuneup_order: 'Garage Guys — tune-up order',
+  };
+  return labels[leadType] || (dealTitle ? `Garage Guys — ${dealTitle} order` : 'Garage Guys — service order');
+}
+
 function formatDealPriceLine(price) {
   if (!price) return '';
   return /^from\s/i.test(price) ? `Deal price: ${price}` : `Deal price: $${price}`;
@@ -159,10 +169,8 @@ module.exports = async function handler(req, res) {
   const safeLeadType = clean(leadType, 40) || 'callback';
   const safeDealId = clean(dealId, 40);
   const safeDealTitle = clean(dealTitle, 120);
-  const safeDealPrice = clean(dealPrice, 12);
-  const isOpenerOrder = safeLeadType === 'opener_install_order';
-  const isMaintenanceOrder = safeLeadType === 'maintenance_order';
-  const isDealOrder = isOpenerOrder || isMaintenanceOrder;
+  const safeDealPrice = clean(dealPrice, 16);
+  const isDealOrder = /_order$/.test(safeLeadType);
 
   if (!safeName || !safePhone || !safeZip) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -183,11 +191,9 @@ module.exports = async function handler(req, res) {
     leadPayload.dealPrice = safeDealPrice;
   }
 
-  const headline = isMaintenanceOrder
-    ? 'Garage Guys — maintenance order'
-    : isOpenerOrder
-      ? 'Garage Guys — opener install order'
-      : 'Garage Guys — callback request';
+  const headline = isDealOrder
+    ? dealOrderHeadline(safeLeadType, safeDealTitle)
+    : 'Garage Guys — callback request';
 
   const plainText = [
     headline,
@@ -201,7 +207,7 @@ module.exports = async function handler(req, res) {
   ].join('\n');
 
   const telegramText = [
-    `<b>${isMaintenanceOrder ? 'Garage Guys — maintenance order' : isOpenerOrder ? 'Garage Guys — opener install order' : 'Garage Guys — new callback'}</b>`,
+    `<b>${isDealOrder ? dealOrderHeadline(safeLeadType, safeDealTitle) : 'Garage Guys — new callback'}</b>`,
     '',
     ...(isDealOrder && safeDealTitle ? [`<b>Package:</b> ${escapeHtml(safeDealTitle)}`] : []),
     ...(isDealOrder && safeDealPrice ? [formatDealPriceHtml(safeDealPrice)] : []),
