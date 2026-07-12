@@ -98,28 +98,28 @@
 
 <main class="deals-main">
   <div class="deals-main__inner">
-    <p class="deals-intro">Browse the deal below each banner, then tap <strong>Add to Cart</strong> to book your opener installation — same quick form as Request Callback.</p>
+    <p class="deals-intro">Hover a deal to see it light up — <strong>click the banner</strong> to reveal <strong>Add to Cart</strong> and book your opener install.</p>
 
     <div class="deals-marketplace">
 
       <article class="deal-plaque" id="chain-drive">
-        <div class="deal-plaque__product">
-          <span class="deal-plaque__product-label">Deal banner</span>
+        <button type="button" class="deal-plaque__trigger" aria-expanded="false" aria-controls="chain-drive-reveal">
+          <span class="deal-plaque__glow" aria-hidden="true"></span>
+          <span class="deal-plaque__tap-hint">Tap to order</span>
           <div class="deal-plaque__visual">
             <img src="/Pictures/deals/genie-chain-drive-opener.png" alt="Genie chain drive garage door opener installation deal $499 Orange County" width="1024" height="1536" loading="eager">
           </div>
-        </div>
-        <div class="deal-plaque__checkout">
-          <div class="deal-plaque__meta">
-            <span class="deal-plaque__name">Genie Chain Drive</span>
-            <div class="deal-plaque__price-row">
-              <span class="deal-plaque__was">Was $699</span>
-              <span class="deal-plaque__now">$499</span>
+        </button>
+        <div class="deal-plaque__reveal" id="chain-drive-reveal">
+          <div class="deal-plaque__checkout">
+            <div class="deal-plaque__meta">
+              <span class="deal-plaque__name">Genie Chain Drive</span>
+              <div class="deal-plaque__price-row">
+                <span class="deal-plaque__was">Was $699</span>
+                <span class="deal-plaque__now">$499</span>
+              </div>
+              <span class="deal-plaque__includes">Parts + installation included</span>
             </div>
-            <span class="deal-plaque__includes">Parts + installation included</span>
-          </div>
-          <div class="deal-plaque__cta">
-            <span class="deal-plaque__cta-hint">Book this install package</span>
             <button type="button" class="deal-plaque__cart" data-open-deal-order
               data-deal-id="genie-chain-drive"
               data-deal-title="Genie Chain Drive Opener Installation"
@@ -134,23 +134,23 @@
       </article>
 
       <article class="deal-plaque" id="belt-drive">
-        <div class="deal-plaque__product">
-          <span class="deal-plaque__product-label">Deal banner</span>
+        <button type="button" class="deal-plaque__trigger" aria-expanded="false" aria-controls="belt-drive-reveal">
+          <span class="deal-plaque__glow" aria-hidden="true"></span>
+          <span class="deal-plaque__tap-hint">Tap to order</span>
           <div class="deal-plaque__visual">
             <img src="/Pictures/deals/genie-belt-drive-opener.png" alt="Genie belt drive garage door opener installation deal $629 Orange County" width="1024" height="1536" loading="lazy">
           </div>
-        </div>
-        <div class="deal-plaque__checkout">
-          <div class="deal-plaque__meta">
-            <span class="deal-plaque__name">Genie Belt Drive</span>
-            <div class="deal-plaque__price-row">
-              <span class="deal-plaque__was">Was $799</span>
-              <span class="deal-plaque__now">$629</span>
+        </button>
+        <div class="deal-plaque__reveal" id="belt-drive-reveal">
+          <div class="deal-plaque__checkout">
+            <div class="deal-plaque__meta">
+              <span class="deal-plaque__name">Genie Belt Drive</span>
+              <div class="deal-plaque__price-row">
+                <span class="deal-plaque__was">Was $799</span>
+                <span class="deal-plaque__now">$629</span>
+              </div>
+              <span class="deal-plaque__includes">Parts + installation included</span>
             </div>
-            <span class="deal-plaque__includes">Parts + installation included</span>
-          </div>
-          <div class="deal-plaque__cta">
-            <span class="deal-plaque__cta-hint">Book this install package</span>
             <button type="button" class="deal-plaque__cart" data-open-deal-order
               data-deal-id="genie-belt-drive"
               data-deal-title="Genie Belt Drive Opener Installation"
@@ -177,7 +177,7 @@
 
 <section class="service-cta">
   <h2>Questions About a Deal?</h2>
-  <p>Call anytime — or tap <strong>Add to Cart</strong> on any deal above.</p>
+  <p>Call anytime — hover a deal, tap the banner, then <strong>Add to Cart</strong>.</p>
   <a href="tel:+19495390009" class="service-cta__phone">(949) 539-0009</a>
   <br>
   <button type="button" class="btn-callback-inline" data-open-callback>
@@ -259,6 +259,7 @@
 </footer>
 
 <script src="/js/callback-form.js"></script>
+<script src="/js/deals-marketplace.js"></script>
 <link rel="stylesheet" href="/css/ai-chat.css">
 <script src="/js/ai-chat.js" defer></script>
 <script>window.addEventListener('load',function(){document.querySelector('.site-van-bg')?.classList.add('is-loaded')});</script>
