@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="format-detection" content="telephone=no">
 <title>Garage Door Repair Orange County | Same-Day Service | Garage Guys</title>
 <meta name="description" content="Garage door repair in Orange County, CA. Same-day spring, opener &amp; emergency service. Free estimate — call (949) 539-0009.">
@@ -175,6 +175,9 @@ html {
   scroll-behavior: smooth;
   scroll-snap-type: y proximity;
   scroll-padding-top: var(--nav-h);
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 .section-screen {
@@ -199,6 +202,10 @@ body {
   font-size: 16px;
   line-height: 1.6;
   overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  overscroll-behavior-x: none;
+  position: relative;
 }
 
 /* Fixed VAN — far background layer, visible through all sections */
@@ -2458,6 +2465,8 @@ footer {
 
   .stats-inner--with-handyman {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 0 12px;
   }
 
   .stat-item--reviews {
@@ -2465,8 +2474,8 @@ footer {
   }
 
   .stats-handyman-slot {
-    grid-column: 2;
-    justify-content: stretch;
+    grid-column: 1 / -1;
+    justify-content: center;
     align-items: stretch;
     min-height: 0;
     padding: 0;
@@ -2474,8 +2483,10 @@ footer {
 
   .stats-bar .hero-handyman {
     width: 100%;
-    min-height: 72px;
+    min-height: 56px;
     justify-content: center;
+    white-space: normal;
+    text-align: center;
   }
 
   .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 16px; }
@@ -2486,7 +2497,7 @@ footer {
   }
   .section-title { margin-bottom: 36px; }
   .services-head { flex-direction: column; align-items: flex-start; gap: 16px; }
-  .services-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .services-grid { grid-template-columns: 1fr; gap: 12px; }
   .service-card,
   .service-card:nth-child(4),
   .service-card:nth-child(5) { grid-column: span 1; }
@@ -2520,10 +2531,34 @@ footer {
 
   .site-van-bg {
     background-attachment: scroll;
+    inset: 0;
+    width: 100%;
+    max-width: 100%;
+    transform: none;
+  }
+
+  .site-van-bg[data-tone="light"],
+  .site-van-bg[data-tone="dark"] {
+    transform: none;
   }
 
   .site-van-bg[data-tone="hero"] {
     background-position: 16% center;
+    transform: none;
+  }
+
+  nav {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .nav-brand {
+    transform: none;
+  }
+
+  .nav-links {
+    overscroll-behavior-x: contain;
+    min-width: 0;
   }
 
   .hero-phone-number,
@@ -2549,7 +2584,7 @@ footer {
   .nav-logo img { height: 44px; max-width: 100px; }
   .nav-links { gap: 10px; max-width: calc(100% - 210px); }
   .nav-links a { font-size: 10px; letter-spacing: 0.1px; }
-  .nav-brand { gap: 12px; transform: translateX(-16px); }
+  .nav-brand { gap: 12px; transform: none; }
   .nav-deals-btn { padding: 10px 16px 9px; }
   .nav-deals-btn__title { font-size: 18px; letter-spacing: 1px; }
   .nav-deals-btn__sub { font-size: 9px; }
@@ -2564,6 +2599,21 @@ footer {
   }
   .hero-phone-icon svg { width: 22px; height: 22px; }
   .hero-callback-btn { max-width: 100%; }
+
+  .hero-phone-big {
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(15, 35, 64, 0.48);
+    border: 1px solid rgba(91, 163, 217, 0.28);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-sizing: border-box;
+  }
+
+  .hero-callback-btn { margin-top: 0; }
+
+  .service-area-map-img { max-width: 100%; height: auto; }
 
   .stat-item { min-height: 72px; padding: 10px 8px; }
   .stat-num { font-size: clamp(24px, 6vw, 30px); }
