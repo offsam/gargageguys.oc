@@ -50,6 +50,11 @@
     if (successBody) successBody.textContent = copy.successBody;
   }
 
+  function formatDealPrice(deal) {
+    const prefix = deal.pricePrefix ? `${deal.pricePrefix} ` : '';
+    return `${prefix}$${deal.price}`;
+  }
+
   function setDealSummary(deal) {
     if (!dealSummary) return;
     if (!deal) {
@@ -59,7 +64,8 @@
     dealSummary.hidden = false;
     if (dealSummaryTitle) dealSummaryTitle.textContent = deal.title;
     if (dealSummaryPrice) {
-      dealSummaryPrice.textContent = `Deal price: $${deal.price} · parts + installation included`;
+      const includes = deal.includes || 'parts + installation included';
+      dealSummaryPrice.textContent = `Deal price: ${formatDealPrice(deal)} · ${includes}`;
     }
   }
 
@@ -102,9 +108,13 @@
   }
 
   function buildDealMessage(deal, notes) {
+    const orderLabel = deal.leadType === 'maintenance_order'
+      ? 'MAINTENANCE ORDER'
+      : 'OPENER INSTALL ORDER';
+    const priceNote = deal.includes || 'parts + installation';
     const lines = [
-      `OPENER INSTALL ORDER — ${deal.title}`,
-      `Deal price: $${deal.price} (parts + installation)`,
+      `${orderLabel} — ${deal.title}`,
+      `Deal price: ${formatDealPrice(deal)} (${priceNote})`,
       `Deal ID: ${deal.id}`,
     ];
     const trimmed = String(notes || '').trim();
@@ -119,9 +129,12 @@
   document.querySelectorAll('[data-open-deal-order]').forEach((btn) => {
     btn.addEventListener('click', () => {
       openModal('deal', {
-        id: btn.dataset.dealId || 'opener-deal',
-        title: btn.dataset.dealTitle || 'Genie Opener Installation',
+        id: btn.dataset.dealId || 'deal',
+        title: btn.dataset.dealTitle || 'Garage Door Deal',
         price: btn.dataset.dealPrice || '',
+        pricePrefix: btn.dataset.dealPricePrefix || '',
+        includes: btn.dataset.dealIncludes || '',
+        leadType: btn.dataset.dealLeadType || 'opener_install_order',
       });
     });
   });
@@ -149,10 +162,12 @@
     };
 
     if (activeDeal) {
-      payload.leadType = 'opener_install_order';
+      payload.leadType = activeDeal.leadType || 'opener_install_order';
       payload.dealId = activeDeal.id;
       payload.dealTitle = activeDeal.title;
-      payload.dealPrice = activeDeal.price;
+      payload.dealPrice = activeDeal.pricePrefix
+        ? `${activeDeal.pricePrefix} $${activeDeal.price}`.trim()
+        : activeDeal.price;
     }
 
     if (errorEl) {

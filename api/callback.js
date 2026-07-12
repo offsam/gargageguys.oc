@@ -27,6 +27,19 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;');
 }
 
+function formatDealPriceLine(price) {
+  if (!price) return '';
+  return /^from\s/i.test(price) ? `Deal price: ${price}` : `Deal price: $${price}`;
+}
+
+function formatDealPriceHtml(price) {
+  if (!price) return '';
+  if (/^from\s/i.test(price)) {
+    return `<b>Deal price:</b> ${escapeHtml(price)}`;
+  }
+  return `<b>Deal price:</b> $${escapeHtml(price)}`;
+}
+
 async function sendTelegram(text) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -148,6 +161,8 @@ module.exports = async function handler(req, res) {
   const safeDealTitle = clean(dealTitle, 120);
   const safeDealPrice = clean(dealPrice, 12);
   const isOpenerOrder = safeLeadType === 'opener_install_order';
+  const isMaintenanceOrder = safeLeadType === 'maintenance_order';
+  const isDealOrder = isOpenerOrder || isMaintenanceOrder;
 
   if (!safeName || !safePhone || !safeZip) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -162,19 +177,23 @@ module.exports = async function handler(req, res) {
     leadType: safeLeadType,
   };
 
-  if (isOpenerOrder) {
+  if (isDealOrder) {
     leadPayload.dealId = safeDealId;
     leadPayload.dealTitle = safeDealTitle;
     leadPayload.dealPrice = safeDealPrice;
   }
 
-  const headline = isOpenerOrder ? 'Garage Guys — opener install order' : 'Garage Guys — callback request';
+  const headline = isMaintenanceOrder
+    ? 'Garage Guys — maintenance order'
+    : isOpenerOrder
+      ? 'Garage Guys — opener install order'
+      : 'Garage Guys — callback request';
 
   const plainText = [
     headline,
-    ...(isOpenerOrder && safeDealTitle ? [`Package: ${safeDealTitle}`] : []),
-    ...(isOpenerOrder && safeDealPrice ? [`Deal price: $${safeDealPrice}`] : []),
-    ...(isOpenerOrder && safeDealId ? [`Deal ID: ${safeDealId}`] : []),
+    ...(isDealOrder && safeDealTitle ? [`Package: ${safeDealTitle}`] : []),
+    ...(isDealOrder && safeDealPrice ? [formatDealPriceLine(safeDealPrice)] : []),
+    ...(isDealOrder && safeDealId ? [`Deal ID: ${safeDealId}`] : []),
     `Name: ${safeName}`,
     `Phone: ${safePhone}`,
     `ZIP: ${safeZip}`,
@@ -182,11 +201,11 @@ module.exports = async function handler(req, res) {
   ].join('\n');
 
   const telegramText = [
-    `<b>${isOpenerOrder ? 'Garage Guys — opener install order' : 'Garage Guys — new callback'}</b>`,
+    `<b>${isMaintenanceOrder ? 'Garage Guys — maintenance order' : isOpenerOrder ? 'Garage Guys — opener install order' : 'Garage Guys — new callback'}</b>`,
     '',
-    ...(isOpenerOrder && safeDealTitle ? [`<b>Package:</b> ${escapeHtml(safeDealTitle)}`] : []),
-    ...(isOpenerOrder && safeDealPrice ? [`<b>Deal price:</b> $${escapeHtml(safeDealPrice)}`] : []),
-    ...(isOpenerOrder && safeDealId ? [`<b>Deal ID:</b> ${escapeHtml(safeDealId)}`] : []),
+    ...(isDealOrder && safeDealTitle ? [`<b>Package:</b> ${escapeHtml(safeDealTitle)}`] : []),
+    ...(isDealOrder && safeDealPrice ? [formatDealPriceHtml(safeDealPrice)] : []),
+    ...(isDealOrder && safeDealId ? [`<b>Deal ID:</b> ${escapeHtml(safeDealId)}`] : []),
     `<b>Name:</b> ${escapeHtml(safeName)}`,
     `<b>Phone:</b> ${escapeHtml(safePhone)}`,
     `<b>ZIP:</b> ${escapeHtml(safeZip)}`,
