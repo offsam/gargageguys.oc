@@ -391,35 +391,14 @@ nav {
   position: relative;
 }
 
-.hero-title-panel {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 6px;
-  max-width: 100%;
-  padding: 14px 18px 16px;
-  border-radius: 12px;
-  background: rgba(15, 35, 64, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow:
-    0 10px 36px rgba(0, 0, 0, 0.38),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.hero-title-panel .hero-title {
-  max-width: none;
-}
-
 .hero-handyman {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   font-size: clamp(13px, 1.05vw, 16px);
   font-weight: 600;
   letter-spacing: 0.8px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.88);
   text-decoration: none;
   margin: 0;
   padding: 9px 16px;
@@ -444,29 +423,16 @@ nav {
   transform: translateY(-1px);
 }
 
-.stat-item--handyman {
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
+.home-hero-stack .hero > .hero-handyman {
+  position: absolute;
+  z-index: 3;
+  right: clamp(24px, 5vw, 56px);
+  top: 50%;
+  transform: translateY(-50%);
 }
 
-.stat-item--handyman.hero-handyman::before {
-  display: none;
-}
-
-.stat-item--handyman:hover {
-  color: inherit;
-  background: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%);
-  border-color: rgba(252, 211, 77, 0.45);
-  transform: translateY(-2px);
-}
-
-.stat-item--handyman .stat-num {
-  font-size: clamp(26px, 2.4vw, 34px);
-}
-
-.stat-item--handyman .stat-num span {
-  color: #5ba3d9;
+.home-hero-stack .hero > .hero-handyman:hover {
+  transform: translateY(calc(-50% - 1px));
 }
 
 .hero-title {
@@ -484,12 +450,18 @@ nav {
 
 .hero-title__line {
   display: block;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 2px 10px rgba(0, 0, 0, 0.65),
+    0 0 24px rgba(15, 35, 64, 0.8);
 }
 
 .hero-title__line--accent {
   color: #5ba3d9;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 2px 10px rgba(0, 0, 0, 0.65),
+    0 0 24px rgba(15, 35, 64, 0.8);
 }
 
 .hero-lead {
@@ -508,7 +480,6 @@ nav {
 .hero-phone-big {
   margin: 0;
   width: 100%;
-  max-width: 300px;
 }
 
 .hero-actions {
@@ -2353,6 +2324,7 @@ footer {
     min-height: auto;
     padding: calc(var(--nav-h) + 24px) 20px 20px;
     align-items: flex-start;
+    flex-direction: column;
   }
 
   .hero-content {
@@ -2361,9 +2333,18 @@ footer {
     max-width: 100%;
   }
 
-  .hero-title-panel { padding: 12px 14px 14px; }
   .hero-lead { max-width: min(300px, 100%); }
-  .hero-phone-big { max-width: min(300px, 100%); }
+
+  .home-hero-stack .hero > .hero-handyman {
+    position: static;
+    transform: none;
+    align-self: flex-end;
+    margin: 0 0 4px;
+  }
+
+  .home-hero-stack .hero > .hero-handyman:hover {
+    transform: translateY(-1px);
+  }
   .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 16px; }
   .section-screen {
     min-height: auto;
@@ -2524,14 +2505,13 @@ footer {
 <section class="hero">
   <div class="hero-bg"></div>
   <div class="hero-grid"></div>
+  <a href="#services" class="hero-handyman" aria-label="Handyman services — painting, storage, and more">Handyman Services</a>
   <div class="hero-content">
     <div class="hero-eyebrow">Orange County, California</div>
-    <div class="hero-title-panel">
-      <h1 class="hero-title">
-        <span class="hero-title__line">Garage Door Repair in Orange County, CA</span>
-        <span class="hero-title__line hero-title__line--accent">Same-Day Service</span>
-      </h1>
-    </div>
+    <h1 class="hero-title">
+      <span class="hero-title__line">Garage Door Repair in Orange County, CA</span>
+      <span class="hero-title__line hero-title__line--accent">Same-Day Service</span>
+    </h1>
     <p class="hero-lead">Same-day garage door repair in Orange County — springs, openers, installation &amp; emergency service. Free estimate, 7 days a week.</p>
     <div class="hero-phone-big">
       <div class="hero-phone-label">Tap to call · free estimate</div>
@@ -2558,7 +2538,7 @@ footer {
     </div>
     <div class="stat-item stat-item--warranty">
       <div class="stat-num">Up to 1 <span>Year</span></div>
-      <div class="stat-label">Labor · 1–5 Yr Parts</div>
+      <div class="stat-label">Labor Warranty</div>
     </div>
     <div class="stat-item stat-item--reviews">
       <a class="stat-tt-link" target="_blank" rel="noopener noreferrer" href="https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690" aria-label="See 67 reviews on Thumbtack"></a>
@@ -2568,10 +2548,10 @@ footer {
       </div>
       <div class="stat-label">67 Reviews · Thumbtack</div>
     </div>
-    <a href="#services" class="stat-item stat-item--handyman hero-handyman" aria-label="Handyman services — painting, storage, and more">
-      <div class="stat-num">Handyman <span>Services</span></div>
-      <div class="stat-label">Painting · Storage · More</div>
-    </a>
+    <div class="stat-item stat-item--parts-warranty">
+      <div class="stat-num">1<span>–5</span> Years</div>
+      <div class="stat-label">Parts Warranty</div>
+    </div>
   </div>
 </div>
 </div>
