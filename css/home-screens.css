@@ -360,6 +360,15 @@ body.page-home-unified .fab-bar {
     gap: 6px;
   }
 
+  body.page-home-unified .home-hero-stack .hero-title__line:not(.hero-title__line--accent) {
+    transform: translateY(-50px);
+  }
+
+  body.page-home-unified .home-hero-stack .hero-title__line--accent {
+    margin-top: 30px;
+    transform: translateY(30px);
+  }
+
   body.page-home-unified .home-hero-stack .hero-eyebrow {
     position: static;
     width: auto;
