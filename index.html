@@ -2625,7 +2625,8 @@ footer {
     font-size: clamp(22px, 6.5vw, 34px);
     flex-wrap: nowrap;
     white-space: nowrap;
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     justify-content: flex-start;
     text-shadow:
       0 1px 2px rgba(0, 0, 0, 0.9),
@@ -2641,10 +2642,11 @@ footer {
     background: none;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 10px;
     box-sizing: border-box;
-    width: 100%;
+    width: max-content;
+    max-width: 100%;
   }
 
   .hero-phone-label {
@@ -2660,10 +2662,10 @@ footer {
 
   .hero-callback-btn {
     margin-top: 0;
-    width: auto;
+    width: 100%;
     max-width: 100%;
-    align-self: flex-start;
-    padding: 12px 14px;
+    align-self: stretch;
+    padding: 14px 16px;
     border-color: rgba(167, 220, 255, 0.95);
     background: linear-gradient(
       145deg,
@@ -2678,7 +2680,7 @@ footer {
   }
 
   .hero-callback-btn .stat-num {
-    font-size: clamp(20px, 5.5vw, 26px);
+    font-size: clamp(22px, 6vw, 28px);
     color: #ffffff;
     text-shadow:
       0 1px 2px rgba(0, 0, 0, 0.75),
@@ -2686,7 +2688,7 @@ footer {
   }
 
   .hero-callback-btn .stat-label {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     color: rgba(230, 245, 255, 1);
   }
