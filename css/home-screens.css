@@ -288,13 +288,19 @@ body.page-home-unified .fab-bar {
     gap: 6px;
   }
 
-  body.page-home-unified .home-hero-stack .hero-eyebrow {
-    font-size: 12px;
-  }
-
-  body.page-home-unified .home-hero-stack .hero-lead {
-    font-size: 14px;
-    line-height: 1.5;
+  body.page-home-unified .home-hero-stack .hero-eyebrow,
+  body.page-home-unified .home-hero-stack .hero-lead,
+  body.page-home-unified .home-hero-stack .hero-phone-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
   }
 
   body.page-home-unified .home-hero-stack .hero-phone-number {
