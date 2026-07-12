@@ -709,6 +709,10 @@
 }
 
 @media (max-width: 640px) {
+  body.page-home-unified .gg-ai-chat-root {
+    bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+  }
+
   .gg-ai-chat-root {
     --gg-launcher: 64px;
     left: 12px;
