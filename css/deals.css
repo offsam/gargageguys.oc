@@ -313,6 +313,10 @@
   color: #5ba3d9;
 }
 
+.deals-intro--mobile {
+  display: none;
+}
+
 /* Order modal — selected deal summary */
 .deal-order-summary {
   display: flex;
@@ -355,14 +359,146 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 640px) {
+  .page-deals .site-van-bg {
+    display: none;
+  }
+
+  .page-deals .service-hero {
+    padding: calc(var(--nav-h) + 14px) 14px 18px;
+    min-height: 0;
+  }
+
+  .page-deals .service-hero__eyebrow,
+  .page-deals .service-hero__lead {
+    display: none;
+  }
+
+  .page-deals .service-hero__title {
+    font-size: clamp(30px, 8.5vw, 38px);
+    margin-bottom: 12px;
+  }
+
+  .page-deals .service-hero__actions {
+    gap: 10px;
+  }
+
+  .page-deals .service-cta {
+    display: none;
+  }
+
+  .deals-main {
+    padding: 0 0 20px;
+  }
+
+  .deals-main__inner {
+    padding: 0 12px;
+  }
+
+  .deals-intro {
+    display: none;
+  }
+
+  .deals-intro--mobile {
+    display: block;
+    margin: 0 0 14px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
   .deals-marketplace {
-    grid-template-columns: 1fr;
-    max-width: 380px;
-    margin: 0 auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    max-width: none;
+    margin: 0;
   }
 
   .deal-plaque {
-    max-width: 100%;
+    max-width: none;
+  }
+
+  .deal-plaque__trigger {
+    border-width: 1px;
+    border-radius: 10px;
+    pointer-events: none;
+    cursor: default;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  }
+
+  .deal-plaque__trigger:hover,
+  .deal-plaque__trigger:focus-visible,
+  .deal-plaque.is-open .deal-plaque__trigger {
+    transform: none;
+    border-color: rgba(91, 163, 217, 0.35);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  }
+
+  .deal-plaque__glow,
+  .deal-plaque__tap-hint {
+    display: none;
+  }
+
+  .deal-plaque__visual {
+    transform: none;
+  }
+
+  .deal-plaque__reveal {
+    max-height: none;
+    opacity: 1;
+    margin-top: 8px;
+    transform: none;
+    pointer-events: auto;
+    overflow: visible;
+  }
+
+  .deal-plaque__checkout {
+    padding: 10px 10px 11px;
+    gap: 8px;
+    border-radius: 10px;
+  }
+
+  .deal-plaque__name {
+    font-size: 15px;
+  }
+
+  .deal-plaque__now {
+    font-size: 22px;
+  }
+
+  .deal-plaque__now--from {
+    font-size: 20px;
+  }
+
+  .deal-plaque__was {
+    font-size: 10px;
+  }
+
+  .deal-plaque__includes {
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    line-height: 1.35;
+  }
+
+  .deal-plaque__cart {
+    padding: 10px 10px;
+    font-size: 15px;
+    letter-spacing: 0.8px;
+    animation: none;
+  }
+
+  .deal-plaque__cart-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .deals-areas {
+    display: none;
+  }
+
+  .deals-note {
+    margin-top: 14px;
+    font-size: 11px;
+    line-height: 1.45;
+    padding: 0 2px;
   }
 }
