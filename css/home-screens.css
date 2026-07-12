@@ -132,26 +132,26 @@ body.page-home-unified .fab-bar {
   }
 }
 
-/* —— Phone only: simplified nav, natural hero height, grouped blocks —— */
+/* —— Phone only: compact nav + hero CTA, keep one-screen sections —— */
 @media (max-width: 600px) {
   html:has(body.page-home-unified) {
-    scroll-snap-type: none;
+    scroll-snap-type: y proximity;
   }
 
   body.page-home-unified .home-hero-stack {
-    height: auto;
-    min-height: 0;
-    max-height: none;
-    overflow: visible;
-    scroll-snap-stop: normal;
+    height: 100svh;
+    min-height: 100svh;
+    max-height: 100svh;
+    overflow: hidden;
+    scroll-snap-stop: always;
   }
 
   body.page-home-unified .home-hero-stack .hero {
-    flex: none;
-    min-height: auto;
-    overflow: visible;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
     align-items: flex-start;
-    padding-bottom: 8px;
+    padding: calc(var(--nav-h) + 8px) 16px 6px;
   }
 
   body.page-home-unified .home-hero-stack .hero-content {
@@ -160,7 +160,8 @@ body.page-home-unified .fab-bar {
     width: 100%;
     max-width: 100%;
     align-items: flex-start;
-    gap: 12px;
+    gap: 8px;
+    min-height: 0;
   }
 
   body.page-home-unified .home-hero-stack .hero-title {
@@ -268,8 +269,9 @@ body.page-home-unified .fab-bar {
 
   body.page-home-unified .home-hero-stack .stats-bar {
     margin-top: 0;
-    padding-top: 10px;
-    padding-bottom: 12px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    flex-shrink: 0;
   }
 
   body.page-home-unified .home-hero-stack .stats-inner--with-handyman {
@@ -293,9 +295,9 @@ body.page-home-unified .fab-bar {
   }
 
   body.page-home-unified .section-screen {
-    min-height: auto;
+    min-height: 100svh;
     padding: calc(var(--nav-h) + 16px) 16px 28px;
-    scroll-snap-stop: normal;
+    scroll-snap-stop: always;
     overflow: hidden;
   }
 
@@ -339,13 +341,9 @@ body.page-home-unified .fab-bar {
     font-size: 16px;
   }
 
-  body.page-home-unified .home-hero-stack .hero {
-    padding: calc(var(--nav-h) + 12px) 16px 12px;
-  }
-
   body.page-home-unified .home-hero-stack .hero-title {
-    font-size: clamp(26px, 7.5vw, 36px);
-    gap: 6px;
+    font-size: clamp(24px, 7vw, 34px);
+    gap: 4px;
   }
 
   body.page-home-unified .home-hero-stack .hero-eyebrow,
@@ -363,8 +361,8 @@ body.page-home-unified .fab-bar {
   }
 
   body.page-home-unified .home-hero-stack .stat-item {
-    min-height: 64px;
-    padding: 8px 6px;
+    min-height: 56px;
+    padding: 6px 4px;
   }
 
   body.page-home-unified .home-hero-stack .stat-label {
