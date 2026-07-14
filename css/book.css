@@ -95,6 +95,11 @@
   color: #6b7c90;
 }
 
+.book-req {
+  color: #dc2626;
+  font-weight: 700;
+}
+
 .book-form input,
 .book-form select,
 .book-form textarea {

@@ -26,10 +26,7 @@
   function syncWhenUI() {
     const preferred = form.querySelector('input[name="when"]:checked')?.value === 'preferred';
     if (dateWrap) dateWrap.hidden = !preferred;
-    if (dateInput) {
-      dateInput.required = preferred;
-      if (!preferred) dateInput.value = '';
-    }
+    if (dateInput && !preferred) dateInput.value = '';
   }
 
   form.querySelectorAll('input[name="when"]').forEach((radio) => {
@@ -49,48 +46,49 @@
     if (success) success.hidden = false;
   }
 
-  function buildMessage(data) {
-    const lines = [
-      `BOOKING REQUEST — ${data.service}`,
-      `Timing: ${data.timing}`,
-      `Time window: ${data.timeWindow}`,
-    ];
-    if (data.notes) lines.push(`Notes: ${data.notes}`);
+  /** All optional booking details go into message/notes for AI Council + Telegram. */
+  function buildNotesMessage(data) {
+    const lines = ['BOOKING REQUEST (Google Local /book/)'];
+    if (data.service) lines.push(`Service: ${data.service}`);
+    if (data.timing) lines.push(`Timing: ${data.timing}`);
+    if (data.timeWindow) lines.push(`Time window: ${data.timeWindow}`);
+    if (data.notes) lines.push(`Customer notes: ${data.notes}`);
+    if (lines.length === 1) lines.push('No extra details provided');
     return lines.join('\n');
   }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    const name = form.name.value.trim();
+    const phone = form.phone.value.trim();
+    const zip = form.zip.value.trim();
+
+    if (!name || !phone || !zip) {
+      showError('Name, phone, and ZIP are required.');
+      return;
+    }
+
     const when = form.querySelector('input[name="when"]:checked')?.value || 'asap';
     const preferredDate = form.preferredDate ? form.preferredDate.value.trim() : '';
     const service = form.service.value.trim();
-    const timeWindow = form.timeWindow.value.trim() || 'Anytime';
+    const timeWindow = form.timeWindow.value.trim();
     const notes = form.message.value.trim();
 
-    if (!service) {
-      showError('Please select a service.');
-      return;
+    let timing = '';
+    if (when === 'preferred') {
+      timing = preferredDate ? `Preferred day: ${preferredDate}` : 'Preferred day (not specified)';
+    } else if (when === 'asap') {
+      timing = 'ASAP / Same day';
     }
 
-    if (when === 'preferred' && !preferredDate) {
-      showError('Please pick a preferred day, or choose ASAP.');
-      return;
-    }
-
-    const timing = when === 'asap'
-      ? 'ASAP / Same day'
-      : `Preferred day: ${preferredDate}`;
-
+    // Everything except name/phone/zip lives in message for AI Council notes
     const payload = {
-      name: form.name.value.trim(),
-      phone: form.phone.value.trim(),
-      zip: form.zip.value.trim(),
-      message: buildMessage({ service, timing, timeWindow, notes }),
+      name,
+      phone,
+      zip,
+      message: buildNotesMessage({ service, timing, timeWindow, notes }),
       leadType: 'booking_request',
-      dealId: 'google-book',
-      dealTitle: service,
-      dealPrice: '',
       _gotcha: form._gotcha.value.trim(),
     };
 

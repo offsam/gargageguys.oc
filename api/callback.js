@@ -166,12 +166,13 @@ module.exports = async function handler(req, res) {
   const safeName = clean(name, 80);
   const safePhone = clean(phone, 30);
   const safeZip = clean(zip, 10);
-  const safeMessage = clean(message, 500) || 'Callback requested from website';
+  const safeMessage = clean(message, 800) || 'Callback requested from website';
   const safeLeadType = clean(leadType, 40) || 'callback';
   const safeDealId = clean(dealId, 40);
   const safeDealTitle = clean(dealTitle, 120);
   const safeDealPrice = clean(dealPrice, 16);
-  const isDealOrder = /_order$/.test(safeLeadType) || safeLeadType === 'booking_request';
+  const isBookingRequest = safeLeadType === 'booking_request';
+  const isDealOrder = /_order$/.test(safeLeadType);
 
   if (!safeName || !safePhone || !safeZip) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -192,9 +193,11 @@ module.exports = async function handler(req, res) {
     leadPayload.dealPrice = safeDealPrice;
   }
 
-  const headline = isDealOrder
-    ? dealOrderHeadline(safeLeadType, safeDealTitle)
-    : 'Garage Guys — callback request';
+  const headline = isBookingRequest
+    ? 'Garage Guys — booking request'
+    : isDealOrder
+      ? dealOrderHeadline(safeLeadType, safeDealTitle)
+      : 'Garage Guys — callback request';
 
   const plainText = [
     headline,
@@ -208,7 +211,7 @@ module.exports = async function handler(req, res) {
   ].join('\n');
 
   const telegramText = [
-    `<b>${isDealOrder ? dealOrderHeadline(safeLeadType, safeDealTitle) : 'Garage Guys — new callback'}</b>`,
+    `<b>${isBookingRequest ? 'Garage Guys — booking request' : isDealOrder ? dealOrderHeadline(safeLeadType, safeDealTitle) : 'Garage Guys — new callback'}</b>`,
     '',
     ...(isDealOrder && safeDealTitle ? [`<b>Package:</b> ${escapeHtml(safeDealTitle)}`] : []),
     ...(isDealOrder && safeDealPrice ? [formatDealPriceHtml(safeDealPrice)] : []),

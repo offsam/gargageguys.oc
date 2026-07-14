@@ -58,19 +58,19 @@
   <div class="book-panel" id="book-panel">
     <div id="book-form-wrap">
       <form class="book-form" id="book-form" novalidate>
-        <label>Your Name
+        <label>Your Name <span class="book-req" aria-hidden="true">*</span>
           <input type="text" name="name" required autocomplete="name" placeholder="John Smith">
         </label>
-        <label>Your Phone
+        <label>Your Phone <span class="book-req" aria-hidden="true">*</span>
           <input type="tel" name="phone" required autocomplete="tel" placeholder="(949) 555-0000">
         </label>
-        <label>ZIP Code
+        <label>ZIP Code <span class="book-req" aria-hidden="true">*</span>
           <input type="text" name="zip" required autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" maxlength="10" placeholder="92660">
         </label>
 
         <fieldset class="book-fieldset">
-          <legend>Service needed</legend>
-          <select name="service" required>
+          <legend>Service needed <span class="book-optional">(optional)</span></legend>
+          <select name="service">
             <option value="">Select a service</option>
             <option value="Garage Door Repair">Garage Door Repair</option>
             <option value="Spring Repair">Spring Repair</option>
@@ -84,7 +84,7 @@
         </fieldset>
 
         <fieldset class="book-fieldset">
-          <legend>When do you need us?</legend>
+          <legend>When do you need us? <span class="book-optional">(optional)</span></legend>
           <div class="book-when" role="radiogroup" aria-label="Preferred timing">
             <label class="book-chip">
               <input type="radio" name="when" value="asap" checked>
@@ -96,13 +96,13 @@
             </label>
           </div>
           <div class="book-date-wrap" id="book-date-wrap" hidden>
-            <label>Preferred day
+            <label>Preferred day <span class="book-optional">(optional)</span>
               <input type="date" name="preferredDate" id="book-preferred-date">
             </label>
           </div>
           <label>Time of day <span class="book-optional">(optional)</span>
             <select name="timeWindow">
-              <option value="Anytime">Anytime</option>
+              <option value="">Anytime</option>
               <option value="Morning">Morning</option>
               <option value="Afternoon">Afternoon</option>
               <option value="Evening">Evening</option>
