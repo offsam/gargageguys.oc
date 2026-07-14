@@ -33,6 +33,7 @@ function dealOrderHeadline(leadType, dealTitle) {
     maintenance_order: 'Garage Guys — maintenance order',
     roller_replacement_order: 'Garage Guys — roller replacement order',
     tuneup_order: 'Garage Guys — tune-up order',
+    booking_request: 'Garage Guys — booking request',
   };
   return labels[leadType] || (dealTitle ? `Garage Guys — ${dealTitle} order` : 'Garage Guys — service order');
 }
@@ -170,7 +171,7 @@ module.exports = async function handler(req, res) {
   const safeDealId = clean(dealId, 40);
   const safeDealTitle = clean(dealTitle, 120);
   const safeDealPrice = clean(dealPrice, 16);
-  const isDealOrder = /_order$/.test(safeLeadType);
+  const isDealOrder = /_order$/.test(safeLeadType) || safeLeadType === 'booking_request';
 
   if (!safeName || !safePhone || !safeZip) {
     return res.status(400).json({ error: 'Missing required fields' });
