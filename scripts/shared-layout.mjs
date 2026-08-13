@@ -109,6 +109,7 @@ export function pageTail(logoAlt) {
 </footer>
 
 <script src="/js/callback-form.js"></script>
+<script src="/js/thumbtack-reviews.js" defer></script>
 <link rel="stylesheet" href="/css/ai-chat.css">
 <script src="/js/ai-chat.js" defer></script>
 <script>window.addEventListener('load',function(){document.querySelector('.site-van-bg')?.classList.add('is-loaded')});</script>

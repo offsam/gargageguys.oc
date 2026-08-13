@@ -94,12 +94,16 @@ export function statsBarBlock() {
       <div class="stat-label">Labor Warranty</div>
     </div>
     <div class="stat-item stat-item--reviews">
-      <a class="stat-tt-link" target="_blank" rel="noopener noreferrer" href="https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690" aria-label="See 67 reviews on Thumbtack"></a>
       <div class="stat-num">
         <span class="stat-review-score">5.0</span>
         <span class="stat-review-stars">★★★★★</span>
       </div>
-      <div class="stat-label">67 Reviews · Thumbtack</div>
+      <div class="stat-label">74 Reviews</div>
+      <div class="stat-review-platforms">
+        <a class="stat-review-platform" target="_blank" rel="noopener noreferrer" href="https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690">Thumbtack</a>
+        <span class="stat-review-sep" aria-hidden="true">·</span>
+        <a class="stat-review-platform" target="_blank" rel="noopener noreferrer" href="https://maps.app.goo.gl/67GLPdiUocxgueEh8">Google</a>
+      </div>
     </div>
     <div class="stat-item stat-item--parts-warranty">
       <div class="stat-num">1<span>–5</span> Years</div>
