@@ -1,99 +1,104 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { FieldShell } from "@/components/bos/FieldShell";
 import { BosShell } from "@/components/bos/BosShell";
+import { FieldCalendar } from "@/components/bos/FieldCalendar";
+import { FieldDayTimeline } from "@/components/bos/FieldDayTimeline";
+import { FieldScheduleFab } from "@/components/bos/FieldScheduleFab";
 import { getSessionUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { updateJobStatusAction } from "@/app/actions/dispatch";
-import { ensureStockSeeded, techQty } from "@/lib/stock/store";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getFieldAttentionCount } from "@/lib/field/load-attention";
+import {
+  formatDayHeading,
+  jobCountsByDay,
+  jobsForDay,
+  parseDayKey,
+  startOfToday,
+  toDayKey,
+  type FieldJob,
+} from "@/lib/field/days";
 
-export default async function FieldPage() {
+export default async function FieldPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ day?: string }>;
+}) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+
+  const params = await searchParams;
+  const todayKey = toDayKey(startOfToday());
+  const selectedDay = params.day && parseDayKey(params.day) ? params.day : todayKey;
 
   const supabase = await createSupabaseServerClient();
   let query = supabase.from("jobs").select("*").order("scheduled_start", { ascending: true });
   if (user.role === "technician") {
     query = query.eq("technician_id", user.id);
   }
-  const { data: jobs } = await query.limit(100);
+  const { data: jobsRaw } = await query.limit(500);
+  const jobs = (jobsRaw || []) as FieldJob[];
 
-  const open = (jobs || []).filter((j) => j.status !== "done" && j.status !== "cancelled");
-  const done = (jobs || []).filter((j) => j.status === "done");
+  const counts = jobCountsByDay(jobs);
+  const dayJobs = jobsForDay(jobs, selectedDay);
+  const open = dayJobs.filter((j) => j.status !== "done");
+  const done = dayJobs.filter((j) => j.status === "done");
+  const isToday = selectedDay === todayKey;
+  const heading = isToday ? "Today" : formatDayHeading(selectedDay);
+  const attentionCount =
+    user.role === "technician" ? await getFieldAttentionCount(user.id) : 0;
 
-  let vanLines = 0;
-  let vanUnits = 0;
-  if (user.role === "technician" || user.role === "owner") {
-    const admin = getSupabaseAdmin();
-    const techId =
-      user.role === "technician"
-        ? user.id
-        : (
-            await admin
-              .from("profiles")
-              .select("id")
-              .eq("role", "technician")
-              .order("created_at", { ascending: true })
-              .limit(1)
-          ).data?.[0]?.id;
-    if (techId) {
-      const state = await ensureStockSeeded(techId);
-      for (const item of state.items) {
-        const q = techQty(state, item.id, techId);
-        if (q > 0) {
-          vanLines += 1;
-          vanUnits += q;
-        }
-      }
-    }
+  const body = (
+    <div className="field-home">
+      {user.role === "technician" ? <FieldScheduleFab /> : null}
+
+      <section className="field-section">
+        <div className="field-section-head">
+          <h2>{heading}</h2>
+          {!isToday ? (
+            <Link href="/field" className="field-today-link">
+              Jump to today
+            </Link>
+          ) : null}
+        </div>
+
+        <div className="field-summary">
+          <div>
+            <strong>{open.length}</strong>
+            <span>{isToday ? "left today" : "open"}</span>
+          </div>
+          <div>
+            <strong>{done.length}</strong>
+            <span>done</span>
+          </div>
+        </div>
+
+        <FieldDayTimeline jobs={dayJobs} />
+      </section>
+
+      <section className="field-section">
+        <h2>Calendar</h2>
+        <FieldCalendar counts={counts} selectedDay={selectedDay} />
+      </section>
+    </div>
+  );
+
+  if (user.role === "technician") {
+    return (
+      <FieldShell
+        user={user}
+        title="Schedule"
+        subtitle={heading}
+        active="schedule"
+        attentionCount={attentionCount}
+      >
+        {body}
+      </FieldShell>
+    );
   }
 
   return (
-    <BosShell user={user} active="/field" title="Field" subtitle="Technician jobs">
-      <div className="bos-grid">
-        <div className="bos-card">
-          <h3>Open</h3>
-          <div className="value">{open.length}</div>
-        </div>
-        <div className="bos-card">
-          <h3>Done</h3>
-          <div className="value">{done.length}</div>
-        </div>
-        <div className="bos-card">
-          <h3>My van</h3>
-          <div className="value">{vanLines}</div>
-          <p style={{ margin: "6px 0 0", color: "var(--bos-muted)", fontSize: "0.85rem" }}>
-            {vanUnits} units · <Link href="/stock?view=tech">View stock</Link>
-          </p>
-        </div>
-      </div>
-
-      <h2>My jobs</h2>
-      <div className="kanban" style={{ gridTemplateColumns: "1fr" }}>
-        {open.map((job) => (
-          <div key={job.id} className="kanban-card">
-            <strong>
-              <Link href={`/field/jobs/${job.id}`}>{job.title}</Link>
-            </strong>
-            <span>
-              {job.zip || "—"} · {job.status}
-            </span>
-            {job.notes ? <div style={{ marginTop: 6 }}>{job.notes}</div> : null}
-            <form action={updateJobStatusAction} style={{ marginTop: 8, display: "flex", gap: 6 }}>
-              <input type="hidden" name="jobId" value={job.id} />
-              <select name="status" defaultValue={job.status}>
-                {["assigned", "en_route", "on_site", "done", "cancelled"].map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-              <button type="submit">Update</button>
-            </form>
-          </div>
-        ))}
-        {open.length === 0 ? <div className="bos-card">No open jobs assigned.</div> : null}
-      </div>
+    <BosShell user={user} active="/field" title="Field" subtitle={heading}>
+      {body}
     </BosShell>
   );
 }

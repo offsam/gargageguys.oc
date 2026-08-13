@@ -2126,6 +2126,106 @@ body.sheet-col-resizing * {
   white-space: nowrap;
 }
 
+.field-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.field-jump-chip {
+  appearance: none;
+  border: 1px solid var(--bos-border);
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.4rem 0.7rem;
+  min-width: 4.4rem;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: var(--bos-text);
+}
+
+.field-jump-chip:active {
+  background: var(--bos-accent-2-soft);
+}
+
+.field-jump-chip strong {
+  display: block;
+  font-size: 1.05rem;
+  line-height: 1.05;
+}
+
+.field-jump-chip span {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--bos-muted);
+}
+
+.field-alert-section {
+  scroll-margin-top: 5.5rem;
+  margin-bottom: 1rem;
+}
+
+.field-alert-section h2 {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--bos-muted);
+}
+
+.field-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.field-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.38rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--bos-border);
+  background: #fff;
+  color: var(--bos-text);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.field-chip--danger {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.field-chip--warn {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.field-chip--info {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.field-chip-empty {
+  margin: 0;
+  padding: 0.35rem 0.1rem;
+  color: var(--bos-muted);
+  font-size: 0.8rem;
+}
+
 .field-report-list,
 .field-alert-list {
   list-style: none;
@@ -2519,5 +2619,247 @@ body.sheet-col-resizing * {
   }
   .emp-section-head {
     flex-direction: column;
+  }
+}
+
+/* —— Field invoice wizard —— */
+.inv-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0 0 0.75rem;
+}
+
+.inv-step {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #94a3b8;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 0.28rem 0.55rem;
+}
+
+.inv-step.is-on {
+  color: var(--bos-accent-2);
+  background: var(--bos-accent-2-soft);
+}
+
+.inv-step.is-current {
+  box-shadow: inset 0 0 0 1px var(--bos-accent-2);
+}
+
+.inv-client {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-bottom: 0.65rem;
+}
+
+.inv-client strong {
+  font-size: 1.05rem;
+}
+
+.inv-error {
+  color: #b91c1c;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin: 0 0 0.65rem;
+}
+
+.inv-build h3,
+.field-detail-card h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.92rem;
+}
+
+.inv-row {
+  display: grid;
+  grid-template-columns: 1fr 64px auto;
+  gap: 0.4rem;
+  margin-bottom: 0.55rem;
+}
+
+.inv-row select,
+.inv-row input,
+.inv-row button,
+.field-detail-card select,
+.inv-sign-actions button,
+.inv-primary {
+  border: 1px solid var(--bos-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  font: inherit;
+  background: #fff;
+}
+
+.inv-row button,
+.inv-sign-actions button {
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.inv-primary {
+  display: block;
+  width: 100%;
+  margin-top: 0.65rem;
+  background: var(--bos-accent-2);
+  border-color: var(--bos-accent-2);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inv-primary:disabled,
+.inv-row button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.inv-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.inv-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--bos-border);
+}
+
+.inv-lines li > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.inv-lines span {
+  color: var(--bos-muted);
+  font-size: 0.82rem;
+}
+
+.inv-line-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.inv-remove {
+  border: 0;
+  background: transparent;
+  color: #b91c1c;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inv-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 0.75rem;
+  font-size: 1.05rem;
+}
+
+.inv-sign-pad {
+  width: 100%;
+  height: 160px;
+  touch-action: none;
+  border: 1px dashed var(--bos-border-strong);
+  border-radius: 10px;
+  background: #fff;
+  margin: 0.4rem 0 0.55rem;
+}
+
+.inv-sign-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.inv-sign-preview {
+  max-width: 100%;
+  border: 1px solid var(--bos-border);
+  border-radius: 8px;
+  background: #fff;
+  margin-top: 0.5rem;
+}
+
+.inv-done code {
+  font-size: 0.78rem;
+  word-break: break-all;
+}
+
+.inv-public {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1.5rem 1.1rem 2.5rem;
+}
+
+.inv-public-brand {
+  color: var(--bos-accent-2);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.inv-public h1 {
+  margin: 0.2rem 0 0.75rem;
+}
+
+.inv-public section {
+  background: #fff;
+  border: 1px solid var(--bos-border);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.inv-public ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.inv-public li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--bos-border);
+}
+
+.inv-public-total {
+  margin: 0.75rem 0 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.1rem;
+}
+
+.inv-public img {
+  max-width: 100%;
+  border: 1px solid var(--bos-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.inv-public footer {
+  color: var(--bos-muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 560px) {
+  .inv-row {
+    grid-template-columns: 1fr;
   }
 }

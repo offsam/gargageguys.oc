@@ -1,11 +1,14 @@
 import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
+import { FieldShell } from "@/components/bos/FieldShell";
 import { BosShell } from "@/components/bos/BosShell";
+import { FieldInvoiceWizard } from "@/components/bos/FieldInvoiceWizard";
 import { getSessionUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updateJobStatusAction } from "@/app/actions/dispatch";
-import { installPartsOnJobAction } from "@/app/actions/stock";
 import { ensureStockSeeded, techQty } from "@/lib/stock/store";
-import Link from "next/link";
+import { getFieldAttentionCount } from "@/lib/field/load-attention";
+import { ensureJobInvoice } from "@/lib/field/job-invoice";
 
 export default async function FieldJobPage({
   params,
@@ -23,98 +26,109 @@ export default async function FieldJobPage({
     redirect("/field");
   }
 
-  const techId =
-    user.role === "technician" ? user.id : job.technician_id || user.id;
+  const techId = user.role === "technician" ? user.id : job.technician_id || user.id;
   const state = await ensureStockSeeded(techId);
-  const vanItems = state.items
-    .map((item) => ({ item, qty: techQty(state, item.id, techId) }))
+  const vanParts = state.items
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      qty: techQty(state, item.id, techId),
+      unitCostCents: item.unitCostCents || 0,
+    }))
     .filter((row) => row.qty > 0);
 
-  const usedOnJob = state.movements.filter(
-    (m) => m.kind === "install_on_job" && m.jobId === job.id,
-  );
+  let invoice = null as Awaited<ReturnType<typeof ensureJobInvoice>> | null;
+  try {
+    invoice = await ensureJobInvoice({ jobId: job.id, createdBy: user.id });
+  } catch (err) {
+    console.error("[field job invoice]", err);
+  }
 
-  return (
-    <BosShell user={user} active="/field" title={job.title} subtitle="Job detail">
-      <p>
-        <Link href="/field">← All jobs</Link>
+  const when = job.scheduled_start
+    ? new Date(job.scheduled_start).toLocaleString([], {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "Unscheduled";
+
+  const body = (
+    <div className="field-detail">
+      <p className="field-back">
+        <Link href="/field">← Today</Link>
       </p>
-      <div className="bos-card">
+
+      <section className="field-detail-card">
+        <p className="field-detail-when">{when}</p>
         <p>
-          <strong>Status:</strong> {job.status}
+          <strong>Address</strong>
+          <br />
+          {[job.address, job.zip].filter(Boolean).join(", ") || "—"}
         </p>
         <p>
-          <strong>ZIP:</strong> {job.zip || "—"}
+          <strong>Notes</strong>
+          <br />
+          {job.notes || "—"}
         </p>
-        <p>
-          <strong>Address:</strong> {job.address || "—"}
-        </p>
-        <p>
-          <strong>Notes:</strong> {job.notes || "—"}
-        </p>
-        <form action={updateJobStatusAction} style={{ display: "flex", gap: 8, marginTop: 12 }}>
+
+        <form action={updateJobStatusAction} className="field-job-actions field-job-actions--block">
           <input type="hidden" name="jobId" value={job.id} />
           <select name="status" defaultValue={job.status}>
             {["assigned", "en_route", "on_site", "done", "cancelled"].map((s) => (
               <option key={s} value={s}>
-                {s}
+                {s.replace(/_/g, " ")}
               </option>
             ))}
           </select>
           <button type="submit">Update status</button>
         </form>
-      </div>
-
-      <h2 style={{ marginTop: 24 }}>Parts used</h2>
-      <p style={{ color: "var(--bos-muted)" }}>
-        Deducts from this tech&apos;s van (and Master). Warehouse unchanged.
-      </p>
-      <div className="bos-card">
-        <form action={installPartsOnJobAction} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <input type="hidden" name="jobId" value={job.id} />
-          <input type="hidden" name="technicianId" value={techId} />
-          <select name="itemId" required style={{ minWidth: 220 }}>
-            <option value="">Select part…</option>
-            {vanItems.map(({ item, qty }) => (
-              <option key={item.id} value={item.id}>
-                {item.name} ({qty} on van)
-              </option>
-            ))}
-          </select>
-          <input name="qty" type="number" min={1} defaultValue={1} style={{ width: 72 }} />
-          <button type="submit">Use on job</button>
-        </form>
-        {vanItems.length === 0 ? (
-          <p style={{ marginTop: 10, color: "var(--bos-muted)" }}>
-            Van has no positive stock.{" "}
-            <Link href="/stock?view=tech">Check Stock</Link>
+        {job.status !== "on_site" && job.status !== "done" ? (
+          <p className="field-muted" style={{ marginTop: 8 }}>
+            Tip: set <strong>on site</strong> to unlock the invoice flow.
           </p>
         ) : null}
-      </div>
+      </section>
 
-      {usedOnJob.length > 0 ? (
-        <table className="bos-table" style={{ marginTop: 12 }}>
-          <thead>
-            <tr>
-              <th>When</th>
-              <th>Part</th>
-              <th>Qty</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usedOnJob.map((m) => {
-              const item = state.items.find((i) => i.id === m.itemId);
-              return (
-                <tr key={m.id}>
-                  <td>{new Date(m.createdAt).toLocaleString()}</td>
-                  <td>{item?.name || m.itemId}</td>
-                  <td>{m.qty}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      ) : null}
+      {invoice ? (
+        <FieldInvoiceWizard
+          jobId={job.id}
+          technicianId={techId}
+          vanParts={vanParts}
+          invoice={invoice}
+          jobStatus={job.status}
+        />
+      ) : (
+        <section className="field-section">
+          <div className="field-detail-card">
+            <p className="field-muted">
+              Invoice table not ready yet. Apply migration{" "}
+              <code>202608140002_job_invoices.sql</code> in Supabase, then refresh.
+            </p>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+
+  if (user.role === "technician") {
+    const attentionCount = await getFieldAttentionCount(user.id);
+    return (
+      <FieldShell
+        user={user}
+        title={job.title}
+        active="schedule"
+        attentionCount={attentionCount}
+      >
+        {body}
+      </FieldShell>
+    );
+  }
+
+  return (
+    <BosShell user={user} active="/field" title={job.title} subtitle="Job detail + invoice">
+      {body}
     </BosShell>
   );
 }
