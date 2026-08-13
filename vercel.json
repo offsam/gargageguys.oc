@@ -8,25 +8,5 @@
       "path": "/api/google-reviews-sync",
       "schedule": "0 15 */3 * *"
     }
-  ],
-  "functions": {
-    "api/callback.js": {
-      "maxDuration": 10
-    },
-    "api/ai-chat.js": {
-      "maxDuration": 60
-    },
-    "api/seo-sync.js": {
-      "maxDuration": 30
-    },
-    "api/google-reviews-sync.js": {
-      "maxDuration": 30
-    },
-    "api/reviews.js": {
-      "maxDuration": 10
-    },
-    "api/thumbtack-reviews.js": {
-      "maxDuration": 15
-    }
-  }
+  ]
 }
