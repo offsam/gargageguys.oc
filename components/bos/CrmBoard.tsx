@@ -34,6 +34,8 @@ function todayISO(): string {
 }
 
 const EMPTY_FORM = {
+  workSource: "Garage Guys",
+  partnerName: "",
   clientName: "",
   phone: "",
   zip: "",
@@ -247,6 +249,26 @@ export function CrmBoard({
               Fills the same columns as Sheet. Client appears in CRM and Sheet immediately.
             </p>
             <form className="crm-add-form" onSubmit={submitAdd}>
+              <label>
+                Work source
+                <select
+                  value={form.workSource}
+                  onChange={(e) => setField("workSource", e.target.value)}
+                >
+                  <option value="Garage Guys">Garage Guys</option>
+                  <option value="Partner">Partner</option>
+                </select>
+              </label>
+              {form.workSource === "Partner" ? (
+                <label>
+                  Partner
+                  <input
+                    value={form.partnerName}
+                    onChange={(e) => setField("partnerName", e.target.value)}
+                    placeholder="Company name"
+                  />
+                </label>
+              ) : null}
               <label>
                 Client name
                 <input

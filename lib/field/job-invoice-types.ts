@@ -22,6 +22,7 @@ export type JobInvoiceStatus =
 export type JobInvoice = {
   id: string;
   job_id: string;
+  job_number: number | null;
   lead_id: string | null;
   customer_id: string | null;
   public_token: string;
@@ -51,6 +52,11 @@ export const PAYMENT_OPTIONS = [
   "Cash",
   "Check",
 ] as const;
+
+export function formatJobNumber(jobNumber: number | null | undefined): string {
+  if (!jobNumber || !Number.isFinite(jobNumber)) return "—";
+  return `GG-${jobNumber}`;
+}
 
 export function money(cents: number) {
   return (cents / 100).toLocaleString("en-US", {

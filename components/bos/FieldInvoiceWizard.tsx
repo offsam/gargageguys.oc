@@ -15,6 +15,7 @@ import {
 import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 import {
   money,
+  formatJobNumber,
   PAYMENT_OPTIONS,
   type JobInvoice,
   type JobInvoiceStatus,
@@ -181,7 +182,7 @@ export function FieldInvoiceWizard({
 
   return (
     <section className="field-section">
-      <h2>Invoice</h2>
+      <h2>Invoice {formatJobNumber(invoice.job_number)}</h2>
 
       <div className="inv-steps">
         {STEPS.map((step, idx) => (
@@ -195,6 +196,7 @@ export function FieldInvoiceWizard({
       </div>
 
       <div className="field-detail-card inv-client">
+        <div className="inv-job-num">Job # {formatJobNumber(invoice.job_number)}</div>
         <strong>{invoice.client_name || "Customer"}</strong>
         <span>{invoice.client_phone || "No phone"}</span>
         <span>
@@ -423,7 +425,7 @@ export function FieldInvoiceWizard({
 
       {invoice.status === "complete" && (
         <div className="field-detail-card inv-done">
-          <h3>Invoice complete</h3>
+          <h3>Invoice complete — {formatJobNumber(invoice.job_number)}</h3>
           <p>
             Saved in BOS. Payment: <strong>{invoice.payment_type}</strong> ·{" "}
             <strong>{money(invoice.total_cents)}</strong>

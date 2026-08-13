@@ -4,9 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useRouter } from "next/navigation";
 import { saveSheetRowAction, deleteSheetRowAction } from "@/app/actions/sheet";
 import { SHEET_STATUSES } from "@/lib/leads/stage-sync";
+import {
+  WORK_SOURCES,
+  PARTNER_TECH_RATE,
+  isColumnEditable,
+  isOwnWork,
+  isPartnerWork,
+  normalizeWorkSource,
+  type SheetColumnKey,
+} from "@/lib/sheet/work-source";
 
 export type SheetRow = {
   id: string;
+  workSource: string;
+  partnerName: string;
   leadSource: string;
   leadCost: string;
   date: string;
@@ -40,27 +51,30 @@ const LEAD_SOURCES = [
   "Yelp",
 ] as const;
 const BANK_FEE_RATE = 0.035;
-const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths";
+const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths-v2";
 const LEAD_SOURCE_LIST_ID = "sheet-lead-source-list";
+const PARTNER_LIST_ID = "sheet-partner-list";
 
 const COLUMNS: Array<{
-  key: keyof SheetRow;
+  key: SheetColumnKey;
   label: string;
   width: number;
   kind?: "text" | "select" | "date" | "combo";
-  options?: "payment" | "status" | "technician" | "parts" | "leadSource";
+  options?: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource";
 }> = [
-  { key: "leadSource", label: "Lead source", width: 140, kind: "combo", options: "leadSource" },
-  { key: "leadCost", label: "Lead cost", width: 100 },
+  { key: "workSource", label: "Work source", width: 130, kind: "select", options: "workSource" },
+  { key: "partnerName", label: "Partner", width: 140, kind: "combo" },
   { key: "date", label: "Date", width: 130, kind: "date" },
   { key: "clientName", label: "Client name", width: 150 },
   { key: "clientAddress", label: "Address", width: 200 },
   { key: "jobStatus", label: "Status", width: 130, kind: "select", options: "status" },
   { key: "jobType", label: "Job type", width: 140 },
+  { key: "leadSource", label: "Lead source", width: 140, kind: "combo", options: "leadSource" },
+  { key: "leadCost", label: "Lead cost", width: 100 },
   { key: "parts", label: "Parts", width: 180, kind: "select", options: "parts" },
   { key: "paymentType", label: "Payment type", width: 140, kind: "select", options: "payment" },
   { key: "checkNumber", label: "Check #", width: 110 },
-  { key: "jobCost", label: "Job cost", width: 100 },
+  { key: "jobCost", label: "Gross", width: 100 },
   { key: "bankFee", label: "Bank fee", width: 90 },
   { key: "partsCost", label: "Parts cost", width: 100 },
   {
@@ -83,7 +97,10 @@ function money(value: string): number {
 }
 
 function formatMoney(n: number): string {
-  return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  return n.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+  });
 }
 
 function formatFee(n: number): string {
@@ -137,9 +154,17 @@ function bankFeeFor(jobCost: string): string {
   return formatFee(money(jobCost) * BANK_FEE_RATE);
 }
 
+function partnerTechSalary(gross: string): string {
+  const n = money(gross) * PARTNER_TECH_RATE;
+  if (!n) return "";
+  return formatFee(n);
+}
+
 function emptyRow(index: number): SheetRow {
   return {
     id: `new-${index}-${Date.now()}`,
+    workSource: "",
+    partnerName: "",
     leadSource: "",
     leadCost: "",
     date: todayISO(),
@@ -159,6 +184,15 @@ function emptyRow(index: number): SheetRow {
 }
 
 function clearProfitFor(row: SheetRow): string {
+  if (isPartnerWork(row.workSource)) {
+    const has = money(row.jobCost) || money(row.techSalary);
+    if (!has) return "";
+    // Partner: tech gets 30% of Gross — company clear profit on the job is $0
+    return formatMoney(0);
+  }
+
+  if (!isOwnWork(row.workSource)) return "";
+
   const hasMoney =
     money(row.jobCost) ||
     money(row.leadCost) ||
@@ -175,13 +209,32 @@ function clearProfitFor(row: SheetRow): string {
   );
 }
 
-function applyPaymentRules(row: SheetRow, patch: Partial<SheetRow>): SheetRow {
+function applyRowRules(row: SheetRow, patch: Partial<SheetRow>): SheetRow {
   const next = { ...row, ...patch };
+  if (Object.prototype.hasOwnProperty.call(patch, "workSource")) {
+    next.workSource = normalizeWorkSource(next.workSource);
+  }
+
   const paymentChanged = Object.prototype.hasOwnProperty.call(patch, "paymentType");
   const jobCostChanged = Object.prototype.hasOwnProperty.call(patch, "jobCost");
+  const sourceChanged = Object.prototype.hasOwnProperty.call(patch, "workSource");
 
-  if (isCardPayment(next.paymentType) && (paymentChanged || jobCostChanged)) {
-    next.bankFee = bankFeeFor(next.jobCost);
+  if (isOwnWork(next.workSource)) {
+    if (isCardPayment(next.paymentType) && (paymentChanged || jobCostChanged || sourceChanged)) {
+      next.bankFee = bankFeeFor(next.jobCost);
+    }
+  }
+
+  if (isPartnerWork(next.workSource)) {
+    if (jobCostChanged || sourceChanged) {
+      next.techSalary = partnerTechSalary(next.jobCost);
+    }
+    // Parts come from partner stock — do not carry GG parts cost into calc
+    if (sourceChanged || Object.prototype.hasOwnProperty.call(patch, "parts")) {
+      if (!Object.prototype.hasOwnProperty.call(patch, "partsCost")) {
+        next.partsCost = "";
+      }
+    }
   }
 
   return next;
@@ -231,6 +284,13 @@ function loadWidths(): Record<string, number> {
   return base;
 }
 
+function cellMutedClass(workSource: string, key: SheetColumnKey, extra?: string) {
+  const editable = isColumnEditable(workSource, key);
+  const parts = [extra];
+  if (!editable) parts.push("sheet-cell-muted");
+  return parts.filter(Boolean).join(" ") || undefined;
+}
+
 export function SheetTable({
   rows: initialRows,
   technicians,
@@ -244,7 +304,11 @@ export function SheetTable({
   const [rows, setRows] = useState<SheetRow[]>(() => {
     const extras = Math.max(8, 14 - initialRows.length);
     return [
-      ...initialRows.map((r) => ({ ...r, date: toDateInputValue(r.date) })),
+      ...initialRows.map((r) => ({
+        ...r,
+        workSource: normalizeWorkSource(r.workSource) || r.workSource || "",
+        date: toDateInputValue(r.date),
+      })),
       ...Array.from({ length: extras }, (_, i) => emptyRow(i)),
     ];
   });
@@ -342,6 +406,8 @@ export function SheetTable({
   function removeRow(row: SheetRow) {
     const isTemp = row.id.startsWith("new-");
     const hasContent = [
+      row.workSource,
+      row.partnerName,
       row.leadSource,
       row.leadCost,
       row.clientName,
@@ -411,7 +477,7 @@ export function SheetTable({
       let saved: SheetRow | null = null;
       const nextRows = prev.map((row) => {
         if (row.id !== rowId) return row;
-        const next = applyPaymentRules(row, patch);
+        const next = applyRowRules(row, patch);
         saved = next;
         return next;
       });
@@ -420,18 +486,23 @@ export function SheetTable({
     });
   }
 
-  function onPartsChange(rowId: string, value: string) {
+  function onPartsChange(rowId: string, value: string, workSource: string) {
     const patch: Partial<SheetRow> = { parts: value };
-    const cost = partCostByName.get(value);
-    if (cost != null && cost !== "") {
-      patch.partsCost = cost;
+    if (isOwnWork(workSource)) {
+      const cost = partCostByName.get(value);
+      if (cost != null && cost !== "") {
+        patch.partsCost = cost;
+      }
+    } else {
+      patch.partsCost = "";
     }
     patchRow(rowId, patch, true);
   }
 
   function selectOptions(
-    kind: "payment" | "status" | "technician" | "parts" | "leadSource" | undefined,
+    kind: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource" | undefined,
   ) {
+    if (kind === "workSource") return ["", ...WORK_SOURCES];
     if (kind === "payment") return [...PAYMENT_TYPES];
     if (kind === "status") return [...JOB_STATUSES];
     if (kind === "technician") return techOptions;
@@ -448,12 +519,25 @@ export function SheetTable({
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [rows]);
 
+  const partnerSuggestions = useMemo(() => {
+    const set = new Set<string>();
+    for (const row of rows) {
+      if (row.partnerName.trim()) set.add(row.partnerName.trim());
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
   const displayRows = useMemo(() => rows, [rows]);
 
   return (
     <div>
       <datalist id={LEAD_SOURCE_LIST_ID}>
         {leadSourceSuggestions.map((opt) => (
+          <option key={opt} value={opt} />
+        ))}
+      </datalist>
+      <datalist id={PARTNER_LIST_ID}>
+        {partnerSuggestions.map((opt) => (
           <option key={opt} value={opt} />
         ))}
       </datalist>
@@ -503,26 +587,43 @@ export function SheetTable({
           <tbody>
             {displayRows.map((row, rowIndex) => {
               const needCheck =
-                isCheckPayment(row.paymentType) && !String(row.checkNumber).trim();
-              const cardPay = isCardPayment(row.paymentType);
+                isColumnEditable(row.workSource, "checkNumber") &&
+                isCheckPayment(row.paymentType) &&
+                !String(row.checkNumber).trim();
+              const cardPay =
+                isOwnWork(row.workSource) && isCardPayment(row.paymentType);
+              const sourcePicked = Boolean(normalizeWorkSource(row.workSource));
 
               return (
-                <tr key={row.id}>
+                <tr
+                  key={row.id}
+                  className={
+                    !sourcePicked
+                      ? "sheet-row-need-source"
+                      : isPartnerWork(row.workSource)
+                        ? "sheet-row-partner"
+                        : "sheet-row-own"
+                  }
+                >
                   <th className="sheet-row-num">{rowIndex + 1}</th>
                   {COLUMNS.map((col) => {
+                    const editable = isColumnEditable(row.workSource, col.key);
                     const needBankEmpty =
                       col.key === "bankFee" && cardPay && !String(row.bankFee).trim();
                     const bankActive = col.key === "bankFee" && cardPay;
-                    const cellClass =
+                    const cellClass = cellMutedClass(
+                      row.workSource,
+                      col.key,
                       needCheck && col.key === "checkNumber"
                         ? "sheet-cell-need"
                         : needBankEmpty
                           ? "sheet-cell-need"
                           : bankActive
                             ? "sheet-cell-bank"
-                            : col.key === "jobStatus"
+                            : col.key === "jobStatus" && editable
                               ? statusClass(row.jobStatus)
-                              : undefined;
+                              : undefined,
+                    );
 
                     if (col.kind === "select") {
                       return (
@@ -530,9 +631,12 @@ export function SheetTable({
                           <select
                             className="sheet-cell sheet-select"
                             value={row[col.key]}
+                            disabled={!editable}
+                            tabIndex={editable ? 0 : -1}
                             onChange={(e) => {
+                              if (!editable) return;
                               if (col.key === "parts") {
-                                onPartsChange(row.id, e.target.value);
+                                onPartsChange(row.id, e.target.value, row.workSource);
                                 return;
                               }
                               patchRow(row.id, { [col.key]: e.target.value }, true);
@@ -550,16 +654,27 @@ export function SheetTable({
 
                     if (col.kind === "combo") {
                       return (
-                        <td key={col.key}>
+                        <td key={col.key} className={cellClass}>
                           <input
                             className="sheet-cell sheet-combo"
-                            list={col.options === "leadSource" ? LEAD_SOURCE_LIST_ID : undefined}
-                            value={row[col.key]}
-                            placeholder="Pick or type…"
-                            onChange={(e) =>
-                              patchRow(row.id, { [col.key]: e.target.value }, false)
+                            list={
+                              col.key === "partnerName"
+                                ? PARTNER_LIST_ID
+                                : col.options === "leadSource"
+                                  ? LEAD_SOURCE_LIST_ID
+                                  : undefined
                             }
+                            value={row[col.key]}
+                            placeholder={editable ? "Pick or type…" : ""}
+                            disabled={!editable}
+                            readOnly={!editable}
+                            tabIndex={editable ? 0 : -1}
+                            onChange={(e) => {
+                              if (!editable) return;
+                              patchRow(row.id, { [col.key]: e.target.value }, false);
+                            }}
                             onBlur={() => {
+                              if (!editable) return;
                               setRows((prev) => {
                                 const current = prev.find((r) => r.id === row.id);
                                 if (current) persistRow(current);
@@ -573,28 +688,43 @@ export function SheetTable({
 
                     if (col.kind === "date") {
                       return (
-                        <td key={col.key}>
+                        <td key={col.key} className={cellClass}>
                           <input
                             className="sheet-cell sheet-date"
                             type="date"
                             value={toDateInputValue(row.date)}
-                            onChange={(e) =>
-                              patchRow(row.id, { date: e.target.value || todayISO() }, true)
-                            }
+                            disabled={!editable}
+                            tabIndex={editable ? 0 : -1}
+                            onChange={(e) => {
+                              if (!editable) return;
+                              patchRow(row.id, { date: e.target.value || todayISO() }, true);
+                            }}
                           />
                         </td>
                       );
                     }
 
+                    const isComputedPartnerSalary =
+                      col.key === "techSalary" && isPartnerWork(row.workSource);
+
                     return (
                       <td key={col.key} className={cellClass}>
                         <input
                           className="sheet-cell"
-                          value={row[col.key]}
-                          onChange={(e) =>
-                            patchRow(row.id, { [col.key]: e.target.value }, false)
+                          value={
+                            isComputedPartnerSalary
+                              ? row.techSalary || partnerTechSalary(row.jobCost)
+                              : row[col.key]
                           }
+                          disabled={!editable}
+                          readOnly={!editable || isComputedPartnerSalary}
+                          tabIndex={editable ? 0 : -1}
+                          onChange={(e) => {
+                            if (!editable || isComputedPartnerSalary) return;
+                            patchRow(row.id, { [col.key]: e.target.value }, false);
+                          }}
                           onBlur={() => {
+                            if (!editable || isComputedPartnerSalary) return;
                             setRows((prev) => {
                               const current = prev.find((r) => r.id === row.id);
                               if (current) persistRow(current);
@@ -606,13 +736,19 @@ export function SheetTable({
                               ? "Required"
                               : col.key === "bankFee" && cardPay
                                 ? "3.5%"
+                              : col.key === "techSalary" && isPartnerWork(row.workSource)
+                                ? "30% Gross"
                                 : ""
                           }
                         />
                       </td>
                     );
                   })}
-                  <td className="sheet-profit">
+                  <td
+                    className={
+                      sourcePicked ? "sheet-profit" : "sheet-profit sheet-cell-muted"
+                    }
+                  >
                     <input
                       className="sheet-cell"
                       value={clearProfitFor(row)}

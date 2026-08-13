@@ -7,6 +7,8 @@ import { stageFromSheetStatus } from "@/lib/leads/stage-sync";
 
 export type SheetSaveInput = {
   id: string;
+  workSource: string;
+  partnerName: string;
   leadSource: string;
   leadCost: string;
   date: string;
@@ -26,6 +28,8 @@ export type SheetSaveInput = {
 
 function sheetMeta(input: SheetSaveInput) {
   return {
+    workSource: input.workSource,
+    partnerName: input.partnerName,
     leadSource: input.leadSource,
     leadCost: input.leadCost,
     sheetDate: input.date,
@@ -42,6 +46,13 @@ function sheetMeta(input: SheetSaveInput) {
     technician: input.technician,
     techSalary: input.techSalary,
   };
+}
+
+function leadSourceForDb(input: SheetSaveInput) {
+  if (/^partner$/i.test(input.workSource) || input.workSource === "Partner") {
+    return input.partnerName.trim() || "Partner";
+  }
+  return input.leadSource || "sheet";
 }
 
 function isTempId(id: string) {
@@ -63,6 +74,8 @@ export async function saveSheetRowAction(
   if (!session) return { ok: false, error: "Not signed in" };
 
   const hasContent = [
+    input.workSource,
+    input.partnerName,
     input.leadSource,
     input.leadCost,
     input.clientName,
@@ -109,7 +122,7 @@ export async function saveSheetRowAction(
       const insertPayload = {
         name: input.clientName || null,
         address: input.clientAddress || null,
-        source: input.leadSource || "sheet",
+        source: leadSourceForDb(input),
         lead_type: input.jobType || "sheet_row",
         message: input.jobType || input.parts || null,
         deal_title: input.jobType || null,
@@ -148,7 +161,7 @@ export async function saveSheetRowAction(
     const update: Record<string, unknown> = {
       name: input.clientName || null,
       address: input.clientAddress || null,
-      source: input.leadSource || "sheet",
+      source: leadSourceForDb(input),
       lead_type: input.jobType || null,
       deal_title: input.jobType || null,
       deal_price: input.jobCost || null,

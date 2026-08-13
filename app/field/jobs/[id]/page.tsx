@@ -62,6 +62,17 @@ export default async function FieldJobPage({
 
       <section className="field-detail-card">
         <p className="field-detail-when">{when}</p>
+        {(invoice?.job_number ??
+          (typeof (job as { job_number?: number | null }).job_number === "number"
+            ? (job as { job_number: number }).job_number
+            : null)) != null ? (
+          <p>
+            <strong>Job #</strong>{" "}
+            GG-
+            {invoice?.job_number ??
+              (job as { job_number?: number }).job_number}
+          </p>
+        ) : null}
         <p>
           <strong>Address</strong>
           <br />

@@ -8,7 +8,7 @@ import {
 } from "@/lib/field/job-invoice-types";
 
 export type { InvoiceLine, JobInvoice, JobInvoiceStatus };
-export { money, PAYMENT_OPTIONS } from "@/lib/field/job-invoice-types";
+export { money, PAYMENT_OPTIONS, formatJobNumber } from "@/lib/field/job-invoice-types";
 
 export async function getJobInvoiceByJobId(jobId: string): Promise<JobInvoice | null> {
   const admin = getSupabaseAdmin();
@@ -40,6 +40,10 @@ function mapRow(data: Record<string, unknown>): JobInvoice {
   return {
     id: String(data.id),
     job_id: String(data.job_id),
+    job_number:
+      data.job_number == null || data.job_number === ""
+        ? null
+        : Number(data.job_number),
     lead_id: (data.lead_id as string) || null,
     customer_id: (data.customer_id as string) || null,
     public_token: String(data.public_token),
@@ -63,21 +67,77 @@ function mapRow(data: Record<string, unknown>): JobInvoice {
   };
 }
 
+async function assignJobNumber(jobId: string): Promise<number | null> {
+  const admin = getSupabaseAdmin();
+  try {
+    const { data, error } = await admin.rpc("ensure_job_number", { p_job_id: jobId });
+    if (error) return null;
+    return data != null ? Number(data) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function ensureJobInvoice(input: {
   jobId: string;
   createdBy?: string;
 }): Promise<JobInvoice> {
   const existing = await getJobInvoiceByJobId(input.jobId);
-  if (existing) return existing;
+  if (existing) {
+    if (!existing.job_number) {
+      const jobNumber = await assignJobNumber(input.jobId);
+      if (jobNumber) {
+        try {
+          return await updateJobInvoiceFields(existing.id, { job_number: jobNumber });
+        } catch {
+          return existing;
+        }
+      }
+    }
+    return existing;
+  }
 
   const admin = getSupabaseAdmin();
-  const { data: job, error: jobErr } = await admin
-    .from("jobs")
-    .select("id, lead_id, customer_id, address, zip, title, notes")
-    .eq("id", input.jobId)
-    .maybeSingle();
-  if (jobErr) throw jobErr;
+  let job: {
+    id: string;
+    lead_id: string | null;
+    customer_id: string | null;
+    address: string | null;
+    zip: string | null;
+    title: string | null;
+    notes: string | null;
+    job_number?: number | null;
+  } | null = null;
+
+  {
+    const res = await admin
+      .from("jobs")
+      .select("id, lead_id, customer_id, address, zip, title, notes, job_number")
+      .eq("id", input.jobId)
+      .maybeSingle();
+    if (res.error && /job_number/i.test(res.error.message)) {
+      const fallback = await admin
+        .from("jobs")
+        .select("id, lead_id, customer_id, address, zip, title, notes")
+        .eq("id", input.jobId)
+        .maybeSingle();
+      if (fallback.error) throw fallback.error;
+      job = fallback.data;
+    } else if (res.error) {
+      throw res.error;
+    } else {
+      job = res.data;
+    }
+  }
   if (!job) throw new Error("Job not found");
+
+  let jobNumber =
+    job.job_number != null && Number.isFinite(Number(job.job_number))
+      ? Number(job.job_number)
+      : null;
+  if (!jobNumber) {
+    jobNumber = await assignJobNumber(job.id);
+  }
 
   let clientName: string | null = null;
   let clientPhone: string | null = null;
@@ -130,6 +190,7 @@ export async function ensureJobInvoice(input: {
     .from("job_invoices")
     .insert({
       job_id: job.id,
+      job_number: jobNumber,
       lead_id: job.lead_id,
       customer_id: customerId,
       client_name: clientName || job.title || "Customer",
@@ -144,6 +205,31 @@ export async function ensureJobInvoice(input: {
     .single();
 
   if (error) {
+    // retry without job_number if column not migrated yet
+    if (/job_number/i.test(error.message)) {
+      const retry = await admin
+        .from("job_invoices")
+        .insert({
+          job_id: job.id,
+          lead_id: job.lead_id,
+          customer_id: customerId,
+          client_name: clientName || job.title || "Customer",
+          client_phone: clientPhone,
+          client_address: clientAddress,
+          client_zip: clientZip,
+          status: "draft",
+          lines: [],
+          created_by: input.createdBy || null,
+        })
+        .select("*")
+        .single();
+      if (retry.error) {
+        const again = await getJobInvoiceByJobId(input.jobId);
+        if (again) return again;
+        throw retry.error;
+      }
+      return mapRow(retry.data);
+    }
     const again = await getJobInvoiceByJobId(input.jobId);
     if (again) return again;
     throw error;

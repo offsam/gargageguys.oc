@@ -91,6 +91,8 @@ export async function ingestLead(input: IngestLeadInput) {
 
   const sheetDate = input.preferredDate || todayISO();
   const metadata = {
+    workSource: "Garage Guys",
+    partnerName: "",
     leadSource,
     leadCost: "",
     sheetDate,

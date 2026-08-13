@@ -1180,6 +1180,25 @@ body.sheet-col-resizing * {
   background: transparent;
 }
 
+.sheet-cell-muted {
+  background: #f1f5f9 !important;
+  opacity: 0.55;
+}
+
+.sheet-cell-muted .sheet-cell,
+.sheet-cell-muted .sheet-select,
+.sheet-cell-muted .sheet-combo,
+.sheet-cell-muted .sheet-date {
+  color: #64748b;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.sheet-row-partner .sheet-profit .sheet-cell {
+  color: var(--bos-muted);
+  font-weight: 600;
+}
+
 .sheet-status-done {
   background: #ecfdf5 !important;
 }
@@ -2657,6 +2676,15 @@ body.sheet-col-resizing * {
   margin-bottom: 0.65rem;
 }
 
+.inv-job-num {
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bos-accent-2);
+  margin-bottom: 0.2rem;
+}
+
 .inv-client strong {
   font-size: 1.05rem;
 }
@@ -2811,6 +2839,13 @@ body.sheet-col-resizing * {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   font-size: 0.8rem;
+}
+
+.inv-public-job {
+  font-size: 1.15rem;
+  font-weight: 750;
+  margin: 0 0 0.35rem;
+  color: var(--bos-text);
 }
 
 .inv-public h1 {

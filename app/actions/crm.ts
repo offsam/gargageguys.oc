@@ -36,6 +36,8 @@ export async function createCrmClientAction(formData: FormData) {
 
   const input: SheetSaveInput = {
     id: `new-crm-${Date.now()}`,
+    workSource: String(formData.get("workSource") || "").trim() || "Garage Guys",
+    partnerName: String(formData.get("partnerName") || "").trim(),
     leadSource: String(formData.get("leadSource") || "").trim(),
     leadCost: String(formData.get("leadCost") || "").trim(),
     date: String(formData.get("date") || "").trim() || todayISO(),

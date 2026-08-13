@@ -257,7 +257,7 @@ export async function completeInvoiceAction(jobId: string) {
   let financeInvoiceId = invoice.finance_invoice_id;
   if (!financeInvoiceId) {
     const description = [
-      `Job invoice ${invoice.id.slice(0, 8)}`,
+      `Job ${invoice.job_number != null ? `GG-${invoice.job_number}` : invoice.id.slice(0, 8)}`,
       ...invoice.lines.map((l) => `${l.qty}× ${l.name}`),
     ]
       .join(" · ")

@@ -78,9 +78,17 @@ export default async function SheetPage() {
         ? techById.get(lead.assigned_to)!
         : "";
 
+    const workSource =
+      pick(meta, "workSource", "work_source", "owner") || "Garage Guys";
+
     return {
       id: lead.id,
-      leadSource: lead.source || pick(meta, "leadSource", "lead_source") || "",
+      workSource,
+      partnerName: pick(meta, "partnerName", "partner_name", "partner"),
+      leadSource:
+        workSource === "Partner"
+          ? pick(meta, "leadSource", "lead_source")
+          : lead.source || pick(meta, "leadSource", "lead_source") || "",
       leadCost: pick(meta, "leadCost", "lead_cost"),
       date: pick(meta, "sheetDate", "date") || new Date(lead.created_at).toISOString().slice(0, 10),
       clientName: lead.name || pick(meta, "clientName", "client_name") || "",
@@ -116,8 +124,8 @@ export default async function SheetPage() {
         <div>
           <strong>Garage Guys Sheet</strong>
           <p>
-            Add or edit here — CRM updates automatically. Funnel: Waiting → Scheduled → Tech
-            confirmed → En route → On site → Completed.
+            Pick Work source first (Garage Guys or Partner) — only the needed columns unlock.
+            Partner: Gross → tech gets 30%. Own jobs: full costs and clear profit.
           </p>
         </div>
         <span className="bos-badge scheduled">Synced with CRM</span>

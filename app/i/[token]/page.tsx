@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getJobInvoiceByToken, money } from "@/lib/field/job-invoice";
+import { getJobInvoiceByToken, money, formatJobNumber } from "@/lib/field/job-invoice";
 
 export default async function PublicInvoicePage({
   params,
@@ -15,6 +15,7 @@ export default async function PublicInvoicePage({
       <header>
         <p className="inv-public-brand">Garage Guys</p>
         <h1>Service invoice</h1>
+        <p className="inv-public-job">Job # {formatJobNumber(invoice.job_number)}</p>
         <p>
           Status: <strong>{invoice.status.replace(/_/g, " ")}</strong>
         </p>
