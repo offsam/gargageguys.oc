@@ -63,6 +63,7 @@ export type Database = {
           name: string | null;
           phone: string | null;
           zip: string | null;
+          address: string | null;
           message: string | null;
           source: string;
           lead_type: string | null;
@@ -81,6 +82,7 @@ export type Database = {
           name?: string | null;
           phone?: string | null;
           zip?: string | null;
+          address?: string | null;
           message?: string | null;
           source?: string;
           lead_type?: string | null;

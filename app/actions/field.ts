@@ -42,33 +42,43 @@ export async function createFieldClientJobAction(formData: FormData) {
   const end = new Date(start.getTime() + 60 * 60 * 1000);
   const admin = getSupabaseAdmin();
 
-  const { data: lead, error: leadErr } = await admin
-    .from("leads")
-    .insert({
-      name,
+  const leadPayload = {
+    name,
+    phone,
+    zip: zip || null,
+    address: address || null,
+    message: message || null,
+    source: "field",
+    lead_type: "field_job",
+    stage: "scheduled" as const,
+    assigned_to: session.id,
+    deal_title: message || "Field job",
+    scheduled_at: start.toISOString(),
+    metadata: {
+      clientName: name,
+      clientAddress: address,
       phone,
-      zip: zip || null,
-      address: address || null,
-      message: message || null,
-      source: "field",
-      lead_type: "field_job",
-      stage: "scheduled",
-      assigned_to: session.id,
-      deal_title: message || "Field job",
-      scheduled_at: start.toISOString(),
-      metadata: {
-        clientName: name,
-        clientAddress: address,
-        phone,
-        zip,
-        jobStatus: "Scheduled",
-        technician: session.fullName || session.email,
-        sheetDate: start.toISOString().slice(0, 10),
-        fromField: true,
-      },
-    })
+      zip,
+      jobStatus: "Scheduled",
+      technician: session.fullName || session.email,
+      sheetDate: start.toISOString().slice(0, 10),
+      fromField: true,
+    },
+  };
+
+  let { data: lead, error: leadErr } = await admin
+    .from("leads")
+    .insert(leadPayload)
     .select("id")
     .single();
+
+  // DB without leads.address yet — retry storing address only in metadata
+  if (leadErr && /address/i.test(leadErr.message)) {
+    const { address: _omit, ...withoutAddress } = leadPayload;
+    const retry = await admin.from("leads").insert(withoutAddress).select("id").single();
+    lead = retry.data;
+    leadErr = retry.error;
+  }
 
   if (leadErr || !lead) {
     return { ok: false as const, error: leadErr?.message || "Could not create lead" };

@@ -106,26 +106,30 @@ export async function saveSheetRowAction(
     }
 
     if (isTempId(input.id)) {
-      const { data, error } = await admin
-        .from("leads")
-        .insert({
-          name: input.clientName || null,
-          address: input.clientAddress || null,
-          source: input.leadSource || "sheet",
-          lead_type: input.jobType || "sheet_row",
-          message: input.jobType || input.parts || null,
-          deal_title: input.jobType || null,
-          deal_price: input.jobCost || null,
-          stage: stage || "new",
-          assigned_to: assignedTo ?? null,
-          metadata: meta,
-        })
-        .select("id")
-        .single();
+      const insertPayload = {
+        name: input.clientName || null,
+        address: input.clientAddress || null,
+        source: input.leadSource || "sheet",
+        lead_type: input.jobType || "sheet_row",
+        message: input.jobType || input.parts || null,
+        deal_title: input.jobType || null,
+        deal_price: input.jobCost || null,
+        stage: stage || "new",
+        assigned_to: assignedTo ?? null,
+        metadata: meta,
+      };
+      let { data, error } = await admin.from("leads").insert(insertPayload).select("id").single();
+
+      if (error && /address/i.test(error.message)) {
+        const { address: _a, ...rest } = insertPayload;
+        const retry = await admin.from("leads").insert(rest).select("id").single();
+        data = retry.data;
+        error = retry.error;
+      }
 
       if (error) return { ok: false, error: error.message };
       revalidateSheetSurfaces();
-      return { ok: true, id: data.id };
+      return { ok: true, id: data!.id };
     }
 
     const { data: existing } = await admin
@@ -155,7 +159,13 @@ export async function saveSheetRowAction(
     if (stage) update.stage = stage;
     if (assignedTo !== undefined) update.assigned_to = assignedTo;
 
-    const { error } = await admin.from("leads").update(update).eq("id", input.id);
+    let { error } = await admin.from("leads").update(update).eq("id", input.id);
+
+    if (error && /address/i.test(error.message)) {
+      const { address: _a, ...rest } = update;
+      const retry = await admin.from("leads").update(rest).eq("id", input.id);
+      error = retry.error;
+    }
 
     if (error) return { ok: false, error: error.message };
     revalidateSheetSurfaces();
