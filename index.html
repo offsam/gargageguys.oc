@@ -1135,34 +1135,79 @@ nav {
   color: #fbbf24;
 }
 
-.stat-review-platforms {
+.stat-item--reviews {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.stat-review-split {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  gap: 6px;
-  margin-top: 6px;
+  width: 100%;
+  gap: 0;
   position: relative;
   z-index: 2;
 }
 
-.stat-review-platform {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: #7ec4ef;
+.stat-review-side {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 2px 6px;
   text-decoration: none;
-  transition: color 0.2s ease;
+  color: inherit;
+  border-radius: 6px;
+  transition: background 0.2s ease;
 }
 
-.stat-review-platform:hover {
+.stat-review-side:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.stat-review-side .stat-review-score {
+  font-size: clamp(22px, 2.2vw, 30px);
+}
+
+.stat-review-side .stat-review-stars {
+  font-size: clamp(10px, 1vw, 12px);
+  letter-spacing: 1px;
+  color: #fbbf24;
+}
+
+.stat-review-count {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: rgba(220, 230, 242, 0.95);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.stat-review-source {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: #7ec4ef;
+  line-height: 1.2;
+}
+
+.stat-review-side:hover .stat-review-source {
   color: #f5a623;
 }
 
-.stat-review-sep {
-  color: rgba(138, 155, 176, 0.7);
-  font-size: 10px;
-  line-height: 1;
+.stat-review-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 2px;
+  background: rgba(255, 255, 255, 0.18);
+  flex: 0 0 1px;
 }
 
 .stat-item--callback {
@@ -1856,6 +1901,35 @@ a.service-card {
   color: #fbbf24;
 }
 
+.reviews-slider--google {
+  margin-top: 18px;
+  background: linear-gradient(165deg, #ffffff 0%, #f7faf7 100%);
+}
+
+.reviews-slider--google .reviews-slider-title em {
+  color: #4285F4;
+}
+
+.reviews-source-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  vertical-align: middle;
+  background: rgba(46, 109, 164, 0.12);
+  color: #2e6da4;
+}
+
+.reviews-slider--google .reviews-source-badge {
+  background: rgba(66, 133, 244, 0.12);
+  color: #1a73e8;
+}
+
 .reviews-track {
   position: relative;
   overflow: hidden;
@@ -1900,6 +1974,9 @@ a.service-card {
 .review-avatar--amber  { background: #faeeda; color: #633806; }
 .review-avatar--purple { background: #eeedfe; color: #3c3489; }
 .review-avatar--coral  { background: #faece7; color: #712b13; }
+.review-avatar--green  { background: #e6f4ea; color: #137333; }
+.review-avatar--slate  { background: #eceff1; color: #37474f; }
+.review-avatar--indigo { background: #e8eaf6; color: #283593; }
 
 .reviewer-name {
   font-weight: 600;
@@ -2899,15 +2976,20 @@ footer {
       <div class="stat-label">Labor Warranty</div>
     </div>
     <div class="stat-item stat-item--reviews">
-      <div class="stat-num">
-        <span class="stat-review-score">5.0</span>
-        <span class="stat-review-stars">★★★★★</span>
-      </div>
-      <div class="stat-label">74 Reviews</div>
-      <div class="stat-review-platforms">
-        <a class="stat-review-platform" target="_blank" rel="noopener noreferrer" href="https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690">Thumbtack</a>
-        <span class="stat-review-sep" aria-hidden="true">·</span>
-        <a class="stat-review-platform" target="_blank" rel="noopener noreferrer" href="https://maps.app.goo.gl/67GLPdiUocxgueEh8">Google</a>
+      <div class="stat-review-split">
+        <a class="stat-review-side" target="_blank" rel="noopener noreferrer" href="https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690" aria-label="74 Thumbtack reviews">
+          <span class="stat-review-score">5.0</span>
+          <span class="stat-review-stars">★★★★★</span>
+          <span class="stat-review-count" data-tt-reviews>74 Reviews</span>
+          <span class="stat-review-source">Thumbtack</span>
+        </a>
+        <span class="stat-review-divider" aria-hidden="true"></span>
+        <a class="stat-review-side" target="_blank" rel="noopener noreferrer" href="https://maps.app.goo.gl/67GLPdiUocxgueEh8" aria-label="7 Google reviews">
+          <span class="stat-review-score">5.0</span>
+          <span class="stat-review-stars">★★★★★</span>
+          <span class="stat-review-count" data-google-reviews>7 Reviews</span>
+          <span class="stat-review-source">Google</span>
+        </a>
       </div>
     </div>
     <div class="stat-item stat-item--parts-warranty">
@@ -3040,8 +3122,8 @@ footer {
         <div class="why-trust-spotlight">
           <div class="why-trust-glow"></div>
           <div class="why-trust-ring"></div>
-          <div class="reviews-slider" id="reviews-slider">
-            <p class="reviews-slider-title"><em>★ 5.0</em> &nbsp;·&nbsp; 74 Reviews on Thumbtack</p>
+          <div class="reviews-slider" id="reviews-slider" data-reviews-slider>
+            <p class="reviews-slider-title"><em>★ 5.0</em> &nbsp;·&nbsp; <span data-tt-reviews-title>74 Reviews</span> on Thumbtack <span class="reviews-source-badge">Thumbtack</span></p>
 
             <div class="reviews-track">
               <div class="review-card active">
@@ -3112,6 +3194,104 @@ footer {
             </div>
 
             <a class="reviews-thumbtack-link" target="_blank" rel="noopener noreferrer" href="https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690">See all 74 reviews on Thumbtack →</a>
+            </div>
+
+            <div class="reviews-slider reviews-slider--google" id="google-reviews-slider" data-reviews-slider>
+            <p class="reviews-slider-title"><em>★ 5.0</em> &nbsp;·&nbsp; <span data-google-reviews-title>7 Reviews</span> on Google <span class="reviews-source-badge">Google</span></p>
+
+            <div class="reviews-track">
+              <div class="review-card active">
+                <div class="review-header">
+                  <div class="review-avatar review-avatar--green">FH</div>
+                  <div>
+                    <p class="reviewer-name">Farzaneh H.</p>
+                    <div class="review-stars">★★★★★</div>
+                  </div>
+                </div>
+                <p class="review-text">Reasonable price. Fix the garage door.</p>
+                <p class="review-detail">Google · Newport Beach</p>
+              </div>
+
+              <div class="review-card">
+                <div class="review-header">
+                  <div class="review-avatar review-avatar--blue">JG</div>
+                  <div>
+                    <p class="reviewer-name">Jose G.</p>
+                    <div class="review-stars">★★★★★</div>
+                  </div>
+                </div>
+                <p class="review-text">We found Sam on OfferUp and decided to give him a call. He was fast on getting there, checked out the issue and got to work on it fast and fixed it. Did a good job as well — I will definitely recommend him. Very respectful and professional.</p>
+                <p class="review-detail">Google · Reasonable price</p>
+              </div>
+
+              <div class="review-card">
+                <div class="review-header">
+                  <div class="review-avatar review-avatar--teal">TH</div>
+                  <div>
+                    <p class="reviewer-name">Thomas H.</p>
+                    <div class="review-stars">★★★★★</div>
+                  </div>
+                </div>
+                <p class="review-text">Very professional and easy to work with. Were available within a few hours of reaching out and came fully prepared for any issue. Our garage had not been serviced in 25 years and had more work than expected — still handled it smoothly.</p>
+                <p class="review-detail">Google · Reasonable price</p>
+              </div>
+
+              <div class="review-card">
+                <div class="review-header">
+                  <div class="review-avatar review-avatar--amber">MY</div>
+                  <div>
+                    <p class="reviewer-name">Maribel Y.</p>
+                    <div class="review-stars">★★★★★</div>
+                  </div>
+                </div>
+                <p class="review-text">Garage Guys did a good job with fair pricing and in a short time. My garage door was fixed within an hour. I highly recommend Garage Guys for repairing garage door.</p>
+                <p class="review-detail">Google · Local Guide</p>
+              </div>
+
+              <div class="review-card">
+                <div class="review-header">
+                  <div class="review-avatar review-avatar--purple">HM</div>
+                  <div>
+                    <p class="reviewer-name">Hani M.</p>
+                    <div class="review-stars">★★★★★</div>
+                  </div>
+                </div>
+                <p class="review-text">We had an excellent experience with this garage door company from start to finish. They responded quickly, arrived on time, and clearly explained the issue with our garage door before beginning any work. The technician was professional and thorough.</p>
+                <p class="review-detail">Google · Local Guide</p>
+              </div>
+
+              <div class="review-card">
+                <div class="review-header">
+                  <div class="review-avatar review-avatar--indigo">PT</div>
+                  <div>
+                    <p class="reviewer-name">PULL team</p>
+                    <div class="review-stars">★★★★★</div>
+                  </div>
+                </div>
+                <p class="review-text">5 star service and communication. Technician explained everything before start working.</p>
+                <p class="review-detail">Google · Great price</p>
+              </div>
+
+              <div class="review-card">
+                <div class="review-header">
+                  <div class="review-avatar review-avatar--slate">KC</div>
+                  <div>
+                    <p class="reviewer-name">Kai C.</p>
+                    <div class="review-stars">★★★★★</div>
+                  </div>
+                </div>
+                <p class="review-text">Great price.</p>
+                <p class="review-detail">Google</p>
+              </div>
+            </div>
+
+            <div class="reviews-controls">
+              <button class="reviews-btn" id="google-reviews-prev" type="button" aria-label="Previous Google review">&#8592;</button>
+              <div class="reviews-dots" id="google-reviews-dots"></div>
+              <button class="reviews-btn" id="google-reviews-next" type="button" aria-label="Next Google review">&#8594;</button>
+            </div>
+
+            <a class="reviews-thumbtack-link" target="_blank" rel="noopener noreferrer" href="https://maps.app.goo.gl/67GLPdiUocxgueEh8">See all 7 reviews on Google →</a>
 
             <div class="reviews-social">
               <a class="reviews-social-link reviews-social-link--facebook" target="_blank" rel="noopener noreferrer" href="https://www.facebook.com/garage.guys.oc" aria-label="Garage Guys on Facebook">
@@ -3400,47 +3580,54 @@ updateVanTone();
   updateFab();
 })();
 
-// Reviews slider
+// Reviews sliders (Thumbtack + Google)
 (function () {
-  const slider = document.getElementById('reviews-slider');
-  if (!slider) return;
+  function initReviewsSlider(sliderId, dotsId, prevId, nextId) {
+    const slider = document.getElementById(sliderId);
+    if (!slider) return;
 
-  const cards = slider.querySelectorAll('.review-card');
-  const dotsWrap = document.getElementById('reviews-dots');
-  const prevBtn = document.getElementById('reviews-prev');
-  const nextBtn = document.getElementById('reviews-next');
-  let current = 0;
-  let timer;
+    const cards = slider.querySelectorAll('.review-card');
+    const dotsWrap = document.getElementById(dotsId);
+    const prevBtn = document.getElementById(prevId);
+    const nextBtn = document.getElementById(nextId);
+    if (!cards.length || !dotsWrap || !prevBtn || !nextBtn) return;
 
-  cards.forEach((_, i) => {
-    const dot = document.createElement('button');
-    dot.type = 'button';
-    dot.className = 'reviews-dot' + (i === 0 ? ' active' : '');
-    dot.setAttribute('aria-label', 'Go to review ' + (i + 1));
-    dot.addEventListener('click', () => goTo(i));
-    dotsWrap.appendChild(dot);
-  });
+    let current = 0;
+    let timer;
 
-  function goTo(n) {
-    cards[current].classList.remove('active');
-    dotsWrap.children[current].classList.remove('active');
-    current = (n + cards.length) % cards.length;
-    cards[current].classList.add('active');
-    dotsWrap.children[current].classList.add('active');
+    cards.forEach((_, i) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'reviews-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('aria-label', 'Go to review ' + (i + 1));
+      dot.addEventListener('click', () => goTo(i));
+      dotsWrap.appendChild(dot);
+    });
+
+    function goTo(n) {
+      cards[current].classList.remove('active');
+      dotsWrap.children[current].classList.remove('active');
+      current = (n + cards.length) % cards.length;
+      cards[current].classList.add('active');
+      dotsWrap.children[current].classList.add('active');
+      resetTimer();
+    }
+
+    function resetTimer() {
+      clearInterval(timer);
+      timer = setInterval(() => goTo(current + 1), 5000);
+    }
+
+    prevBtn.addEventListener('click', () => goTo(current - 1));
+    nextBtn.addEventListener('click', () => goTo(current + 1));
+    slider.addEventListener('mouseenter', () => clearInterval(timer));
+    slider.addEventListener('mouseleave', resetTimer);
+
     resetTimer();
   }
 
-  function resetTimer() {
-    clearInterval(timer);
-    timer = setInterval(() => goTo(current + 1), 5000);
-  }
-
-  prevBtn.addEventListener('click', () => goTo(current - 1));
-  nextBtn.addEventListener('click', () => goTo(current + 1));
-  slider.addEventListener('mouseenter', () => clearInterval(timer));
-  slider.addEventListener('mouseleave', resetTimer);
-
-  resetTimer();
+  initReviewsSlider('reviews-slider', 'reviews-dots', 'reviews-prev', 'reviews-next');
+  initReviewsSlider('google-reviews-slider', 'google-reviews-dots', 'google-reviews-prev', 'google-reviews-next');
 })();
 
 // Callback request modal

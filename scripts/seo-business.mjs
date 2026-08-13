@@ -32,11 +32,15 @@ export const BUSINESS_RATING = {
 
 export const THUMBTACK_URL =
   'https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690';
+export const THUMBTACK_REVIEW_COUNT = '74';
 
 /** Short share link for UI; full place URL is better for schema. */
 export const GOOGLE_MAPS_URL = 'https://maps.app.goo.gl/67GLPdiUocxgueEh8';
 export const GOOGLE_MAPS_PLACE_URL =
   'https://www.google.com/maps/place/Garage+Guys/@33.6641495,-117.8724153,17z/data=!4m6!3m5!1s0x43ab6332ea244b2b:0xee9d549c4475ae56!8m2!3d33.6641495!4d-117.8724153!16s%2Fg%2F11nr2gs_vt';
+/** Update when Google review count changes (Maps scrape is unreliable). */
+export const GOOGLE_REVIEW_COUNT = '7';
+export const GOOGLE_RATING = '5.0';
 
 export const BUSINESS_SAME_AS = [THUMBTACK_URL, GOOGLE_MAPS_PLACE_URL];
 
