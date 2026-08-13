@@ -1,0 +1,7 @@
+# https://garageguysoc.com/robots.txt
+# All pages are allowed for indexing — nothing is blocked.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://garageguysoc.com/sitemap.xml

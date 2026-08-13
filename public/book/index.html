@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="format-detection" content="telephone=no">
+<title>Book Garage Door Service | Orange County | Garage Guys</title>
+<meta name="description" content="Book garage door service in Orange County — choose ASAP or a preferred day. Same-day repairs available. Call (949) 539-0009.">
+<link rel="canonical" href="https://garageguysoc.com/book/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Garage Guys">
+<meta property="og:url" content="https://garageguysoc.com/book/">
+<meta property="og:title" content="Book Garage Door Service | Garage Guys">
+<meta property="og:description" content="Request a visit — ASAP or pick a day. We call to confirm. Orange County, CA.">
+<meta property="og:image" content="https://garageguysoc.com/Pictures/Logo.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Book Garage Door Service | Garage Guys">
+<meta name="twitter:description" content="ASAP or preferred day — we confirm by phone. (949) 539-0009.">
+<meta name="theme-color" content="#0f2340">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/service-page.css">
+<link rel="stylesheet" href="/css/book.css">
+<script src="/api/analytics.js" defer></script>
+</head>
+<body class="page-book">
+
+<div class="site-van-bg" aria-hidden="true"></div>
+
+<nav>
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/garage-door-repair/">Garage Door Repair</a></li>
+    <li><a href="/garage-door-spring-repair/">Spring Repair</a></li>
+    <li><a href="/garage-door-opener-repair/">Opener Repair</a></li>
+    <li><a href="/deals/">Deals</a></li>
+    <li><a href="/service-areas/">Service Areas</a></li>
+  </ul>
+  <a href="/" class="nav-logo">
+    <img src="/Pictures/Logo.png" alt="Garage Guys — book garage door service Orange County">
+  </a>
+</nav>
+
+<header class="book-hero">
+  <div class="book-hero__inner">
+    <p class="book-hero__eyebrow">Orange County, CA</p>
+    <h1 class="book-hero__title">Book a Visit</h1>
+    <p class="book-hero__lead">Pick ASAP or a day that works — we call to confirm time and quote before we come out.</p>
+    <a href="tel:+19495390009" class="book-hero__phone">(949) 539-0009</a>
+  </div>
+</header>
+
+<main class="book-main">
+  <div class="book-panel" id="book-panel">
+    <div id="book-form-wrap">
+      <form class="book-form" id="book-form" novalidate>
+        <label>Your Name <span class="book-req" aria-hidden="true">*</span>
+          <input type="text" name="name" required autocomplete="name" placeholder="John Smith">
+        </label>
+        <label>Your Phone <span class="book-req" aria-hidden="true">*</span>
+          <input type="tel" name="phone" required autocomplete="tel" placeholder="(949) 555-0000">
+        </label>
+        <label>ZIP Code <span class="book-req" aria-hidden="true">*</span>
+          <input type="text" name="zip" required autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" maxlength="10" placeholder="92660">
+        </label>
+
+        <fieldset class="book-fieldset">
+          <legend>Service needed <span class="book-optional">(optional)</span></legend>
+          <select name="service">
+            <option value="">Select a service</option>
+            <option value="Garage Door Repair">Garage Door Repair</option>
+            <option value="Spring Repair">Spring Repair</option>
+            <option value="Opener Repair">Opener Repair</option>
+            <option value="Opener Installation">Opener Installation</option>
+            <option value="Maintenance">Maintenance</option>
+            <option value="Roller Replacement">Roller Replacement</option>
+            <option value="Full Tune Up">Full Tune Up</option>
+            <option value="Other / Not sure">Other / Not sure</option>
+          </select>
+        </fieldset>
+
+        <fieldset class="book-fieldset">
+          <legend>When do you need us? <span class="book-optional">(optional)</span></legend>
+          <div class="book-when" role="radiogroup" aria-label="Preferred timing">
+            <label class="book-chip">
+              <input type="radio" name="when" value="asap" checked>
+              <span>ASAP / Same day</span>
+            </label>
+            <label class="book-chip">
+              <input type="radio" name="when" value="preferred">
+              <span>Pick a day</span>
+            </label>
+          </div>
+          <div class="book-date-wrap" id="book-date-wrap" hidden>
+            <label>Preferred day <span class="book-optional">(optional)</span>
+              <input type="date" name="preferredDate" id="book-preferred-date">
+            </label>
+          </div>
+          <label>Time of day <span class="book-optional">(optional)</span>
+            <select name="timeWindow">
+              <option value="">Anytime</option>
+              <option value="Morning">Morning</option>
+              <option value="Afternoon">Afternoon</option>
+              <option value="Evening">Evening</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <label>Notes <span class="book-optional">(optional)</span>
+          <textarea name="message" placeholder="Door stuck, gate code, parking notes…"></textarea>
+        </label>
+
+        <label class="callback-honeypot" aria-hidden="true">
+          Leave blank
+          <input type="text" name="_gotcha" tabindex="-1" autocomplete="off">
+        </label>
+
+        <p class="book-error" id="book-error" hidden></p>
+        <button type="submit" class="book-submit">Request Visit</button>
+        <p class="book-fine">We confirm by phone before arrival. Final price quoted on-site.</p>
+      </form>
+    </div>
+
+    <div class="book-success" id="book-success" hidden>
+      <div class="book-success__icon" aria-hidden="true">✓</div>
+      <h2>Request received</h2>
+      <p>We’ll call you at<br><span class="book-success__phone"></span><br>Usually within the hour — 7 days a week.</p>
+      <a href="tel:+19495390009" class="book-success__call">Or call now: (949) 539-0009</a>
+      <a href="/" class="book-success__home">Back to home</a>
+    </div>
+  </div>
+
+  <p class="book-alt">Need help now? <a href="tel:+19495390009">Call (949) 539-0009</a> · <a href="/deals/">See current deals</a></p>
+</main>
+
+<footer>
+  <a href="/" class="footer-logo">
+    <img src="/Pictures/Logo.png" alt="Garage Guys garage door booking Orange County CA">
+  </a>
+  <div class="footer-copy">© 2026 Garage Guys · <a href="/">Orange County, CA</a></div>
+  <p class="footer-disclaimer">Not a licensed contractor. All work performed under $1,000 per project per California AB 2622.</p>
+</footer>
+
+<script src="/js/book-form.js"></script>
+<link rel="stylesheet" href="/css/ai-chat.css">
+<script src="/js/ai-chat.js" defer></script>
+<script>window.addEventListener('load',function(){document.querySelector('.site-van-bg')?.classList.add('is-loaded')});</script>
+</body>
+</html>
