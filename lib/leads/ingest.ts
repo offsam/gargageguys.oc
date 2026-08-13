@@ -1,10 +1,12 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { LeadStage } from "@/lib/supabase/types";
+import { stageFromSheetStatus, type SheetStatus } from "@/lib/leads/stage-sync";
 
 export type IngestLeadInput = {
   name: string;
   phone: string;
   zip: string;
+  address?: string;
   message?: string;
   source?: string;
   leadType?: string;
@@ -13,14 +15,38 @@ export type IngestLeadInput = {
   dealId?: string;
   stage?: LeadStage;
   problem?: string;
+  jobStatus?: SheetStatus;
+  preferredDate?: string;
+  timeWindow?: string;
   metadata?: Record<string, unknown>;
 };
+
+function mapWebsiteSource(source?: string): string {
+  const raw = String(source || "").trim();
+  if (!raw) return "Website";
+  const lower = raw.toLowerCase();
+  if (lower.includes("thumbtack")) return "Thumbtack";
+  if (lower.includes("yelp")) return "Yelp";
+  if (lower.includes("facebook") || lower.includes("fb")) return "Facebook";
+  if (lower.includes("google")) return "Google";
+  if (lower.includes("referral")) return "Referral";
+  if (lower.includes("garageguys") || lower.includes("website") || lower.includes("pullgarage")) {
+    return "Website";
+  }
+  return raw.slice(0, 80);
+}
+
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 export async function ingestLead(input: IngestLeadInput) {
   const supabase = getSupabaseAdmin();
   const name = input.name.trim();
   const phone = input.phone.trim();
   const zip = input.zip.trim();
+  const address = String(input.address || "").trim();
 
   let customerId: string | null = null;
   const { data: existing } = await supabase
@@ -33,21 +59,60 @@ export async function ingestLead(input: IngestLeadInput) {
     customerId = existing.id;
     await supabase
       .from("customers")
-      .update({ name, zip, updated_at: new Date().toISOString() })
+      .update({
+        name,
+        zip,
+        address: address || undefined,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", existing.id);
   } else {
     const { data: created, error } = await supabase
       .from("customers")
-      .insert({ name, phone, zip })
+      .insert({ name, phone, zip, address: address || null })
       .select("id")
       .single();
     if (error) throw error;
     customerId = created.id;
   }
 
+  const leadSource = mapWebsiteSource(input.source);
+  const jobType =
+    input.dealTitle ||
+    input.leadType ||
+    (input.message ? input.message.slice(0, 120) : "") ||
+    "Website lead";
+
+  const hasScheduleHint = Boolean(input.preferredDate || input.timeWindow);
+  const jobStatus: SheetStatus =
+    input.jobStatus || (hasScheduleHint ? "Scheduled" : "Waiting");
+  const stage =
+    input.stage || stageFromSheetStatus(jobStatus) || ("new" as LeadStage);
+
+  const sheetDate = input.preferredDate || todayISO();
   const metadata = {
-    ...(input.metadata || {}),
+    leadSource,
+    leadCost: "",
+    sheetDate,
+    clientName: name,
+    clientAddress: address || (zip ? `ZIP ${zip}` : ""),
+    jobStatus,
+    jobType,
+    parts: "",
+    paymentType: "",
+    checkNumber: "",
+    jobCost: input.dealPrice || "",
+    bankFee: "",
+    partsCost: "",
+    technician: "",
+    techSalary: "",
+    phone,
+    zip,
+    preferredDate: input.preferredDate || "",
+    timeWindow: input.timeWindow || "",
+    websiteLeadType: input.leadType || "",
     ...(input.dealId ? { dealId: input.dealId } : {}),
+    ...(input.metadata || {}),
   };
 
   const { data: lead, error: leadError } = await supabase
@@ -59,19 +124,25 @@ export async function ingestLead(input: IngestLeadInput) {
       zip,
       message: input.message || null,
       problem: input.problem || input.message || null,
-      source: input.source || "website",
+      source: leadSource,
       lead_type: input.leadType || "callback",
-      stage: input.stage || "new",
-      deal_title: input.dealTitle || null,
+      stage,
+      deal_title: input.dealTitle || jobType || null,
       deal_price: input.dealPrice || null,
-      metadata,
+      scheduled_at: input.preferredDate
+        ? `${input.preferredDate}T12:00:00.000Z`
+        : null,
+      metadata: {
+        ...metadata,
+        ...(address ? { clientAddress: address } : {}),
+      },
     })
     .select("id")
     .single();
 
   if (leadError) throw leadError;
 
-  const title = `Lead: ${name} (${zip})`;
+  const title = `Lead: ${name} (${zip || address || "OC"})`;
   const { data: inbox, error: inboxError } = await supabase
     .from("inbox_items")
     .insert({
@@ -79,8 +150,8 @@ export async function ingestLead(input: IngestLeadInput) {
       item_type: "lead",
       title,
       body: input.message || null,
-      source: input.source || "website",
-      payload: { ...input, leadId: lead.id },
+      source: leadSource,
+      payload: { ...input, leadId: lead.id, metadata },
       status: "new",
     })
     .select("id")

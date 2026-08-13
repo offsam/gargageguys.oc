@@ -73,11 +73,14 @@ export async function POST(request: NextRequest) {
   const safeName = clean(body.name, 80);
   const safePhone = clean(body.phone, 30);
   const safeZip = clean(body.zip, 10);
+  const safeAddress = clean(body.address, 200);
   const safeMessage = clean(body.message, 800) || "Callback requested from website";
   const safeLeadType = clean(body.leadType, 40) || "callback";
   const safeDealId = clean(body.dealId, 40);
   const safeDealTitle = clean(body.dealTitle, 120);
   const safeDealPrice = clean(body.dealPrice, 16);
+  const safePreferredDate = clean(body.preferredDate, 20);
+  const safeTimeWindow = clean(body.timeWindow, 80);
   const isBookingRequest = safeLeadType === "booking_request";
   const isDealOrder = /_order$/.test(safeLeadType);
 
@@ -134,12 +137,16 @@ export async function POST(request: NextRequest) {
         name: safeName,
         phone: safePhone,
         zip: safeZip,
+        address: safeAddress || undefined,
         message: safeMessage,
-        source: "garageguysoc.com",
+        source: "Website",
         leadType: safeLeadType,
         dealId: safeDealId || undefined,
         dealTitle: safeDealTitle || undefined,
         dealPrice: safeDealPrice || undefined,
+        preferredDate: safePreferredDate || undefined,
+        timeWindow: safeTimeWindow || undefined,
+        jobStatus: isBookingRequest && safePreferredDate ? "Scheduled" : "Waiting",
       });
     } catch (err) {
       console.error("[callback] CRM ingest failed", err);

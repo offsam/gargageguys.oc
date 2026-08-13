@@ -89,6 +89,9 @@
       zip,
       message: buildNotesMessage({ service, timing, timeWindow, notes }),
       leadType: 'booking_request',
+      preferredDate: when === 'preferred' ? preferredDate : '',
+      timeWindow,
+      dealTitle: service || 'Booking request',
       _gotcha: form._gotcha.value.trim(),
     };
 

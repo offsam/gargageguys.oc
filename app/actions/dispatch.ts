@@ -20,14 +20,24 @@ export async function createJobFromLeadAction(formData: FormData) {
     notes: lead.message,
   });
 
+  const prev =
+    lead.metadata && typeof lead.metadata === "object"
+      ? (lead.metadata as Record<string, unknown>)
+      : {};
+
   await supabase
     .from("leads")
-    .update({ stage: "scheduled", updated_at: new Date().toISOString() })
+    .update({
+      stage: "scheduled",
+      metadata: { ...prev, jobStatus: "Scheduled" },
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", leadId);
 
   revalidatePath("/dispatch");
   revalidatePath("/field");
   revalidatePath("/crm");
+  revalidatePath("/sheet");
 }
 
 export async function assignJobAction(formData: FormData) {
@@ -52,11 +62,59 @@ export async function updateJobStatusAction(formData: FormData) {
   const status = String(formData.get("status") || "") as JobStatus;
   if (!jobId || !status) return;
   const supabase = await createSupabaseServerClient();
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("id, lead_id")
+    .eq("id", jobId)
+    .maybeSingle();
+
   await supabase
     .from("jobs")
     .update({ status, updated_at: new Date().toISOString() })
     .eq("id", jobId);
+
+  if (job?.lead_id) {
+    const jobToSheet: Partial<Record<JobStatus, string>> = {
+      assigned: "Tech confirmed",
+      en_route: "En route",
+      on_site: "On site",
+      done: "Completed",
+      cancelled: "Cancelled",
+      queued: "Scheduled",
+    };
+    const sheetStatus = jobToSheet[status];
+    if (sheetStatus) {
+      const { data: lead } = await supabase
+        .from("leads")
+        .select("metadata")
+        .eq("id", job.lead_id)
+        .maybeSingle();
+      const prev =
+        lead?.metadata && typeof lead.metadata === "object"
+          ? (lead.metadata as Record<string, unknown>)
+          : {};
+      const stageMap: Record<string, string> = {
+        "Tech confirmed": "in_progress",
+        "En route": "in_progress",
+        "On site": "in_progress",
+        Completed: "completed",
+        Cancelled: "cancelled",
+        Scheduled: "scheduled",
+      };
+      await supabase
+        .from("leads")
+        .update({
+          stage: stageMap[sheetStatus] || undefined,
+          metadata: { ...prev, jobStatus: sheetStatus },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", job.lead_id);
+    }
+  }
+
   revalidatePath("/dispatch");
   revalidatePath("/field");
   revalidatePath("/owner");
+  revalidatePath("/crm");
+  revalidatePath("/sheet");
 }

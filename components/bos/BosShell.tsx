@@ -1,16 +1,23 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import type { SessionUser } from "@/lib/auth/session";
 import { signOutAction } from "@/app/actions/auth";
 
 const LINKS: Array<{ href: string; label: string; roles?: Array<SessionUser["role"]> }> = [
   { href: "/owner", label: "Overview", roles: ["owner"] },
   { href: "/employees", label: "Employees", roles: ["owner"] },
+  { href: "/crm", label: "CRM", roles: ["owner", "office", "dispatcher"] },
   { href: "/sheet", label: "Sheet", roles: ["owner", "office", "dispatcher"] },
   { href: "/stock", label: "Stock", roles: ["owner", "office", "dispatcher", "technician"] },
+  { href: "/serm", label: "SERM", roles: ["owner", "office"] },
   { href: "/dispatch", label: "Dispatch", roles: ["owner", "dispatcher"] },
   { href: "/finance", label: "Finance", roles: ["owner", "accountant"] },
   { href: "/field", label: "Field", roles: ["owner", "technician", "dispatcher"] },
 ];
+
+const NAV_COLLAPSED_KEY = "bos-nav-collapsed";
 
 export function BosShell({
   user,
@@ -26,10 +33,31 @@ export function BosShell({
   children: React.ReactNode;
 }) {
   const links = LINKS.filter((link) => !link.roles || link.roles.includes(user.role));
+  const [navCollapsed, setNavCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      setNavCollapsed(localStorage.getItem(NAV_COLLAPSED_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function toggleNav() {
+    setNavCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(NAV_COLLAPSED_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   return (
-    <div className="bos-shell">
-      <aside className="bos-nav">
+    <div className={`bos-shell${navCollapsed ? " bos-shell--nav-collapsed" : ""}`}>
+      <aside className="bos-nav" aria-hidden={navCollapsed}>
         <p className="bos-brand">
           Garage Guys <span>BOS</span>
         </p>
@@ -38,6 +66,7 @@ export function BosShell({
             key={link.href}
             href={link.href}
             className={active === link.href ? "active" : undefined}
+            tabIndex={navCollapsed ? -1 : undefined}
           >
             {link.label}
           </Link>
@@ -52,9 +81,21 @@ export function BosShell({
       </aside>
       <main className="bos-main">
         <header className="bos-header">
-          <div>
-            <h1>{title}</h1>
-            {subtitle ? <p>{subtitle}</p> : null}
+          <div className="bos-header-title">
+            <button
+              type="button"
+              className="bos-nav-toggle"
+              onClick={toggleNav}
+              aria-pressed={navCollapsed}
+              aria-label={navCollapsed ? "Show navigation" : "Hide navigation"}
+              title={navCollapsed ? "Show sidebar" : "Hide sidebar"}
+            >
+              {navCollapsed ? "☰ Menu" : "« Hide menu"}
+            </button>
+            <div>
+              <h1>{title}</h1>
+              {subtitle ? <p>{subtitle}</p> : null}
+            </div>
           </div>
           <Link href="/">← Website</Link>
         </header>
