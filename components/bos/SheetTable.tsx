@@ -72,9 +72,9 @@ const COLUMNS: Array<{
   { key: "leadSource", label: "Lead source", width: 140, kind: "combo", options: "leadSource" },
   { key: "leadCost", label: "Lead cost", width: 100 },
   { key: "parts", label: "Parts", width: 180, kind: "select", options: "parts" },
+  { key: "jobCost", label: "Job cost", width: 100 },
   { key: "paymentType", label: "Payment type", width: 140, kind: "select", options: "payment" },
   { key: "checkNumber", label: "Check #", width: 110 },
-  { key: "jobCost", label: "Gross", width: 100 },
   { key: "bankFee", label: "Bank fee", width: 90 },
   { key: "partsCost", label: "Parts cost", width: 100 },
   {
