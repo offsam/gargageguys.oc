@@ -1,3 +1,6 @@
 .env
 .env.local
 .vercel
+
+# Legacy Vercel serverless (conflicts with app/api)
+/api/

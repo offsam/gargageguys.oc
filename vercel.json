@@ -3,6 +3,10 @@
     {
       "path": "/api/seo-sync",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/google-reviews-sync",
+      "schedule": "0 15 */3 * *"
     }
   ],
   "functions": {
@@ -14,6 +18,15 @@
     },
     "api/seo-sync.js": {
       "maxDuration": 30
+    },
+    "api/google-reviews-sync.js": {
+      "maxDuration": 30
+    },
+    "api/reviews.js": {
+      "maxDuration": 10
+    },
+    "api/thumbtack-reviews.js": {
+      "maxDuration": 15
     }
   }
 }
