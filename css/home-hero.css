@@ -281,6 +281,39 @@
   transform: translateY(-1px);
 }
 
+/* Homepage stats: Handyman is a plain label on the warranty tile */
+.stats-bar .hero-handyman {
+  display: inline;
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font-size: 11px;
+  letter-spacing: 0.7px;
+  color: #7ec4ef;
+  white-space: nowrap;
+}
+
+.stats-bar .hero-handyman::before {
+  content: none;
+}
+
+.stats-bar .hero-handyman:hover {
+  color: #f5a623;
+  background: none;
+  border: none;
+  transform: none;
+}
+
+.stats-bar .stat-item--parts-warranty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .hero-title {
   font-family: 'Bebas Neue', sans-serif;
   font-size: clamp(34px, 5.2vw, 68px);
@@ -626,17 +659,17 @@
 }
 
 .stat-review-side .stat-review-score {
-  font-size: clamp(30px, 2.8vw, 38px);
+  font-size: clamp(36px, 3.4vw, 46px);
 }
 
 .stat-review-side .stat-review-stars {
-  font-size: clamp(15px, 1.5vw, 18px);
+  font-size: clamp(18px, 1.8vw, 22px);
   letter-spacing: 1.5px;
   color: #fbbf24;
 }
 
 .stat-review-count {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -646,7 +679,7 @@
 }
 
 .stat-review-source {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.8px;
   text-transform: uppercase;

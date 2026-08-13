@@ -626,17 +626,17 @@
 }
 
 .stat-review-side .stat-review-score {
-  font-size: clamp(30px, 2.8vw, 38px);
+  font-size: clamp(36px, 3.4vw, 46px);
 }
 
 .stat-review-side .stat-review-stars {
-  font-size: clamp(15px, 1.5vw, 18px);
+  font-size: clamp(18px, 1.8vw, 22px);
   letter-spacing: 1.5px;
   color: #fbbf24;
 }
 
 .stat-review-count {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -646,7 +646,7 @@
 }
 
 .stat-review-source {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.8px;
   text-transform: uppercase;
