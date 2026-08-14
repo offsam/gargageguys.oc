@@ -16,7 +16,7 @@ export default async function PartnersPage() {
       user={user}
       active="/partners"
       title="Partners"
-      subtitle="Companies you take jobs from — used on Sheet when Work source is Partner"
+      subtitle="Who sends the job, and whether they use Garage Guys stock or their own"
     >
       <PartnersBoard partners={partners} canDelete={user.role === "owner"} />
     </BosShell>

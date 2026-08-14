@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   installOnJob,
   issueWarehouseToTech,
+  receivePartnerStock,
   receiveSupplier,
   updateItemCost,
 } from "@/lib/stock/ops";
@@ -71,6 +72,23 @@ export async function receiveStockAction(formData: FormData) {
     qty,
     destination,
     technicianId,
+    createdBy: session.id,
+  });
+  revalidatePath("/stock");
+}
+
+export async function receivePartnerStockAction(formData: FormData) {
+  const session = await requireStaff();
+  if (!session) return;
+  if (session.role === "technician") return;
+
+  const itemId = String(formData.get("itemId") || "");
+  const partnerId = String(formData.get("partnerId") || "");
+  const qty = Number(formData.get("qty") || 0);
+  await receivePartnerStock({
+    itemId,
+    partnerId,
+    qty,
     createdBy: session.id,
   });
   revalidatePath("/stock");

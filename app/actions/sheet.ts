@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { stageFromSheetStatus, completeBlockedReason } from "@/lib/leads/stage-sync";
+import { isPartnerWork } from "@/lib/sheet/work-source";
+import { listPartnersAction } from "@/app/actions/partners";
+import { parseSheetStockPull, syncSheetPartStock } from "@/lib/stock/ops";
 
 export type SheetSaveInput = {
   id: string;
@@ -61,6 +64,49 @@ function isTempId(id: string) {
   return id.startsWith("new-");
 }
 
+async function syncPartnerSheetStock(input: {
+  leadId: string;
+  workSource: string;
+  partnerName: string;
+  parts: string;
+  prevMeta: Record<string, unknown>;
+  createdBy: string;
+}) {
+  let owner: "none" | "gg" | string = "none";
+  if (isPartnerWork(input.workSource) && input.partnerName.trim()) {
+    const partners = await listPartnersAction();
+    const match = partners.find(
+      (p) => p.name.trim().toLowerCase() === input.partnerName.trim().toLowerCase(),
+    );
+    owner =
+      match?.has_own_stock && !match.id.startsWith("seed-") ? match.id : "gg";
+  }
+  const { pull } = await syncSheetPartStock({
+    parts: input.parts,
+    owner,
+    prevPull: parseSheetStockPull(input.prevMeta.stockPull),
+    leadId: input.leadId,
+    createdBy: input.createdBy,
+  });
+  const admin = getSupabaseAdmin();
+  const { data: lead } = await admin
+    .from("leads")
+    .select("metadata")
+    .eq("id", input.leadId)
+    .maybeSingle();
+  const meta =
+    lead?.metadata && typeof lead.metadata === "object"
+      ? (lead.metadata as Record<string, unknown>)
+      : {};
+  await admin
+    .from("leads")
+    .update({
+      metadata: { ...meta, stockPull: pull },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.leadId);
+}
+
 function revalidateSheetSurfaces() {
   revalidatePath("/sheet");
   revalidatePath("/crm");
@@ -75,6 +121,7 @@ function revalidateRelatedSurfaces() {
   revalidatePath("/dispatch");
   revalidatePath("/owner");
   revalidatePath("/field");
+  revalidatePath("/stock");
 }
 
 export async function saveSheetRowAction(
@@ -155,6 +202,18 @@ export async function saveSheetRowAction(
       }
 
       if (error) return { ok: false, error: error.message };
+      try {
+        await syncPartnerSheetStock({
+          leadId: data!.id,
+          workSource: input.workSource,
+          partnerName: input.partnerName,
+          parts: input.parts,
+          prevMeta: {},
+          createdBy: session.id,
+        });
+      } catch {
+        /* stock pull is best-effort */
+      }
       revalidateRelatedSurfaces();
       return { ok: true, id: data!.id };
     }
@@ -195,6 +254,18 @@ export async function saveSheetRowAction(
     }
 
     if (error) return { ok: false, error: error.message };
+    try {
+      await syncPartnerSheetStock({
+        leadId: input.id,
+        workSource: input.workSource,
+        partnerName: input.partnerName,
+        parts: input.parts,
+        prevMeta: prev,
+        createdBy: session.id,
+      });
+    } catch {
+      /* stock pull is best-effort */
+    }
     revalidateRelatedSurfaces();
     return { ok: true, id: input.id };
   } catch (err) {
@@ -215,12 +286,28 @@ export async function deleteSheetRowAction(
 
     const { data: lead, error: leadErr } = await admin
       .from("leads")
-      .select("id, customer_id")
+      .select("id, customer_id, metadata")
       .eq("id", id)
       .maybeSingle();
 
     if (leadErr) return { ok: false, error: leadErr.message };
     if (!lead) return { ok: false, error: "Row not found" };
+
+    try {
+      const prevMeta =
+        lead.metadata && typeof lead.metadata === "object"
+          ? (lead.metadata as Record<string, unknown>)
+          : {};
+      await syncSheetPartStock({
+        parts: "",
+        owner: "none",
+        prevPull: parseSheetStockPull(prevMeta.stockPull),
+        leadId: id,
+        createdBy: session.id,
+      });
+    } catch {
+      /* ignore restock failure */
+    }
 
     const customerId = lead.customer_id as string | null;
 
@@ -271,6 +358,7 @@ export async function deleteSheetRowAction(
 
     revalidateSheetSurfaces();
     revalidatePath("/finance");
+    revalidatePath("/stock");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Delete failed" };

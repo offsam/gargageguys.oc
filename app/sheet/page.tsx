@@ -112,10 +112,10 @@ export default async function SheetPage() {
     };
   });
 
-  const partnerNames = partners
+  const partnerOpts = partners
     .filter((p) => p.active && p.name)
-    .map((p) => p.name)
-    .sort((a, b) => a.localeCompare(b));
+    .map((p) => ({ name: p.name, hasOwnStock: p.has_own_stock }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <BosShell
@@ -129,8 +129,8 @@ export default async function SheetPage() {
           <strong>Garage Guys Sheet</strong>
           <p>
             Pick Work source first (Garage Guys or Partner) — only the needed columns unlock.
-            Status is the same funnel as CRM (Waiting, No answer, Scheduled…). Partner: Gross →
-            tech gets 30%.
+            Partner with own stock: parts come from their warehouse, profit $0. Partner using
+            ours: parts cost fills from Garage Guys stock. Tech gets 30% of Gross.
           </p>
         </div>
         <span className="bos-badge scheduled">Synced with CRM</span>
@@ -139,7 +139,7 @@ export default async function SheetPage() {
         rows={rows}
         technicians={technicianNames}
         stockParts={stockParts}
-        partners={partnerNames}
+        partners={partnerOpts}
       />
     </BosShell>
   );

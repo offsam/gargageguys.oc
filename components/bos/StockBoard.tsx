@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   issueToTechAction,
+  receivePartnerStockAction,
   receiveStockAction,
   saveItemCostAction,
 } from "@/app/actions/stock";
@@ -119,6 +120,8 @@ export function StockBoard({
   showPrices,
   canManage,
   isTechOnly,
+  stockOwners = [],
+  stockOwner = "gg",
 }: {
   rows: StockRow[];
   technicians: Tech[];
@@ -126,8 +129,11 @@ export function StockBoard({
   showPrices: boolean;
   canManage: boolean;
   isTechOnly: boolean;
+  stockOwners?: { id: string; name: string }[];
+  stockOwner?: string;
 }) {
   const router = useRouter();
+  const partnerMode = stockOwner !== "gg";
   const [view, setView] = useState<View>(isTechOnly ? "tech" : "master");
   const [techId, setTechId] = useState(initialTechId);
   const [q, setQ] = useState("");
@@ -176,16 +182,31 @@ export function StockBoard({
     });
   }
 
-  const colSpan =
-    2 +
-    (view === "master" || view === "warehouse" ? 1 : 0) +
-    (view === "master" || view === "tech" ? 1 : 0) +
-    (showPrices ? 1 : 0) +
-    (canManage ? 1 : 0);
+  const colSpan = partnerMode
+    ? 2 + (showPrices ? 1 : 0) + (canManage ? 1 : 0)
+    : 2 +
+      (view === "master" || view === "warehouse" ? 1 : 0) +
+      (view === "master" || view === "tech" ? 1 : 0) +
+      (showPrices ? 1 : 0) +
+      (canManage ? 1 : 0);
 
   return (
     <div className="stock-board">
-      {!isTechOnly ? (
+      {!isTechOnly && stockOwners.length > 1 ? (
+        <div className="stock-owner-tabs" role="tablist" aria-label="Stock owner">
+          {stockOwners.map((owner) => (
+            <a
+              key={owner.id}
+              href={owner.id === "gg" ? "/stock" : `/stock?owner=${owner.id}`}
+              className={stockOwner === owner.id ? "active" : undefined}
+            >
+              {owner.name}
+            </a>
+          ))}
+        </div>
+      ) : null}
+
+      {!isTechOnly && !partnerMode ? (
         <div className="stock-tabs" role="tablist">
           {(
             [
@@ -217,7 +238,7 @@ export function StockBoard({
           onChange={(e) => setQ(e.target.value)}
           autoFocus
         />
-        {view === "tech" && !isTechOnly ? (
+        {view === "tech" && !isTechOnly && !partnerMode ? (
           <select
             className="stock-tech-select"
             value={techId}
@@ -242,11 +263,11 @@ export function StockBoard({
           <thead>
             <tr>
               <th className="stock-col-item">Item</th>
-              <th className="stock-col-num">Master</th>
-              {view === "master" || view === "warehouse" ? (
+              <th className="stock-col-num">{partnerMode ? "Qty" : "Master"}</th>
+              {!partnerMode && (view === "master" || view === "warehouse") ? (
                 <th className="stock-col-num">Wh</th>
               ) : null}
-              {view === "master" || view === "tech" ? (
+              {!partnerMode && (view === "master" || view === "tech") ? (
                 <th className="stock-col-num">Van</th>
               ) : null}
               {showPrices ? <th className="stock-col-cost">Cost</th> : null}
@@ -270,10 +291,10 @@ export function StockBoard({
                         ) : null}
                       </td>
                       <td className="stock-col-num stock-master">{row.master}</td>
-                      {view === "master" || view === "warehouse" ? (
+                      {!partnerMode && (view === "master" || view === "warehouse") ? (
                         <td className="stock-col-num">{row.warehouse}</td>
                       ) : null}
-                      {view === "master" || view === "tech" ? (
+                      {!partnerMode && (view === "master" || view === "tech") ? (
                         <td className="stock-col-num">{row.vans[techId] ?? row.van}</td>
                       ) : null}
                       {showPrices ? (
@@ -299,25 +320,36 @@ export function StockBoard({
                           </button>
                           {open ? (
                             <div className="stock-act-pop">
-                              <form action={(fd) => run(receiveStockAction, fd)}>
-                                <input type="hidden" name="itemId" value={row.id} />
-                                <input type="hidden" name="destination" value="warehouse" />
-                                <input name="qty" type="number" min={1} defaultValue={1} />
-                                <button type="submit">+Wh</button>
-                              </form>
-                              <form action={(fd) => run(receiveStockAction, fd)}>
-                                <input type="hidden" name="itemId" value={row.id} />
-                                <input type="hidden" name="destination" value="tech" />
-                                <input type="hidden" name="technicianId" value={techId} />
-                                <input name="qty" type="number" min={1} defaultValue={1} />
-                                <button type="submit">+Van</button>
-                              </form>
-                              <form action={(fd) => run(issueToTechAction, fd)}>
-                                <input type="hidden" name="itemId" value={row.id} />
-                                <input type="hidden" name="technicianId" value={techId} />
-                                <input name="qty" type="number" min={1} defaultValue={1} />
-                                <button type="submit">Wh→Van</button>
-                              </form>
+                              {partnerMode ? (
+                                <form action={(fd) => run(receivePartnerStockAction, fd)}>
+                                  <input type="hidden" name="itemId" value={row.id} />
+                                  <input type="hidden" name="partnerId" value={stockOwner} />
+                                  <input name="qty" type="number" min={1} defaultValue={1} />
+                                  <button type="submit">+ Stock</button>
+                                </form>
+                              ) : (
+                                <>
+                                  <form action={(fd) => run(receiveStockAction, fd)}>
+                                    <input type="hidden" name="itemId" value={row.id} />
+                                    <input type="hidden" name="destination" value="warehouse" />
+                                    <input name="qty" type="number" min={1} defaultValue={1} />
+                                    <button type="submit">+Wh</button>
+                                  </form>
+                                  <form action={(fd) => run(receiveStockAction, fd)}>
+                                    <input type="hidden" name="itemId" value={row.id} />
+                                    <input type="hidden" name="destination" value="tech" />
+                                    <input type="hidden" name="technicianId" value={techId} />
+                                    <input name="qty" type="number" min={1} defaultValue={1} />
+                                    <button type="submit">+Van</button>
+                                  </form>
+                                  <form action={(fd) => run(issueToTechAction, fd)}>
+                                    <input type="hidden" name="itemId" value={row.id} />
+                                    <input type="hidden" name="technicianId" value={techId} />
+                                    <input name="qty" type="number" min={1} defaultValue={1} />
+                                    <button type="submit">Wh→Van</button>
+                                  </form>
+                                </>
+                              )}
                             </div>
                           ) : null}
                         </td>

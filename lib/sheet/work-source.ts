@@ -5,6 +5,11 @@ export type WorkSource = (typeof WORK_SOURCES)[number] | "";
 
 export const PARTNER_TECH_RATE = 0.3;
 
+export type SheetPartner = {
+  name: string;
+  hasOwnStock: boolean;
+};
+
 export type SheetColumnKey =
   | "workSource"
   | "partnerName"
@@ -24,6 +29,10 @@ export type SheetColumnKey =
   | "technician"
   | "techSalary"
   | "description";
+
+export type ColumnOpts = {
+  usesOurParts?: boolean;
+};
 
 const ALWAYS: SheetColumnKey[] = ["workSource"];
 
@@ -70,7 +79,36 @@ export function isPartnerWork(source: string): boolean {
   return normalizeWorkSource(source) === "Partner";
 }
 
-export function isColumnActive(workSource: string, key: SheetColumnKey): boolean {
+export function partnerHasOwnStock(partnerName: string, partners: SheetPartner[]): boolean {
+  const needle = partnerName.trim().toLowerCase();
+  if (!needle) return false;
+  return Boolean(
+    partners.find((p) => p.name.trim().toLowerCase() === needle)?.hasOwnStock,
+  );
+}
+
+/** Named partner that does not keep a warehouse — uses Garage Guys parts. */
+export function partnerUsesOurStock(partnerName: string, partners: SheetPartner[]): boolean {
+  const needle = partnerName.trim().toLowerCase();
+  if (!needle) return false;
+  return !partnerHasOwnStock(partnerName, partners);
+}
+
+export function usesOurParts(
+  workSource: string,
+  partnerName: string,
+  partners: SheetPartner[],
+): boolean {
+  if (isOwnWork(workSource)) return true;
+  if (isPartnerWork(workSource) && partnerUsesOurStock(partnerName, partners)) return true;
+  return false;
+}
+
+export function isColumnActive(
+  workSource: string,
+  key: SheetColumnKey,
+  opts?: ColumnOpts,
+): boolean {
   const src = normalizeWorkSource(workSource);
   if (ALWAYS.includes(key)) return true;
   if (!src) return false;
@@ -78,14 +116,19 @@ export function isColumnActive(workSource: string, key: SheetColumnKey): boolean
   if (src === "Garage Guys") return OWN_ONLY.includes(key);
   if (src === "Partner") {
     if (PARTNER_READONLY.includes(key)) return true; // visible / filled, but UI locks edit
+    if (key === "partsCost" && opts?.usesOurParts) return true;
     return PARTNER_ONLY.includes(key);
   }
   return false;
 }
 
-export function isColumnEditable(workSource: string, key: SheetColumnKey): boolean {
+export function isColumnEditable(
+  workSource: string,
+  key: SheetColumnKey,
+  opts?: ColumnOpts,
+): boolean {
   const src = normalizeWorkSource(workSource);
-  if (!isColumnActive(workSource, key)) return false;
+  if (!isColumnActive(workSource, key, opts)) return false;
   if (src === "Partner" && PARTNER_READONLY.includes(key)) return false;
   // Bank fee is auto for card on own jobs — still editable override
   return true;

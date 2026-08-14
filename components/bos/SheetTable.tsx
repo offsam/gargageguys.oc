@@ -12,7 +12,10 @@ import {
   isOwnWork,
   isPartnerWork,
   normalizeWorkSource,
+  partnerHasOwnStock,
+  usesOurParts,
   type SheetColumnKey,
+  type SheetPartner,
 } from "@/lib/sheet/work-source";
 
 export type SheetRow = {
@@ -197,12 +200,14 @@ function emptyRow(index: number): SheetRow {
   };
 }
 
-function clearProfitFor(row: SheetRow): string {
+function clearProfitFor(row: SheetRow, partners: SheetPartner[]): string {
   if (isPartnerWork(row.workSource)) {
-    const has = money(row.jobCost) || money(row.techSalary);
+    const has = money(row.jobCost) || money(row.techSalary) || money(row.partsCost);
     if (!has) return "";
-    // Partner: tech gets 30% of Gross — company clear profit on the job is $0
-    return formatMoney(0);
+    if (partnerHasOwnStock(row.partnerName, partners)) {
+      return formatMoney(0);
+    }
+    return formatMoney(money(row.jobCost) - money(row.techSalary) - money(row.partsCost));
   }
 
   if (!isOwnWork(row.workSource)) return "";
@@ -223,7 +228,7 @@ function clearProfitFor(row: SheetRow): string {
   );
 }
 
-function applyRowRules(row: SheetRow, patch: Partial<SheetRow>): SheetRow {
+function applyRowRules(row: SheetRow, patch: Partial<SheetRow>, partners: SheetPartner[]): SheetRow {
   const next = { ...row, ...patch };
   if (Object.prototype.hasOwnProperty.call(patch, "workSource")) {
     next.workSource = normalizeWorkSource(next.workSource);
@@ -232,6 +237,10 @@ function applyRowRules(row: SheetRow, patch: Partial<SheetRow>): SheetRow {
   const paymentChanged = Object.prototype.hasOwnProperty.call(patch, "paymentType");
   const jobCostChanged = Object.prototype.hasOwnProperty.call(patch, "jobCost");
   const sourceChanged = Object.prototype.hasOwnProperty.call(patch, "workSource");
+  const partnerChanged = Object.prototype.hasOwnProperty.call(patch, "partnerName");
+  const partsChanged = Object.prototype.hasOwnProperty.call(patch, "parts");
+  const ownStock =
+    isPartnerWork(next.workSource) && partnerHasOwnStock(next.partnerName, partners);
 
   if (isOwnWork(next.workSource)) {
     if (isCardPayment(next.paymentType) && (paymentChanged || jobCostChanged || sourceChanged)) {
@@ -243,8 +252,7 @@ function applyRowRules(row: SheetRow, patch: Partial<SheetRow>): SheetRow {
     if (jobCostChanged || sourceChanged) {
       next.techSalary = partnerTechSalary(next.jobCost);
     }
-    // Parts come from partner stock — do not carry GG parts cost into calc
-    if (sourceChanged || Object.prototype.hasOwnProperty.call(patch, "parts")) {
+    if (ownStock && (sourceChanged || partnerChanged || partsChanged)) {
       if (!Object.prototype.hasOwnProperty.call(patch, "partsCost")) {
         next.partsCost = "";
       }
@@ -327,8 +335,13 @@ function dateSortValue(row: SheetRow): string {
   return toDateInputValue(row.date) || "";
 }
 
-function cellMutedClass(workSource: string, key: SheetColumnKey, extra?: string) {
-  const editable = isColumnEditable(workSource, key);
+function cellMutedClass(
+  workSource: string,
+  key: SheetColumnKey,
+  extra?: string,
+  opts?: { usesOurParts?: boolean },
+) {
+  const editable = isColumnEditable(workSource, key, opts);
   const parts = [extra];
   if (!editable) parts.push("sheet-cell-muted");
   return parts.filter(Boolean).join(" ") || undefined;
@@ -343,7 +356,7 @@ export function SheetTable({
   rows: SheetRow[];
   technicians: string[];
   stockParts?: StockPartOption[];
-  partners?: string[];
+  partners?: SheetPartner[];
 }) {
   const router = useRouter();
   const [rows, setRows] = useState<SheetRow[]>(() => {
@@ -650,7 +663,17 @@ export function SheetTable({
     setRows((prev) => {
       const nextRows = prev.map((row) => {
         if (row.id !== rowId) return row;
-        return applyRowRules(row, patch);
+        const next = applyRowRules(row, patch, partners);
+        if (
+          usesOurParts(next.workSource, next.partnerName, partners) &&
+          (Object.prototype.hasOwnProperty.call(patch, "parts") ||
+            Object.prototype.hasOwnProperty.call(patch, "workSource") ||
+            Object.prototype.hasOwnProperty.call(patch, "partnerName"))
+        ) {
+          const cost = partCostByName.get(next.parts);
+          if (cost != null && cost !== "") next.partsCost = cost;
+        }
+        return next;
       });
       rowsRef.current = nextRows;
       return nextRows;
@@ -661,14 +684,14 @@ export function SheetTable({
     if (save) queuePersist(rowId);
   }
 
-  function onPartsChange(rowId: string, value: string, workSource: string) {
+  function onPartsChange(rowId: string, value: string, row: SheetRow) {
     const patch: Partial<SheetRow> = { parts: value };
-    if (isOwnWork(workSource)) {
+    if (usesOurParts(row.workSource, row.partnerName, partners)) {
       const cost = partCostByName.get(value);
       if (cost != null && cost !== "") {
         patch.partsCost = cost;
       }
-    } else {
+    } else if (isPartnerWork(row.workSource)) {
       patch.partsCost = "";
     }
     patchRow(rowId, patch, true);
@@ -684,7 +707,7 @@ export function SheetTable({
     if (kind === "parts") return partNames;
     if (kind === "leadSource") return ["", ...LEAD_SOURCES];
     if (kind === "partner") {
-      const set = new Set<string>(partners.filter(Boolean));
+      const set = new Set<string>(partners.map((p) => p.name).filter(Boolean));
       for (const row of rows) {
         if (row.partnerName.trim()) set.add(row.partnerName.trim());
       }
@@ -702,7 +725,7 @@ export function SheetTable({
   }, [rows]);
 
   const partnerSuggestions = useMemo(() => {
-    const set = new Set<string>(partners.filter(Boolean));
+    const set = new Set<string>(partners.map((p) => p.name).filter(Boolean));
     for (const row of rows) {
       if (row.partnerName.trim()) set.add(row.partnerName.trim());
     }
@@ -838,8 +861,11 @@ export function SheetTable({
           </thead>
           <tbody>
             {displayRows.map((row, rowIndex) => {
+              const colOpts = {
+                usesOurParts: usesOurParts(row.workSource, row.partnerName, partners),
+              };
               const needCheck =
-                isColumnEditable(row.workSource, "checkNumber") &&
+                isColumnEditable(row.workSource, "checkNumber", colOpts) &&
                 isCheckPayment(row.paymentType) &&
                 !String(row.checkNumber).trim();
               const cardPay =
@@ -869,7 +895,7 @@ export function SheetTable({
                 >
                   <th className="sheet-row-num">{rowIndex + 1}</th>
                   {COLUMNS.map((col) => {
-                    const editable = isColumnEditable(row.workSource, col.key);
+                    const editable = isColumnEditable(row.workSource, col.key, colOpts);
                     const needBankEmpty =
                       col.key === "bankFee" && cardPay && !String(row.bankFee).trim();
                     const bankActive = col.key === "bankFee" && cardPay;
@@ -885,6 +911,7 @@ export function SheetTable({
                             : col.key === "jobStatus" && editable
                               ? statusClass(row.jobStatus)
                               : undefined,
+                      colOpts,
                     );
 
                     if (col.kind === "select") {
@@ -907,7 +934,7 @@ export function SheetTable({
                             onChange={(e) => {
                               if (!editable && !isWorkSource) return;
                               if (col.key === "parts") {
-                                onPartsChange(row.id, e.target.value, row.workSource);
+                                onPartsChange(row.id, e.target.value, row);
                                 return;
                               }
                               if (col.key === "jobStatus") {
@@ -1058,7 +1085,7 @@ export function SheetTable({
                     <div className="sheet-money">
                       <input
                         className="sheet-cell"
-                        value={clearProfitFor(row)}
+                        value={clearProfitFor(row, partners)}
                         readOnly
                         tabIndex={-1}
                       />

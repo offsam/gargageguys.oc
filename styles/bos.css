@@ -1350,7 +1350,7 @@ body.sheet-col-resizing * {
 
 .partner-row-form {
   display: grid;
-  grid-template-columns: minmax(140px, 1.3fr) 72px minmax(140px, 1fr) minmax(100px, 1fr) 64px auto;
+  grid-template-columns: minmax(140px, 1.3fr) 72px minmax(150px, 0.9fr) minmax(120px, 1fr) 64px auto;
   gap: 0.45rem;
   align-items: center;
   padding: 0.55rem 0.65rem;
@@ -1488,6 +1488,32 @@ body.sheet-col-resizing * {
   display: flex;
   gap: 0;
   border-bottom: 1px solid var(--bos-border);
+}
+
+.stock-owner-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.15rem;
+}
+
+.stock-owner-tabs a {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--bos-border);
+  background: #fff;
+  color: var(--bos-text);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.stock-owner-tabs a.active {
+  background: var(--bos-accent-2);
+  border-color: var(--bos-accent-2);
+  color: #fff;
 }
 
 .stock-tabs button {

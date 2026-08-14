@@ -23,6 +23,7 @@ export function PartnersBoard({
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
   const [techPercent, setTechPercent] = useState("30");
+  const [hasOwnStock, setHasOwnStock] = useState(false);
 
   function submitCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +32,7 @@ export function PartnersBoard({
     fd.set("name", name);
     fd.set("notes", notes);
     fd.set("techPercent", techPercent);
+    fd.set("hasOwnStock", hasOwnStock ? "true" : "false");
     startTransition(async () => {
       const result = await createPartnerAction(fd);
       if (!result.ok) {
@@ -41,6 +43,7 @@ export function PartnersBoard({
       setName("");
       setNotes("");
       setTechPercent("30");
+      setHasOwnStock(false);
       router.refresh();
     });
   }
@@ -114,6 +117,27 @@ export function PartnersBoard({
               placeholder="30"
             />
           </label>
+          <fieldset className="partner-stock-pick">
+            <legend>Stock</legend>
+            <label>
+              <input
+                type="radio"
+                name="newHasOwnStock"
+                checked={!hasOwnStock}
+                onChange={() => setHasOwnStock(false)}
+              />
+              Uses Garage Guys stock
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="newHasOwnStock"
+                checked={hasOwnStock}
+                onChange={() => setHasOwnStock(true)}
+              />
+              Has own stock
+            </label>
+          </fieldset>
           <label>
             Notes
             <input
@@ -132,7 +156,10 @@ export function PartnersBoard({
         <div className="emp-section-head">
           <div>
             <h2>Partners</h2>
-            <p>These names appear in Sheet when Work source = Partner.</p>
+            <p>
+              These names appear in Sheet when Work source = Partner. Pick whether each one uses
+              Garage Guys parts or keeps a private warehouse.
+            </p>
           </div>
           <span className="bos-badge">{initial.length}</span>
         </div>
@@ -145,6 +172,7 @@ export function PartnersBoard({
               <tr>
                 <th>Name</th>
                 <th>Tech %</th>
+                <th>Stock</th>
                 <th>Notes</th>
                 <th>Active</th>
                 <th />
@@ -153,7 +181,7 @@ export function PartnersBoard({
             <tbody>
               {initial.map((partner) => (
                 <tr key={partner.id}>
-                  <td colSpan={5} style={{ padding: 0 }}>
+                  <td colSpan={6} style={{ padding: 0 }}>
                     <form
                       className="partner-row-form"
                       onSubmit={(e) => {
@@ -167,6 +195,10 @@ export function PartnersBoard({
                         defaultValue={String(partner.tech_percent)}
                         inputMode="decimal"
                       />
+                      <select name="hasOwnStock" defaultValue={partner.has_own_stock ? "true" : "false"}>
+                        <option value="false">Garage Guys stock</option>
+                        <option value="true">Own stock</option>
+                      </select>
                       <input name="notes" defaultValue={partner.notes} placeholder="—" />
                       <label className="partner-active">
                         <input type="hidden" name="active" value="false" />
