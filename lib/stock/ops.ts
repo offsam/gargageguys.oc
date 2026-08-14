@@ -286,3 +286,54 @@ export async function syncSheetPartStock(input: {
   await saveStockState(state);
   return { pull: nextPull };
 }
+
+/** Move warehouse + van qty onto a partner warehouse. Garage Guys locations go to 0. */
+export async function moveGarageGuysStockToPartner(input: {
+  partnerId: string;
+  createdBy?: string;
+  note?: string;
+}): Promise<StockOpResult & { movedQty: number; movedItems: number }> {
+  if (!input.partnerId) {
+    return { ok: false, error: "Partner required", movedQty: 0, movedItems: 0 };
+  }
+  const state = await loadStockState();
+  const byItem = new Map<string, number>();
+  for (const balance of [...state.balances]) {
+    if (balance.locationType === "partner") continue;
+    const qty = Number(balance.qty) || 0;
+    if (qty <= 0) continue;
+    byItem.set(balance.itemId, (byItem.get(balance.itemId) || 0) + qty);
+    setBalanceQty(
+      state,
+      balance.itemId,
+      balance.locationType,
+      0,
+      balance.technicianId,
+    );
+  }
+
+  let movedQty = 0;
+  for (const [itemId, qty] of byItem.entries()) {
+    const err = applyDelta(state, itemId, "partner", qty, undefined, input.partnerId);
+    if (err) return { ok: false, error: err, movedQty: 0, movedItems: 0 };
+    movedQty += qty;
+    pushMovement(state, {
+      itemId,
+      qty,
+      kind: "adjust",
+      fromLocationType: "warehouse",
+      toLocationType: "partner",
+      partnerId: input.partnerId,
+      createdBy: input.createdBy,
+      note: input.note || "Moved Garage Guys stock to partner warehouse",
+    });
+  }
+
+  if (movedQty > 0) await saveStockState(state);
+  return {
+    ok: true,
+    state: await loadStockState(),
+    movedQty,
+    movedItems: byItem.size,
+  };
+}

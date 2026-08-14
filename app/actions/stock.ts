@@ -6,11 +6,13 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   installOnJob,
   issueWarehouseToTech,
+  moveGarageGuysStockToPartner,
   receivePartnerStock,
   receiveSupplier,
   updateItemCost,
 } from "@/lib/stock/ops";
 import { ensureStockSeeded } from "@/lib/stock/store";
+import { listPartnersAction } from "@/app/actions/partners";
 
 async function requireStaff() {
   const session = await getSessionUser();
@@ -131,4 +133,60 @@ export async function installPartsOnJobAction(formData: FormData) {
   revalidatePath("/stock");
   revalidatePath("/field");
   if (jobId) revalidatePath(`/field/jobs/${jobId}`);
+}
+
+export async function assignCurrentStockToChampionAction(): Promise<{
+  ok: boolean;
+  error?: string;
+  movedQty: number;
+  movedItems: number;
+  partnerId?: string;
+  partnerName?: string;
+}> {
+  const session = await requireStaff();
+  if (!session) return { ok: false, error: "Not signed in", movedQty: 0, movedItems: 0 };
+  if (session.role !== "owner") {
+    return { ok: false, error: "Only owner can move stock", movedQty: 0, movedItems: 0 };
+  }
+
+  const partners = await listPartnersAction();
+  const champion = partners.find(
+    (p) => /champion/i.test(p.name) && !p.id.startsWith("seed-"),
+  );
+  if (!champion) {
+    return {
+      ok: false,
+      error: "Champion partner not found. Run the partners SQL in Supabase first.",
+      movedQty: 0,
+      movedItems: 0,
+    };
+  }
+
+  const admin = getSupabaseAdmin();
+  const { error: flagErr } = await admin
+    .from("partners")
+    .update({ has_own_stock: true, updated_at: new Date().toISOString() })
+    .eq("id", champion.id);
+  if (flagErr) {
+    return { ok: false, error: flagErr.message, movedQty: 0, movedItems: 0 };
+  }
+
+  const moved = await moveGarageGuysStockToPartner({
+    partnerId: champion.id,
+    createdBy: session.id,
+    note: "Moved existing Garage Guys stock to Champion warehouse",
+  });
+  revalidatePath("/stock");
+  revalidatePath("/partners");
+  revalidatePath("/sheet");
+  if (!moved.ok) {
+    return { ok: false, error: moved.error, movedQty: 0, movedItems: 0 };
+  }
+  return {
+    ok: true,
+    movedQty: moved.movedQty,
+    movedItems: moved.movedItems,
+    partnerId: champion.id,
+    partnerName: champion.name,
+  };
 }

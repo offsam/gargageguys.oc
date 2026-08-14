@@ -123,6 +123,7 @@ export function StockBoard({
   stockOwners = [],
   stockOwner = "gg",
   partnerWarehouseCount = 0,
+  notice = "",
 }: {
   rows: StockRow[];
   technicians: Tech[];
@@ -133,6 +134,7 @@ export function StockBoard({
   stockOwners?: { id: string; name: string }[];
   stockOwner?: string;
   partnerWarehouseCount?: number;
+  notice?: string;
 }) {
   const router = useRouter();
   const partnerMode = stockOwner !== "gg";
@@ -207,7 +209,8 @@ export function StockBoard({
               </a>
             ))}
           </div>
-          {partnerWarehouseCount < 1 ? (
+          {notice ? <p className="stock-owner-hint">{notice}</p> : null}
+          {!notice && partnerWarehouseCount < 1 ? (
             <p className="stock-owner-hint">
               This is Garage Guys stock (Master / Warehouse / vans). A partner tab appears after
               you set <strong>Own stock</strong> on Partners and Save.

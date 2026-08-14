@@ -5,8 +5,10 @@ import { StockBoard } from "@/components/bos/StockBoard";
 import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { listPartnersAction } from "@/app/actions/partners";
+import { assignCurrentStockToChampionAction } from "@/app/actions/stock";
 import {
   ensureStockSeeded,
+  loadStockState,
   masterQty,
   partnerQty,
   techQty,
@@ -24,14 +26,11 @@ export default async function StockPage({
 
   const params = await searchParams;
   const admin = getSupabaseAdmin();
-  const [{ data: techs }, partners] = await Promise.all([
-    admin
-      .from("profiles")
-      .select("id, full_name, email")
-      .eq("role", "technician")
-      .order("created_at", { ascending: true }),
-    listPartnersAction(),
-  ]);
+  const { data: techs } = await admin
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("role", "technician")
+    .order("created_at", { ascending: true });
 
   const technicians = techs || [];
   const seedTechId = technicians[0]?.id;
@@ -70,7 +69,19 @@ export default async function StockPage({
         ? params.tech
         : seedTechId;
 
-  const state = await ensureStockSeeded(seedTechId);
+  await ensureStockSeeded(seedTechId);
+
+  let moveNotice = "";
+  if (user.role === "owner") {
+    const moved = await assignCurrentStockToChampionAction();
+    if (!moved.ok && moved.error) {
+      moveNotice = moved.error;
+    } else if (moved.movedQty > 0) {
+      moveNotice = `Moved ${moved.movedQty} units (${moved.movedItems} parts) to ${moved.partnerName || "Champion"}. Garage Guys is empty — fill it when you are ready.`;
+    }
+  }
+
+  const [partners, state] = await Promise.all([listPartnersAction(), loadStockState()]);
   const showPrices = user.role === "owner";
   const isTechOnly = user.role === "technician";
   const canManage = !isTechOnly;
@@ -79,8 +90,12 @@ export default async function StockPage({
     .filter((p) => p.active && p.has_own_stock && !p.id.startsWith("seed-"))
     .map((p) => ({ id: p.id, name: p.name }));
   const stockOwners = [{ id: "gg", name: "Garage Guys" }, ...partnerWarehouses];
+  const ggTotal = state.items.reduce((sum, item) => sum + masterQty(state, item.id), 0);
+  const championOwner = partnerWarehouses.find((p) => /champion/i.test(p.name));
+  const defaultOwner =
+    ggTotal === 0 && championOwner ? championOwner.id : "gg";
   const stockOwner =
-    params.owner && stockOwners.some((o) => o.id === params.owner) ? params.owner : "gg";
+    params.owner && stockOwners.some((o) => o.id === params.owner) ? params.owner : defaultOwner;
 
   const rows = state.items.map((item) => {
     const vans: Record<string, number> = {};
@@ -116,6 +131,7 @@ export default async function StockPage({
       stockOwners={stockOwners}
       stockOwner={stockOwner}
       partnerWarehouseCount={partnerWarehouses.length}
+      notice={moveNotice}
     />
   );
 
