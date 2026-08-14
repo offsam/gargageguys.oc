@@ -67,28 +67,33 @@ export function FieldInvoiceWizard({
   const [paymentType, setPaymentType] = useState(invoice.payment_type || "Credit Card");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef(false);
+  const [hasInk, setHasInk] = useState(false);
+  const SIGN_PAD_HEIGHT = 280;
 
   useEffect(() => {
     setInvoice(initial);
   }, [initial]);
 
   useEffect(() => {
+    if (invoice.status !== "payment_confirmed" && invoice.status !== "signed") return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const ratio = window.devicePixelRatio || 1;
     const width = canvas.clientWidth || 320;
-    const height = 160;
+    const height = SIGN_PAD_HEIGHT;
     canvas.width = width * ratio;
     canvas.height = height * ratio;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(ratio, ratio);
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.strokeStyle = "#0f2340";
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, width, height);
+    setHasInk(false);
   }, [invoice.status]);
 
   const active = stepIndex(invoice.status);
@@ -114,15 +119,25 @@ export function FieldInvoiceWizard({
   function pointerPos(e: React.PointerEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const scaleX = canvas.clientWidth / rect.width;
+    const scaleY = canvas.clientHeight / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
   }
 
   function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
+    e.preventDefault();
     drawing.current = true;
-    canvas.setPointerCapture(e.pointerId);
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
     const p = pointerPos(e);
     ctx.beginPath();
     ctx.moveTo(p.x, p.y);
@@ -130,15 +145,27 @@ export function FieldInvoiceWizard({
 
   function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
     if (!drawing.current) return;
+    e.preventDefault();
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
     const p = pointerPos(e);
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
+    setHasInk(true);
   }
 
-  function onPointerUp() {
+  function onPointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
     drawing.current = false;
+    const canvas = canvasRef.current;
+    if (canvas) {
+      try {
+        if (canvas.hasPointerCapture(e.pointerId)) {
+          canvas.releasePointerCapture(e.pointerId);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   function clearSignature() {
@@ -146,24 +173,42 @@ export function FieldInvoiceWizard({
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, canvas.clientWidth, 160);
+    ctx.fillRect(0, 0, canvas.clientWidth, SIGN_PAD_HEIGHT);
+    setHasInk(false);
+    setError("");
   }
 
-  function submitSignature() {
+  function submitSignature(andFinish: boolean) {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const blank = document.createElement("canvas");
-    blank.width = canvas.width;
-    blank.height = canvas.height;
-    const isBlank = canvas.toDataURL() === blank.toDataURL();
-    if (isBlank) {
-      setError("Client signature required");
+    if (!hasInk && !invoice.signature_data) {
+      setError("Ask the client to sign first");
       return;
     }
     const fd = new FormData();
     fd.set("jobId", jobId);
     fd.set("signatureData", canvas.toDataURL("image/png"));
-    run(() => saveSignatureAction(fd));
+    setError("");
+    startTransition(async () => {
+      const saved = await saveSignatureAction(fd);
+      if (!saved.ok) {
+        setError(saved.error || "Could not save signature");
+        return;
+      }
+      if (saved.invoice) setInvoice(saved.invoice);
+      if (!andFinish) {
+        router.refresh();
+        return;
+      }
+      const done = await completeInvoiceAction(jobId);
+      if (!done.ok) {
+        setError(done.error || "Signature saved — tap Finish again");
+        if (saved.invoice) setInvoice(saved.invoice);
+        return;
+      }
+      if (done.invoice) setInvoice(done.invoice);
+      router.refresh();
+    });
   }
 
   if (jobStatus !== "on_site" && jobStatus !== "done" && invoice.status === "draft" && !invoice.lines.length) {
@@ -391,33 +436,49 @@ export function FieldInvoiceWizard({
       )}
 
       {(invoice.status === "payment_confirmed" || invoice.status === "signed") && (
-        <div className="field-detail-card">
+        <div className="field-detail-card inv-sign-card">
           <h3>Client signature</h3>
-          <p className="field-muted">Have the customer sign with their finger.</p>
+          <p className="field-muted">Ask the customer to sign in the box with their finger.</p>
           <canvas
             ref={canvasRef}
             className="inv-sign-pad"
+            style={{ height: SIGN_PAD_HEIGHT }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           />
+          {!hasInk && !invoice.signature_data ? (
+            <p className="inv-sign-hint">Sign above, then tap the green button.</p>
+          ) : (
+            <p className="inv-sign-hint inv-sign-hint--ready">Signature ready — save below.</p>
+          )}
           <div className="inv-sign-actions">
-            <button type="button" onClick={clearSignature} disabled={pending}>
+            <button
+              type="button"
+              className="inv-sign-clear"
+              onClick={clearSignature}
+              disabled={pending}
+            >
               Clear
             </button>
-            <button type="button" className="inv-primary" disabled={pending} onClick={submitSignature}>
-              Save signature
+            <button
+              type="button"
+              className="inv-primary inv-sign-save"
+              disabled={pending || (!hasInk && !invoice.signature_data)}
+              onClick={() => submitSignature(true)}
+            >
+              {pending ? "Saving…" : "Save signature & finish"}
             </button>
           </div>
-          {invoice.signature_data ? (
+          {invoice.signature_data && invoice.status === "signed" ? (
             <button
               type="button"
               className="inv-primary"
               disabled={pending}
               onClick={() => run(() => completeInvoiceAction(jobId))}
             >
-              Finish — finalize invoice
+              Finish invoice
             </button>
           ) : null}
         </div>

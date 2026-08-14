@@ -2176,6 +2176,151 @@ body.sheet-col-resizing * {
   line-height: 16px;
 }
 
+.ads-campaign-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.ads-campaign {
+  background: #fff;
+  border: 1px solid var(--bos-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--bos-shadow);
+}
+
+.ads-campaign.is-open {
+  border-color: #93c5fd;
+}
+
+.ads-campaign-head {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1.6fr) repeat(4, minmax(4.5rem, auto));
+  gap: 0.55rem;
+  align-items: center;
+  text-align: left;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0.7rem 0.85rem;
+  font: inherit;
+  color: var(--bos-text);
+  cursor: pointer;
+}
+
+.ads-campaign-head:hover {
+  background: var(--bos-accent-2-soft);
+}
+
+.ads-campaign-chevron {
+  color: var(--bos-muted);
+  font-size: 0.85rem;
+}
+
+.ads-campaign-name {
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ads-campaign-stat {
+  font-size: 0.8rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.ads-campaign-stat.muted {
+  color: var(--bos-muted);
+  font-weight: 500;
+}
+
+.ads-campaign-body {
+  border-top: 1px solid var(--bos-border);
+  padding: 0.85rem;
+  background: #fafbfd;
+}
+
+.ads-lead-summary {
+  margin: 0 0 0.55rem;
+  font-size: 0.86rem;
+  color: var(--bos-muted);
+}
+
+.ads-crm-pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.18rem 0.45rem;
+  text-decoration: none;
+}
+
+.ads-crm-pill.is-in {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.ads-crm-pill.is-out {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+@media (max-width: 900px) {
+  .ads-campaign-head {
+    grid-template-columns: 1rem 1fr;
+    grid-auto-rows: auto;
+  }
+
+  .ads-campaign-stat {
+    display: none;
+  }
+
+  .ads-campaign-name {
+    white-space: normal;
+  }
+}
+
+.ads-campaign-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0 0 0.9rem;
+  max-width: 36rem;
+}
+
+.ads-campaign-picker span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--bos-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ads-campaign-picker select {
+  border: 1px solid var(--bos-border);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+  background: #fff;
+  color: var(--bos-text);
+}
+
+.bos-btn--ghost {
+  background: #fff !important;
+  color: var(--bos-text) !important;
+  border-color: var(--bos-border) !important;
+  font-size: 0.75rem !important;
+  padding: 0.3rem 0.5rem !important;
+}
+
+.ads-row-active td {
+  background: var(--bos-accent-2-soft);
+}
+
 .field-signout {
   appearance: none;
   border: 0;
@@ -2911,18 +3056,53 @@ button.bos-btn:disabled {
 
 .inv-sign-pad {
   width: 100%;
-  height: 160px;
+  height: 280px;
+  min-height: 280px;
   touch-action: none;
-  border: 1px dashed var(--bos-border-strong);
-  border-radius: 10px;
+  border: 2px solid var(--bos-border-strong);
+  border-radius: 14px;
   background: #fff;
-  margin: 0.4rem 0 0.55rem;
+  margin: 0.5rem 0 0.65rem;
+  display: block;
+  position: relative;
+  z-index: 1;
+  box-shadow: inset 0 0 0 1px rgba(15, 35, 64, 0.04);
+}
+
+.inv-sign-hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.9rem;
+  color: var(--bos-muted);
+}
+
+.inv-sign-hint--ready {
+  color: var(--bos-ok);
+  font-weight: 650;
 }
 
 .inv-sign-actions {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.55rem;
   margin-bottom: 0.35rem;
+  position: relative;
+  z-index: 2;
+}
+
+.inv-sign-clear {
+  min-height: 48px;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.inv-sign-save {
+  margin-top: 0 !important;
+  min-height: 56px;
+  font-size: 1.05rem;
+}
+
+.inv-sign-save:disabled {
+  opacity: 0.45;
 }
 
 .inv-sign-preview {
@@ -2931,6 +3111,26 @@ button.bos-btn:disabled {
   border-radius: 8px;
   background: #fff;
   margin-top: 0.5rem;
+}
+
+@media (min-width: 720px) {
+  .inv-sign-pad {
+    height: 320px;
+    min-height: 320px;
+  }
+
+  .inv-sign-actions {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .inv-sign-clear {
+    flex: 0 0 120px;
+  }
+
+  .inv-sign-save {
+    flex: 1;
+  }
 }
 
 .inv-done code {
