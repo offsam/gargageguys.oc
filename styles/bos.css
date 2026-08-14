@@ -1203,9 +1203,49 @@ body.sheet-col-resizing * {
   cursor: text;
 }
 
-.sheet-date {
+.sheet-addr-cell {
+  overflow: visible !important;
+  z-index: 4;
+}
+
+.addr-ac {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.addr-ac-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 30;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--bos-border-strong);
+  border-radius: 8px;
+  box-shadow: var(--bos-shadow);
+  max-height: 220px;
+  overflow: auto;
+}
+
+.addr-ac-list button {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+  color: var(--bos-text);
   cursor: pointer;
-  min-width: 118px;
+}
+
+.addr-ac-list button:hover,
+.addr-ac-list button:focus {
+  background: #eef6ff;
 }
 
 .sheet-date::-webkit-calendar-picker-indicator {

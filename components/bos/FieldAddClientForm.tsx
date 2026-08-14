@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { createFieldClientJobAction } from "@/app/actions/field";
+import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 
 function defaultVisitLocal(): string {
   const d = new Date();
@@ -22,6 +22,8 @@ export function FieldAddClientForm() {
   const defaultVisit = useMemo(() => defaultVisitLocal(), []);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const [address, setAddress] = useState("");
+  const [zip, setZip] = useState("");
 
   function onSubmit(formData: FormData) {
     setError("");
@@ -50,11 +52,22 @@ export function FieldAddClientForm() {
       </label>
       <label>
         <span>Address</span>
-        <input name="address" required disabled={pending} />
+        <AddressAutocomplete
+          name="address"
+          value={address}
+          onChange={setAddress}
+          onSelect={(item) => {
+            setAddress(item.label);
+            if (item.zip) setZip(item.zip);
+          }}
+          placeholder="Start typing address…"
+          disabled={pending}
+          required
+        />
       </label>
       <label>
         <span>ZIP</span>
-        <input name="zip" disabled={pending} />
+        <input name="zip" value={zip} onChange={(e) => setZip(e.target.value)} disabled={pending} />
       </label>
       <label>
         <span>Problem</span>

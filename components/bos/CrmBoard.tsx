@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createCrmClientAction, deleteCrmLeadAction, updateLeadJobStatusAction } from "@/app/actions/crm";
 import { SHEET_STATUSES, type SheetStatus } from "@/lib/leads/stage-sync";
+import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 
 export type CrmLeadCard = {
   id: string;
@@ -287,9 +288,14 @@ export function CrmBoard({
               </label>
               <label className="crm-span-2">
                 Address
-                <input
+                <AddressAutocomplete
                   value={form.clientAddress}
-                  onChange={(e) => setField("clientAddress", e.target.value)}
+                  onChange={(value) => setField("clientAddress", value)}
+                  onSelect={(item) => {
+                    setField("clientAddress", item.label);
+                    if (item.zip && !form.zip) setField("zip", item.zip);
+                  }}
+                  placeholder="Start typing address…"
                 />
               </label>
               <label>

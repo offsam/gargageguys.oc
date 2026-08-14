@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveSheetRowAction, deleteSheetRowAction } from "@/app/actions/sheet";
+import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { SHEET_STATUSES } from "@/lib/leads/stage-sync";
 import {
   WORK_SOURCES,
@@ -921,6 +921,32 @@ export function SheetTable({
                             onChange={(e) => {
                               if (!editable) return;
                               patchRow(row.id, { date: e.target.value || todayISO() }, true);
+                            }}
+                          />
+                        </td>
+                      );
+                    }
+
+                    if (col.key === "clientAddress") {
+                      return (
+                        <td key={col.key} className={`${cellClass || ""} sheet-addr-cell`.trim()}>
+                          <AddressAutocomplete
+                            className="sheet-cell"
+                            value={row.clientAddress}
+                            disabled={!editable}
+                            readOnly={!editable}
+                            placeholder={editable ? "Start typing address…" : ""}
+                            onChange={(value) => {
+                              if (!editable) return;
+                              patchRow(row.id, { clientAddress: value }, false);
+                            }}
+                            onSelect={(item) => {
+                              if (!editable) return;
+                              patchRow(row.id, { clientAddress: item.label }, true);
+                            }}
+                            onBlur={() => {
+                              if (!editable) return;
+                              queuePersist(row.id);
                             }}
                           />
                         </td>
