@@ -535,6 +535,21 @@ textarea {
 }
 
 .kanban-card-meta {
+  margin: 0.35rem 0 0.45rem;
+  font-size: 0.78rem;
+  color: var(--bos-muted);
+}
+
+.kanban-card-note {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 0.3rem;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--bos-muted);
+}
   margin-top: 6px;
   font-size: 0.8rem;
   color: var(--bos-muted);
@@ -684,7 +699,8 @@ textarea {
 }
 
 .crm-add-form input,
-.crm-add-form select {
+.crm-add-form select,
+.crm-add-form textarea {
   border: 1px solid var(--bos-border);
   border-radius: 8px;
   padding: 0.5rem 0.6rem;
@@ -694,6 +710,12 @@ textarea {
   letter-spacing: 0;
   color: var(--bos-text);
   background: #fff;
+  font-family: inherit;
+}
+
+.crm-add-form textarea {
+  resize: vertical;
+  min-height: 4.5rem;
 }
 
 .crm-span-2 {

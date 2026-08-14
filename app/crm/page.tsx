@@ -91,6 +91,7 @@ export default async function CrmPage() {
       bankFee: pick(meta, "bankFee", "bank_fee"),
       partsCost: pick(meta, "partsCost", "parts_cost"),
       techSalary: pick(meta, "techSalary", "tech_salary"),
+      description: pick(meta, "description", "notes", "note"),
       createdAt: lead.created_at,
     };
   });

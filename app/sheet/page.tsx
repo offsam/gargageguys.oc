@@ -108,6 +108,7 @@ export default async function SheetPage() {
       partsCost: pick(meta, "partsCost", "parts_cost"),
       technician: pick(meta, "technician", "tech_name") || fromAssignee,
       techSalary: pick(meta, "techSalary", "tech_salary"),
+      description: pick(meta, "description", "notes", "note"),
     };
   });
 

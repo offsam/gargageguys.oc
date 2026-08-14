@@ -22,7 +22,8 @@ export type SheetColumnKey =
   | "bankFee"
   | "partsCost"
   | "technician"
-  | "techSalary";
+  | "techSalary"
+  | "description";
 
 const ALWAYS: SheetColumnKey[] = ["workSource"];
 
@@ -37,6 +38,7 @@ const SHARED: SheetColumnKey[] = [
   "checkNumber",
   "jobCost",
   "technician",
+  "description",
 ];
 
 const OWN_ONLY: SheetColumnKey[] = [

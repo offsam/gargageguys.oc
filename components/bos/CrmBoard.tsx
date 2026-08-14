@@ -35,6 +35,7 @@ export type CrmLeadCard = {
   bankFee: string;
   partsCost: string;
   techSalary: string;
+  description: string;
   createdAt: string;
 };
 
@@ -76,6 +77,7 @@ const EMPTY_FORM = {
   partsCost: "",
   technician: "",
   techSalary: "",
+  description: "",
 };
 
 function formFromLead(lead: CrmLeadCard): typeof EMPTY_FORM {
@@ -99,6 +101,7 @@ function formFromLead(lead: CrmLeadCard): typeof EMPTY_FORM {
     partsCost: lead.partsCost,
     technician: lead.technician,
     techSalary: lead.techSalary,
+    description: lead.description,
   };
 }
 
@@ -337,6 +340,9 @@ export function CrmBoard({
                 </div>
                 {lead.address ? <span>{lead.address}</span> : null}
                 {lead.phone ? <span>{lead.phone}</span> : null}
+                {lead.description ? (
+                  <span className="kanban-card-note">{lead.description}</span>
+                ) : null}
                 <div className="kanban-card-meta">
                   {[lead.source, lead.jobType, lead.technician].filter(Boolean).join(" · ") ||
                     "—"}
@@ -544,6 +550,15 @@ export function CrmBoard({
                 <input
                   value={form.techSalary}
                   onChange={(e) => setField("techSalary", e.target.value)}
+                />
+              </label>
+              <label className="crm-span-2">
+                Description
+                <textarea
+                  rows={3}
+                  value={form.description}
+                  onChange={(e) => setField("description", e.target.value)}
+                  placeholder="Client refused, no-show reason, extra notes about this job…"
                 />
               </label>
               {formError ? <p className="crm-form-error crm-span-2">{formError}</p> : null}

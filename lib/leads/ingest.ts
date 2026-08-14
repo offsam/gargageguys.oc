@@ -110,6 +110,7 @@ export async function ingestLead(input: IngestLeadInput) {
     partsCost: "",
     technician: "",
     techSalary: "",
+    description: "",
     phone,
     zip,
     preferredDate: input.preferredDate || "",

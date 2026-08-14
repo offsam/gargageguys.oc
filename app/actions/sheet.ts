@@ -24,6 +24,7 @@ export type SheetSaveInput = {
   partsCost: string;
   technician: string;
   techSalary: string;
+  description: string;
 };
 
 function sheetMeta(input: SheetSaveInput) {
@@ -45,6 +46,7 @@ function sheetMeta(input: SheetSaveInput) {
     partsCost: input.partsCost,
     technician: input.technician,
     techSalary: input.techSalary,
+    description: input.description,
   };
 }
 
@@ -98,6 +100,7 @@ export async function saveSheetRowAction(
     input.partsCost,
     input.technician,
     input.techSalary,
+    input.description,
   ].some((v) => String(v || "").trim());
 
   if (!hasContent && isTempId(input.id)) {

@@ -50,6 +50,7 @@ function crmSheetInput(formData: FormData, id: string, jobStatus: string): Sheet
     partsCost: String(formData.get("partsCost") || "").trim(),
     technician: String(formData.get("technician") || "").trim(),
     techSalary: String(formData.get("techSalary") || "").trim(),
+    description: String(formData.get("description") || "").trim(),
   };
 }
 

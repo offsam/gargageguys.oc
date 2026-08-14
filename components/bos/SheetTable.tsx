@@ -34,6 +34,7 @@ export type SheetRow = {
   partsCost: string;
   technician: string;
   techSalary: string;
+  description: string;
 };
 
 export type StockPartOption = {
@@ -96,6 +97,7 @@ const COLUMNS: Array<{
     options: "technician",
   },
   { key: "techSalary", label: "Tech salary", width: 110, money: true },
+  { key: "description", label: "Description", width: 220 },
 ];
 
 const PROFIT_DEFAULT_WIDTH = 110;
@@ -191,6 +193,7 @@ function emptyRow(index: number): SheetRow {
     partsCost: "",
     technician: "",
     techSalary: "",
+    description: "",
   };
 }
 
@@ -316,6 +319,7 @@ function rowHasWork(row: SheetRow): boolean {
     row.partsCost,
     row.technician,
     row.techSalary,
+    row.description,
   ].some((v) => String(v || "").trim());
 }
 
@@ -515,6 +519,7 @@ export function SheetTable({
       row.partsCost,
       row.technician,
       row.techSalary,
+      row.description,
     ].some((v) => String(v || "").trim());
 
     if (isTemp && !hasContent) {
@@ -570,6 +575,7 @@ export function SheetTable({
       row.partsCost,
       row.technician,
       row.techSalary,
+      row.description,
     ].some((v) => String(v || "").trim());
   }
 
