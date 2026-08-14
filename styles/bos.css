@@ -1181,17 +1181,27 @@ body.sheet-col-resizing * {
 }
 
 .sheet-cell-muted {
-  background: #f1f5f9 !important;
-  opacity: 0.55;
+  background: #e8eef4 !important;
 }
 
 .sheet-cell-muted .sheet-cell,
 .sheet-cell-muted .sheet-select,
 .sheet-cell-muted .sheet-combo,
 .sheet-cell-muted .sheet-date {
-  color: #64748b;
+  color: #94a3b8;
   cursor: not-allowed;
-  pointer-events: none;
+}
+
+/* Never mute hit-testing on Work source — opacity on siblings was eating clicks */
+.sheet-cell-work-source,
+.sheet-cell-work-source .sheet-select {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  color: var(--bos-text) !important;
+  background: #fff7ed !important;
+  position: relative;
+  z-index: 2;
 }
 
 .sheet-row-partner .sheet-profit .sheet-cell {

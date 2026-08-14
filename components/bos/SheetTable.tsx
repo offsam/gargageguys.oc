@@ -454,7 +454,7 @@ export function SheetTable({
     });
   }
 
-  function persistRow(row: SheetRow) {
+  function persistRow(row: SheetRow, refresh = true) {
     startTransition(async () => {
       const result = await saveSheetRowAction(row);
       if (!result.ok) {
@@ -468,7 +468,8 @@ export function SheetTable({
       }
       setStatus("Saved");
       window.setTimeout(() => setStatus(""), 1200);
-      router.refresh();
+      // Refresh after workSource toggle was snapping the select back mid-click.
+      if (refresh) router.refresh();
     });
   }
 
@@ -481,7 +482,10 @@ export function SheetTable({
         saved = next;
         return next;
       });
-      if (save && saved) persistRow(saved);
+      if (save && saved) {
+        const sourceToggle = Object.prototype.hasOwnProperty.call(patch, "workSource");
+        persistRow(saved, !sourceToggle);
+      }
       return nextRows;
     });
   }
@@ -626,15 +630,24 @@ export function SheetTable({
                     );
 
                     if (col.kind === "select") {
+                      const isWorkSource = col.key === "workSource";
                       return (
-                        <td key={col.key} className={cellClass}>
+                        <td
+                          key={col.key}
+                          className={[cellClass, isWorkSource ? "sheet-cell-work-source" : ""]
+                            .filter(Boolean)
+                            .join(" ")}
+                        >
                           <select
                             className="sheet-cell sheet-select"
                             value={row[col.key]}
-                            disabled={!editable}
-                            tabIndex={editable ? 0 : -1}
+                            disabled={!editable && !isWorkSource}
+                            tabIndex={editable || isWorkSource ? 0 : -1}
+                            onMouseDown={(e) => {
+                              if (isWorkSource) e.stopPropagation();
+                            }}
                             onChange={(e) => {
-                              if (!editable) return;
+                              if (!editable && !isWorkSource) return;
                               if (col.key === "parts") {
                                 onPartsChange(row.id, e.target.value, row.workSource);
                                 return;
