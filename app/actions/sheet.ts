@@ -138,8 +138,7 @@ function revalidateRelatedSurfaces() {
   revalidatePath("/stock");
 }
 
-async function workOrderNumber(leadId: string, address: string): Promise<string> {
-  if (!String(address || "").trim()) return "";
+async function workOrderNumber(leadId: string): Promise<string> {
   try {
     const wo = await ensureLeadWorkOrder({ leadId });
     const label = formatJobNumber(wo.jobNumber);
@@ -241,7 +240,7 @@ export async function saveSheetRowAction(
       } catch {
         /* stock pull is best-effort */
       }
-      const jobNumber = await workOrderNumber(data!.id, input.clientAddress);
+      const jobNumber = await workOrderNumber(data!.id);
       if (!opts?.silent) revalidateRelatedSurfaces();
       return { ok: true, id: data!.id, jobNumber };
     }
@@ -294,7 +293,7 @@ export async function saveSheetRowAction(
     } catch {
       /* stock pull is best-effort */
     }
-    const jobNumber = await workOrderNumber(input.id, input.clientAddress);
+    const jobNumber = await workOrderNumber(input.id);
     if (!opts?.silent) revalidateRelatedSurfaces();
     return { ok: true, id: input.id, jobNumber };
   } catch (err) {

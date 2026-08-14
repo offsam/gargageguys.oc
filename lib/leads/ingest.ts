@@ -1,6 +1,9 @@
+import { revalidatePath } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { LeadStage } from "@/lib/supabase/types";
 import { stageFromSheetStatus, type SheetStatus } from "@/lib/leads/stage-sync";
+import { ensureLeadWorkOrder } from "@/lib/field/job-invoice";
+import { formatJobNumber } from "@/lib/field/job-invoice-types";
 
 export type IngestLeadInput = {
   name: string;
@@ -129,6 +132,7 @@ export async function ingestLead(input: IngestLeadInput) {
       name,
       phone,
       zip,
+      address: address || null,
       message: input.message || null,
       problem: input.problem || input.message || null,
       source: leadSource,
@@ -149,6 +153,15 @@ export async function ingestLead(input: IngestLeadInput) {
 
   if (leadError) throw leadError;
 
+  let jobNumberLabel = "";
+  try {
+    const wo = await ensureLeadWorkOrder({ leadId: lead.id });
+    const label = formatJobNumber(wo.jobNumber);
+    if (label !== "—") jobNumberLabel = label;
+  } catch {
+    /* numbering is best-effort */
+  }
+
   const title = `Lead: ${name} (${zip || address || "OC"})`;
   const { data: inbox, error: inboxError } = await supabase
     .from("inbox_items")
@@ -158,7 +171,7 @@ export async function ingestLead(input: IngestLeadInput) {
       title,
       body: input.message || null,
       source: leadSource,
-      payload: { ...input, leadId: lead.id, metadata },
+      payload: { ...input, leadId: lead.id, metadata, jobNumber: jobNumberLabel },
       status: "new",
     })
     .select("id")
@@ -166,5 +179,9 @@ export async function ingestLead(input: IngestLeadInput) {
 
   if (inboxError) throw inboxError;
 
-  return { leadId: lead.id, inboxItemId: inbox.id, customerId };
+  revalidatePath("/sheet");
+  revalidatePath("/crm");
+  revalidatePath("/clients");
+
+  return { leadId: lead.id, inboxItemId: inbox.id, customerId, jobNumber: jobNumberLabel };
 }

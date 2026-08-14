@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
+import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
 import { SHEET_STATUSES, completeBlockedReason } from "@/lib/leads/stage-sync";
 import { FIELD_SERVICE_NAMES } from "@/lib/field/services-catalog";
 import {
@@ -390,15 +391,6 @@ function withClientKeys(rows: SheetRow[]): SheetRow[] {
   }));
 }
 
-function padBlankRows(rows: SheetRow[]): SheetRow[] {
-  const blanks = rows.filter((row) => !rowHasWork(row));
-  if (blanks.length >= 8) return rows;
-  return [
-    ...rows,
-    ...Array.from({ length: 8 - blanks.length }, (_, i) => emptyRow(rows.length + i)),
-  ];
-}
-
 function mergeLiveRows(live: SheetRow[], server: SheetRow[]): SheetRow[] {
   const serverById = new Map(
     server.filter((row) => !row.id.startsWith("new-")).map((row) => [row.id, row]),
@@ -423,18 +415,13 @@ function mergeLiveRows(live: SheetRow[], server: SheetRow[]): SheetRow[] {
   for (const leftover of serverById.values()) {
     out.push(leftover);
   }
-  return padBlankRows(out);
+  return out;
 }
 
 function seedRows(initialRows: SheetRow[]): SheetRow[] {
   const seeded = withClientKeys(initialRows);
-  const extras = Math.max(8, 14 - seeded.length);
-  const next = [
-    ...seeded,
-    ...Array.from({ length: extras }, (_, i) => emptyRow(i)),
-  ];
-  if (!liveRowsCache?.length) return next;
-  return mergeLiveRows(liveRowsCache, next);
+  if (!liveRowsCache?.length) return seeded;
+  return mergeLiveRows(liveRowsCache, seeded);
 }
 
 function rememberRows(rows: SheetRow[]) {
@@ -464,6 +451,7 @@ export function SheetTable({
   stockParts?: StockPartOption[];
   partners?: SheetPartner[];
 }) {
+  useBosLiveRefresh(["leads", "jobs"]);
   const [rows, setRows] = useState<SheetRow[]>(() => seedRows(initialRows));
   const [status, setStatus] = useState<string>("");
   const [pending, setPending] = useState(false);
@@ -481,11 +469,24 @@ export function SheetTable({
   const persistTimersRef = useRef<Map<string, number>>(new Map());
   const pendingDrainRef = useRef<Set<string>>(new Set());
   const releaseQueuedRef = useRef(false);
+  const initialRowsRef = useRef(initialRows);
 
   useEffect(() => {
     rowsRef.current = rows;
     rememberRows(rows);
   }, [rows]);
+
+  useEffect(() => {
+    // Soft-merge server snapshot (Meta/website inserts, other tabs) without wiping edits.
+    if (initialRowsRef.current === initialRows) return;
+    initialRowsRef.current = initialRows;
+    setRows((prev) => {
+      const next = mergeLiveRows(prev, withClientKeys(initialRows));
+      rowsRef.current = next;
+      rememberRows(next);
+      return next;
+    });
+  }, [initialRows]);
 
   useEffect(() => {
     setWidths(loadWidths());
@@ -829,6 +830,69 @@ export function SheetTable({
     patchRow(rowId, patch, true);
   }
 
+  async function addNewRow() {
+    if (pending) return;
+    const draft: SheetRow = {
+      ...emptyRow(Date.now()),
+      workSource: "Garage Guys",
+      jobStatus: "Waiting",
+      date: todayISO(),
+    };
+    releaseQueuedRef.current = false;
+    frozenIdsRef.current = null;
+    setFreezeOrder(false);
+    setRows((prev) => {
+      const next = [draft, ...prev];
+      rowsRef.current = next;
+      rememberRows(next);
+      return next;
+    });
+    dirtyIdsRef.current.add(rowKey(draft));
+    setPending(true);
+    setStatus("Creating…");
+    try {
+      const result = await postSheetRow(draft);
+      if (!result.ok) {
+        setStatus(result.error || "Could not create row");
+        setRows((prev) => {
+          const next = prev.filter((r) => rowKey(r) !== rowKey(draft));
+          rowsRef.current = next;
+          rememberRows(next);
+          return next;
+        });
+        dirtyIdsRef.current.delete(rowKey(draft));
+        return;
+      }
+      const nextId = result.id || draft.id;
+      const nextJob = result.jobNumber || "";
+      setRows((prev) => {
+        const next = prev.map((r) =>
+          rowKey(r) === rowKey(draft)
+            ? { ...r, id: nextId, jobNumber: nextJob || r.jobNumber }
+            : r,
+        );
+        rowsRef.current = next;
+        rememberRows(next);
+        return next;
+      });
+      dirtyIdsRef.current.delete(rowKey(draft));
+      setStatus(nextJob ? `Saved · ${nextJob}` : "Saved");
+      window.setTimeout(() => setStatus(""), 1600);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not create row";
+      setStatus(message);
+      setRows((prev) => {
+        const next = prev.filter((r) => rowKey(r) !== rowKey(draft));
+        rowsRef.current = next;
+        rememberRows(next);
+        return next;
+      });
+      dirtyIdsRef.current.delete(rowKey(draft));
+    } finally {
+      setPending(false);
+    }
+  }
+
   function selectOptions(
     kind: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource" | "partner" | "service" | undefined,
   ) {
@@ -872,15 +936,14 @@ export function SheetTable({
   }, [partners, rows]);
 
   const sortedRows = useMemo(() => {
-    const filled = rows.filter(rowHasWork);
-    const blanks = rows.filter((row) => !rowHasWork(row));
-    filled.sort((a, b) => {
+    const next = [...rows];
+    next.sort((a, b) => {
       const da = dateSortValue(a);
       const db = dateSortValue(b);
       if (da === db) return 0;
       return dateSort === "newest" ? (da < db ? 1 : -1) : da < db ? -1 : 1;
     });
-    return [...filled, ...blanks];
+    return next;
   }, [rows, dateSort]);
 
   const displayRows = useMemo(() => {
@@ -927,7 +990,17 @@ export function SheetTable({
         ))}
       </datalist>
       <div className="sheet-table-bar">
-        <div className="sheet-status">{pending ? "Saving…" : status}</div>
+        <div className="sheet-table-bar-left">
+          <button
+            type="button"
+            className="emp-add-btn"
+            onClick={() => void addNewRow()}
+            disabled={pending}
+          >
+            + Add row
+          </button>
+          <div className="sheet-status">{pending ? "Saving…" : status}</div>
+        </div>
         <label className="sheet-sort">
           Date
           <select
@@ -1289,14 +1362,6 @@ export function SheetTable({
           </tbody>
         </table>
       </div>
-      <button
-        type="button"
-        className="emp-add-btn"
-        style={{ marginTop: "0.75rem" }}
-        onClick={() => setRows((prev) => [...prev, emptyRow(prev.length)])}
-      >
-        + Add row
-      </button>
     </div>
   );
 }

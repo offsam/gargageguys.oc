@@ -1336,6 +1336,13 @@ body.sheet-col-resizing * {
   margin: 0 0 0.5rem;
 }
 
+.sheet-table-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
 .sheet-sort {
   display: inline-flex;
   align-items: center;
