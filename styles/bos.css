@@ -1389,11 +1389,13 @@ body.sheet-col-resizing * {
   cursor: text;
 }
 
-.sheet-addr-cell {
+.sheet-addr-cell,
+.sheet-name-cell {
   overflow: hidden;
 }
 
-.sheet-addr-cell .sheet-cell {
+.sheet-addr-cell .sheet-cell,
+.sheet-name-cell .sheet-cell {
   text-overflow: ellipsis;
 }
 
@@ -1432,6 +1434,19 @@ body.sheet-col-resizing * {
 .addr-ac-list button:hover,
 .addr-ac-list button:focus {
   background: #eef6ff;
+}
+
+.addr-ac-list button strong {
+  display: block;
+  font-weight: 650;
+}
+
+.addr-ac-list button span {
+  display: block;
+  margin-top: 0.12rem;
+  color: var(--bos-muted);
+  font-size: 0.82rem;
+  line-height: 1.25;
 }
 
 .sheet-date::-webkit-calendar-picker-indicator {

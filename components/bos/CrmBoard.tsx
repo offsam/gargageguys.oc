@@ -11,6 +11,7 @@ import {
 } from "@/app/actions/crm";
 import { SHEET_STATUSES, completeBlockedReason, type SheetStatus } from "@/lib/leads/stage-sync";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
+import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
 import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/ScheduleLeadModal";
@@ -415,9 +416,16 @@ export function CrmBoard({
               ) : null}
               <label>
                 Client name
-                <input
+                <ClientAutocomplete
                   value={form.clientName}
-                  onChange={(e) => setField("clientName", e.target.value)}
+                  onChange={(value) => setField("clientName", value)}
+                  onSelect={(client) => {
+                    setField("clientName", client.name);
+                    if (client.address) setField("clientAddress", client.address);
+                    if (client.phone) setField("phone", client.phone);
+                    if (client.zip) setField("zip", client.zip);
+                  }}
+                  placeholder="Type name…"
                   autoFocus
                 />
               </label>

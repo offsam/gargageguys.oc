@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
+import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
 import { SHEET_STATUSES, completeBlockedReason } from "@/lib/leads/stage-sync";
 import { FIELD_SERVICE_NAMES } from "@/lib/field/services-catalog";
 import {
@@ -1147,6 +1148,39 @@ export function SheetTable({
                             onChange={(e) => {
                               if (!editable) return;
                               patchRow(row.id, { date: e.target.value || todayISO() }, true);
+                            }}
+                          />
+                        </td>
+                      );
+                    }
+
+                    if (col.key === "clientName") {
+                      return (
+                        <td key={col.key} className={`${cellClass || ""} sheet-name-cell`.trim()}>
+                          <ClientAutocomplete
+                            className="sheet-cell"
+                            value={row.clientName}
+                            disabled={!editable}
+                            readOnly={!editable}
+                            placeholder={editable ? "Type name…" : ""}
+                            onChange={(value) => {
+                              if (!editable) return;
+                              patchRow(row.id, { clientName: value }, false);
+                            }}
+                            onSelect={(client) => {
+                              if (!editable) return;
+                              patchRow(
+                                row.id,
+                                {
+                                  clientName: client.name,
+                                  ...(client.address ? { clientAddress: client.address } : {}),
+                                },
+                                true,
+                              );
+                            }}
+                            onBlur={() => {
+                              if (!editable) return;
+                              queuePersistNow(rowKey(row));
                             }}
                           />
                         </td>
