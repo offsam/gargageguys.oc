@@ -8,6 +8,7 @@ import { signOutAction } from "@/app/actions/auth";
 const LINKS: Array<{ href: string; label: string; roles?: Array<SessionUser["role"]> }> = [
   { href: "/owner", label: "Overview", roles: ["owner"] },
   { href: "/employees", label: "Employees", roles: ["owner"] },
+  { href: "/partners", label: "Partners", roles: ["owner", "office"] },
   { href: "/crm", label: "CRM", roles: ["owner", "office", "dispatcher"] },
   { href: "/sheet", label: "Sheet", roles: ["owner", "office", "dispatcher"] },
   { href: "/stock", label: "Stock", roles: ["owner", "office", "dispatcher", "technician"] },

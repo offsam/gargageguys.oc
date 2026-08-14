@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { loadStockState } from "@/lib/stock/store";
 import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
+import { listPartnersAction } from "@/app/actions/partners";
 import { STAGE_TO_STATUS, sheetStatusFromLead } from "@/lib/leads/stage-sync";
 
 function asMeta(value: unknown): Record<string, unknown> {
@@ -28,7 +29,7 @@ export default async function SheetPage() {
   const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();
 
-  const [{ data: leads }, { data: techProfiles }, stockState] = await Promise.all([
+  const [{ data: leads }, { data: techProfiles }, stockState, partners] = await Promise.all([
     supabase
       .from("leads")
       .select(
@@ -42,6 +43,7 @@ export default async function SheetPage() {
       .eq("role", "technician")
       .order("created_at", { ascending: true }),
     loadStockState().catch(() => null),
+    listPartnersAction(),
   ]);
 
   const stockParts = (() => {
@@ -113,6 +115,11 @@ export default async function SheetPage() {
     };
   });
 
+  const partnerNames = partners
+    .filter((p) => p.active && p.name)
+    .map((p) => p.name)
+    .sort((a, b) => a.localeCompare(b));
+
   return (
     <BosShell
       user={user}
@@ -130,7 +137,12 @@ export default async function SheetPage() {
         </div>
         <span className="bos-badge scheduled">Synced with CRM</span>
       </div>
-      <SheetTable rows={rows} technicians={technicianNames} stockParts={stockParts} />
+      <SheetTable
+        rows={rows}
+        technicians={technicianNames}
+        stockParts={stockParts}
+        partners={partnerNames}
+      />
     </BosShell>
   );
 }

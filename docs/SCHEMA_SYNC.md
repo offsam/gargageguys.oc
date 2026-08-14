@@ -11,6 +11,7 @@ If creating a client/lead fails with **address** or missing table errors, run th
 | `leads.address` | Required for Sheet/CRM/Field |
 | `job_invoices` | Field invoice + signature flow |
 | `jobs.job_number` / `job_invoices.job_number` | Human Job # (`GG-1001`…) on invoices |
+| `partners` | Partner companies for Sheet Work source |
 | `reviews` / `review_snapshots` | SERM / Overview review counts |
 | `chat_sessions` RLS policy | AI chat |
 
@@ -19,3 +20,7 @@ Core tables from `202608130001_bos_core.sql` must already exist: `profiles`, `cu
 Also run for Job # on invoices:
 
 [`supabase/migrations/202608140004_job_number.sql`](../supabase/migrations/202608140004_job_number.sql)
+
+Also run for Partners:
+
+[`supabase/migrations/202608140005_partners.sql`](../supabase/migrations/202608140005_partners.sql)

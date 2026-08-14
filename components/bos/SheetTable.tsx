@@ -68,12 +68,12 @@ const COLUMNS: Array<{
   label: string;
   width: number;
   kind?: "text" | "select" | "date" | "combo";
-  options?: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource";
+  options?: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource" | "partner";
   money?: boolean;
 }> = [
   { key: "date", label: "Date", width: 130, kind: "date" },
   { key: "workSource", label: "Work source", width: 130, kind: "select", options: "workSource" },
-  { key: "partnerName", label: "Partner", width: 140, kind: "combo" },
+  { key: "partnerName", label: "Partner", width: 160, kind: "select", options: "partner" },
   { key: "leadSource", label: "Lead source", width: 140, kind: "combo", options: "leadSource" },
   { key: "leadCost", label: "Lead cost", width: 100, money: true },
   { key: "clientName", label: "Client name", width: 150 },
@@ -304,10 +304,12 @@ export function SheetTable({
   rows: initialRows,
   technicians,
   stockParts = [],
+  partners = [],
 }: {
   rows: SheetRow[];
   technicians: string[];
   stockParts?: StockPartOption[];
+  partners?: string[];
 }) {
   const router = useRouter();
   const [rows, setRows] = useState<SheetRow[]>(() => {
@@ -616,7 +618,7 @@ export function SheetTable({
   }
 
   function selectOptions(
-    kind: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource" | undefined,
+    kind: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource" | "partner" | undefined,
   ) {
     if (kind === "workSource") return ["", ...WORK_SOURCES];
     if (kind === "payment") return [...PAYMENT_TYPES];
@@ -624,6 +626,13 @@ export function SheetTable({
     if (kind === "technician") return techOptions;
     if (kind === "parts") return partNames;
     if (kind === "leadSource") return ["", ...LEAD_SOURCES];
+    if (kind === "partner") {
+      const set = new Set<string>(partners.filter(Boolean));
+      for (const row of rows) {
+        if (row.partnerName.trim()) set.add(row.partnerName.trim());
+      }
+      return ["", ...[...set].sort((a, b) => a.localeCompare(b))];
+    }
     return [""];
   }
 
@@ -636,12 +645,12 @@ export function SheetTable({
   }, [rows]);
 
   const partnerSuggestions = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>(partners.filter(Boolean));
     for (const row of rows) {
       if (row.partnerName.trim()) set.add(row.partnerName.trim());
     }
     return [...set].sort((a, b) => a.localeCompare(b));
-  }, [rows]);
+  }, [partners, rows]);
 
   const displayRows = useMemo(() => rows, [rows]);
 
