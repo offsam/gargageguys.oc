@@ -157,8 +157,9 @@ export async function loadStockState(options?: {
   if (!text.trim()) return emptyState();
   const state = JSON.parse(text) as StockState;
   if (options?.skipRepair) return state;
-  const removed = stripDuplicatedPartnerWarehouse(state);
-  if (removed <= 0) return state;
+  const removedDupes = stripDuplicatedPartnerWarehouse(state);
+  const splitPairs = splitSpringPairs(state);
+  if (removedDupes <= 0 && splitPairs <= 0) return state;
   await saveStockState(state);
   return {
     ...state,
@@ -350,6 +351,137 @@ export function stripDuplicatedPartnerWarehouse(state: StockState): number {
     if (state.movements.length > 500) state.movements.length = 500;
   }
   return removed;
+}
+
+function springColorFromName(name: string): { size: string; color: "pair" | "red" | "black" } | null {
+  const match = name.trim().match(/^(.+?)\s*\((pair|red|blk|black)\)\s*$/i);
+  if (!match) return null;
+  const label = match[2].toLowerCase();
+  const color = label === "pair" ? "pair" : label === "red" ? "red" : "black";
+  return { size: match[1].trim(), color };
+}
+
+function springSku(size: string, color: "red" | "black") {
+  const stem = size.replace(/\*/g, "-").replace(/\s+/g, "");
+  return `SPR-${stem}-${color === "red" ? "RED" : "BLK"}`;
+}
+
+function ensureSpringColorItem(
+  state: StockState,
+  size: string,
+  color: "red" | "black",
+  template: StockItem,
+): StockItem {
+  const existing = state.items.find((item) => {
+    const parsed = springColorFromName(item.name);
+    return parsed?.size === size && parsed.color === color;
+  });
+  if (existing) {
+    existing.name = `${size} (${color})`;
+    existing.active = true;
+    return existing;
+  }
+  const item: StockItem = {
+    id: randomUUID(),
+    sku: springSku(size, color),
+    name: `${size} (${color})`,
+    category: "Springs",
+    unitCostCents: Math.round((template.unitCostCents || 0) / 2),
+    unit: template.unit || "ea",
+    reorderAt: template.reorderAt || 0,
+    active: true,
+  };
+  state.items.push(item);
+  return item;
+}
+
+/** Drop (pair) spring SKUs: each pair becomes +1 red and +1 black at the same location. */
+export function splitSpringPairs(state: StockState): number {
+  let renamed = 0;
+  for (const item of state.items) {
+    const parsed = springColorFromName(item.name);
+    if (!parsed || parsed.color === "pair") continue;
+    const nextName = `${parsed.size} (${parsed.color})`;
+    if (item.name !== nextName) {
+      item.name = nextName;
+      renamed += 1;
+    }
+  }
+
+  const pairs = state.items.filter((item) => {
+    if (/-PAIR$/i.test(item.sku)) return true;
+    return springColorFromName(item.name)?.color === "pair";
+  });
+  if (pairs.length === 0) return renamed;
+
+  const pairIds = new Set(pairs.map((item) => item.id));
+  let movedPairs = 0;
+
+  for (const pair of pairs) {
+    const parsed = springColorFromName(pair.name);
+    const size =
+      parsed?.size ||
+      pair.name.replace(/\s*\(pair\)\s*$/i, "").trim() ||
+      pair.sku.replace(/^SPR-/, "").replace(/-PAIR$/i, "").replace(/-/g, "*");
+    const red = ensureSpringColorItem(state, size, "red", pair);
+    const black = ensureSpringColorItem(state, size, "black", pair);
+    if (!red.unitCostCents && pair.unitCostCents) {
+      red.unitCostCents = Math.round(pair.unitCostCents / 2);
+    }
+    if (!black.unitCostCents && pair.unitCostCents) {
+      black.unitCostCents = Math.round(pair.unitCostCents / 2);
+    }
+
+    for (const balance of state.balances) {
+      if (balance.itemId !== pair.id) continue;
+      const qty = Number(balance.qty) || 0;
+      if (qty <= 0) continue;
+      const currentRed = getBalanceQty(
+        state,
+        red.id,
+        balance.locationType,
+        balance.technicianId,
+        balance.partnerId,
+      );
+      const currentBlack = getBalanceQty(
+        state,
+        black.id,
+        balance.locationType,
+        balance.technicianId,
+        balance.partnerId,
+      );
+      setBalanceQty(
+        state,
+        red.id,
+        balance.locationType,
+        currentRed + qty,
+        balance.technicianId,
+        balance.partnerId,
+      );
+      setBalanceQty(
+        state,
+        black.id,
+        balance.locationType,
+        currentBlack + qty,
+        balance.technicianId,
+        balance.partnerId,
+      );
+      movedPairs += qty;
+    }
+  }
+
+  state.items = state.items.filter((item) => !pairIds.has(item.id));
+  state.balances = state.balances.filter((b) => !pairIds.has(b.itemId));
+  state.movements.unshift({
+    id: randomUUID(),
+    itemId: pairs[0]?.id || "stock",
+    qty: movedPairs,
+    kind: "adjust",
+    note: "Split spring pairs into red and black (1 pair = 1 red + 1 black)",
+    createdAt: new Date().toISOString(),
+  });
+  if (state.movements.length > 500) state.movements.length = 500;
+  return pairs.length + renamed;
 }
 
 export async function ensureStockSeeded(technicianId: string): Promise<StockState> {
