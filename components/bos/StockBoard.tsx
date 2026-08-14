@@ -122,6 +122,7 @@ export function StockBoard({
   isTechOnly,
   stockOwners = [],
   stockOwner = "gg",
+  partnerWarehouseCount = 0,
 }: {
   rows: StockRow[];
   technicians: Tech[];
@@ -131,6 +132,7 @@ export function StockBoard({
   isTechOnly: boolean;
   stockOwners?: { id: string; name: string }[];
   stockOwner?: string;
+  partnerWarehouseCount?: number;
 }) {
   const router = useRouter();
   const partnerMode = stockOwner !== "gg";
@@ -192,17 +194,25 @@ export function StockBoard({
 
   return (
     <div className="stock-board">
-      {!isTechOnly && stockOwners.length > 1 ? (
-        <div className="stock-owner-tabs" role="tablist" aria-label="Stock owner">
-          {stockOwners.map((owner) => (
-            <a
-              key={owner.id}
-              href={owner.id === "gg" ? "/stock" : `/stock?owner=${owner.id}`}
-              className={stockOwner === owner.id ? "active" : undefined}
-            >
-              {owner.name}
-            </a>
-          ))}
+      {!isTechOnly ? (
+        <div className="stock-owner-block">
+          <div className="stock-owner-tabs" role="tablist" aria-label="Stock owner">
+            {(stockOwners.length ? stockOwners : [{ id: "gg", name: "Garage Guys" }]).map((owner) => (
+              <a
+                key={owner.id}
+                href={owner.id === "gg" ? "/stock" : `/stock?owner=${owner.id}`}
+                className={stockOwner === owner.id ? "active" : undefined}
+              >
+                {owner.name}
+              </a>
+            ))}
+          </div>
+          {partnerWarehouseCount < 1 ? (
+            <p className="stock-owner-hint">
+              This is Garage Guys stock (Master / Warehouse / vans). A partner tab appears after
+              you set <strong>Own stock</strong> on Partners and Save.
+            </p>
+          ) : null}
         </div>
       ) : null}
 

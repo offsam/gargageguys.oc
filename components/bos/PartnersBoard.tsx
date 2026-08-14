@@ -195,10 +195,17 @@ export function PartnersBoard({
                         defaultValue={String(partner.tech_percent)}
                         inputMode="decimal"
                       />
-                      <select name="hasOwnStock" defaultValue={partner.has_own_stock ? "true" : "false"}>
-                        <option value="false">Garage Guys stock</option>
-                        <option value="true">Own stock</option>
-                      </select>
+                      <div className="partner-stock-cell">
+                        <select name="hasOwnStock" defaultValue={partner.has_own_stock ? "true" : "false"}>
+                          <option value="false">Garage Guys stock</option>
+                          <option value="true">Own stock</option>
+                        </select>
+                        {partner.has_own_stock && !partner.id.startsWith("seed-") ? (
+                          <a className="partner-stock-link" href={`/stock?owner=${partner.id}`}>
+                            Open stock
+                          </a>
+                        ) : null}
+                      </div>
                       <input name="notes" defaultValue={partner.notes} placeholder="—" />
                       <label className="partner-active">
                         <input type="hidden" name="active" value="false" />

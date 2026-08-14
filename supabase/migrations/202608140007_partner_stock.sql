@@ -51,3 +51,6 @@ where not exists (
   select 1 from public.partners
   where lower(name) = lower('Champion Garage Doors Service')
 );
+
+-- Pick up the new table/column in the API without waiting
+notify pgrst, 'reload schema';

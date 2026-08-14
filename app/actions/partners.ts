@@ -27,7 +27,7 @@ function mapPartner(row: Record<string, unknown>): Partner {
     name: String(row.name || ""),
     notes: typeof row.notes === "string" ? row.notes : "",
     tech_percent: Number(row.tech_percent) || 30,
-    has_own_stock: row.has_own_stock === true,
+    has_own_stock: row.has_own_stock === true || row.has_own_stock === "true",
     active: row.active !== false,
     created_at: String(row.created_at || ""),
   };

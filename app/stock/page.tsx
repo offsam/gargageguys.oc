@@ -75,12 +75,10 @@ export default async function StockPage({
   const isTechOnly = user.role === "technician";
   const canManage = !isTechOnly;
 
-  const stockOwners = [
-    { id: "gg", name: "Garage Guys" },
-    ...partners
-      .filter((p) => p.active && p.has_own_stock && !p.id.startsWith("seed-"))
-      .map((p) => ({ id: p.id, name: p.name })),
-  ];
+  const partnerWarehouses = partners
+    .filter((p) => p.active && p.has_own_stock && !p.id.startsWith("seed-"))
+    .map((p) => ({ id: p.id, name: p.name }));
+  const stockOwners = [{ id: "gg", name: "Garage Guys" }, ...partnerWarehouses];
   const stockOwner =
     params.owner && stockOwners.some((o) => o.id === params.owner) ? params.owner : "gg";
 
@@ -117,6 +115,7 @@ export default async function StockPage({
       isTechOnly={isTechOnly}
       stockOwners={stockOwners}
       stockOwner={stockOwner}
+      partnerWarehouseCount={partnerWarehouses.length}
     />
   );
 

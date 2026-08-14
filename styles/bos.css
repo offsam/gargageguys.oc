@@ -1490,11 +1490,41 @@ body.sheet-col-resizing * {
   border-bottom: 1px solid var(--bos-border);
 }
 
+.partner-stock-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.partner-stock-link {
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--bos-accent-2);
+  text-decoration: none;
+}
+
+.partner-stock-link:hover {
+  text-decoration: underline;
+}
+
+.stock-owner-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.stock-owner-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--bos-muted);
+  line-height: 1.35;
+}
+
 .stock-owner-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin-bottom: 0.15rem;
 }
 
 .stock-owner-tabs a {
