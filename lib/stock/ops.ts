@@ -58,23 +58,26 @@ export async function issueWarehouseToTech(input: {
   technicianId: string;
   createdBy?: string;
   note?: string;
+  partnerId?: string;
 }): Promise<StockOpResult> {
   if (input.qty <= 0) return { ok: false, error: "Qty must be > 0" };
   const state = await loadStockState();
   if (!state.items.some((i) => i.id === input.itemId)) {
     return { ok: false, error: "Item not found" };
   }
+  const fromType = input.partnerId ? "partner" : "warehouse";
   const err =
-    applyDelta(state, input.itemId, "warehouse", -input.qty) ||
-    applyDelta(state, input.itemId, "tech", input.qty, input.technicianId);
+    applyDelta(state, input.itemId, fromType, -input.qty, undefined, input.partnerId) ||
+    applyDelta(state, input.itemId, "tech", input.qty, input.technicianId, input.partnerId);
   if (err) return { ok: false, error: err };
   pushMovement(state, {
     itemId: input.itemId,
     qty: input.qty,
     kind: "issue_warehouse_to_tech",
-    fromLocationType: "warehouse",
+    fromLocationType: fromType,
     toLocationType: "tech",
     toTechnicianId: input.technicianId,
+    partnerId: input.partnerId,
     createdBy: input.createdBy,
     note: input.note,
   });
@@ -89,6 +92,7 @@ export async function receiveSupplier(input: {
   technicianId?: string;
   createdBy?: string;
   note?: string;
+  partnerId?: string;
 }): Promise<StockOpResult> {
   if (input.qty <= 0) return { ok: false, error: "Qty must be > 0" };
   if (input.destination === "tech" && !input.technicianId) {
@@ -98,24 +102,31 @@ export async function receiveSupplier(input: {
   if (!state.items.some((i) => i.id === input.itemId)) {
     return { ok: false, error: "Item not found" };
   }
-  const kind =
-    input.destination === "warehouse"
+  const locationType =
+    input.partnerId && input.destination === "warehouse" ? "partner" : input.destination;
+  const kind = input.partnerId
+    ? input.destination === "warehouse"
+      ? "receive_supplier_to_partner"
+      : "receive_supplier_to_tech"
+    : input.destination === "warehouse"
       ? "receive_supplier_to_warehouse"
       : "receive_supplier_to_tech";
   const err = applyDelta(
     state,
     input.itemId,
-    input.destination,
+    locationType,
     input.qty,
     input.technicianId,
+    input.partnerId,
   );
   if (err) return { ok: false, error: err };
   pushMovement(state, {
     itemId: input.itemId,
     qty: input.qty,
     kind,
-    toLocationType: input.destination,
+    toLocationType: locationType,
     toTechnicianId: input.technicianId,
+    partnerId: input.partnerId,
     createdBy: input.createdBy,
     note: input.note,
   });
@@ -139,16 +150,21 @@ export async function installOnJob(input: {
   }
   const partnerId =
     input.owner && input.owner !== "gg" ? input.owner : undefined;
-  const err = partnerId
-    ? applyDelta(state, input.itemId, "partner", -input.qty, undefined, partnerId)
-    : applyDelta(state, input.itemId, "tech", -input.qty, input.technicianId);
+  const err = applyDelta(
+    state,
+    input.itemId,
+    "tech",
+    -input.qty,
+    input.technicianId,
+    partnerId,
+  );
   if (err) return { ok: false, error: err };
   pushMovement(state, {
     itemId: input.itemId,
     qty: input.qty,
     kind: partnerId ? "install_partner" : "install_on_job",
-    fromLocationType: partnerId ? "partner" : "tech",
-    fromTechnicianId: partnerId ? undefined : input.technicianId,
+    fromLocationType: "tech",
+    fromTechnicianId: input.technicianId,
     partnerId,
     jobId: input.jobId,
     createdBy: input.createdBy,
@@ -342,4 +358,46 @@ export async function moveGarageGuysStockToPartner(input: {
     movedQty,
     movedItems: byItem.size,
   };
+}
+
+/** If partner parts sit only in the warehouse, put them on a tech van (same as GG seed). */
+export async function loadPartnerWarehouseOntoTech(input: {
+  partnerId: string;
+  technicianId: string;
+  createdBy?: string;
+}): Promise<StockOpResult & { movedQty: number }> {
+  const state = await loadStockState();
+  const alreadyOnVans = state.balances.some(
+    (b) =>
+      b.locationType === "tech" &&
+      b.partnerId === input.partnerId &&
+      (Number(b.qty) || 0) > 0,
+  );
+  if (alreadyOnVans) {
+    return { ok: true, state, movedQty: 0 };
+  }
+
+  let movedQty = 0;
+  for (const item of state.items) {
+    const qty = getBalanceQty(state, item.id, "partner", undefined, input.partnerId);
+    if (qty <= 0) continue;
+    const err =
+      applyDelta(state, item.id, "partner", -qty, undefined, input.partnerId) ||
+      applyDelta(state, item.id, "tech", qty, input.technicianId, input.partnerId);
+    if (err) return { ok: false, error: err, movedQty: 0 };
+    movedQty += qty;
+    pushMovement(state, {
+      itemId: item.id,
+      qty,
+      kind: "issue_warehouse_to_tech",
+      fromLocationType: "partner",
+      toLocationType: "tech",
+      toTechnicianId: input.technicianId,
+      partnerId: input.partnerId,
+      createdBy: input.createdBy,
+      note: "Loaded partner warehouse onto van",
+    });
+  }
+  if (movedQty > 0) await saveStockState(state);
+  return { ok: true, state: await loadStockState(), movedQty };
 }

@@ -262,8 +262,8 @@ export function FieldInvoiceWizard({
             <select value={partId} onChange={(e) => setPartId(e.target.value)}>
               <option value="">
                 {stockFrom === "partner"
-                  ? `Part from ${stockSourceLabel}…`
-                  : "Part from van…"}
+                  ? `Part from ${stockSourceLabel} on van…`
+                  : "Part from Garage Guys van…"}
               </option>
               {vanParts.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -295,8 +295,8 @@ export function FieldInvoiceWizard({
           {vanParts.length === 0 ? (
             <p className="field-muted">
               {stockFrom === "partner"
-                ? `No ${stockSourceLabel} stock on hand. Office needs to receive parts into that warehouse.`
-                : "No parts on your van for this job."}
+                ? `No ${stockSourceLabel} parts on your van.`
+                : "No Garage Guys parts on your van."}
             </p>
           ) : null}
 

@@ -180,6 +180,7 @@ export function balanceKey(
 ) {
   if (locationType === "warehouse") return `${itemId}:warehouse`;
   if (locationType === "partner") return `${itemId}:partner:${partnerId || ""}`;
+  if (partnerId) return `${itemId}:tech:${technicianId || ""}:partner:${partnerId}`;
   return `${itemId}:tech:${technicianId || ""}`;
 }
 
@@ -193,7 +194,8 @@ function matchBalance(
   if (b.itemId !== itemId || b.locationType !== locationType) return false;
   if (locationType === "warehouse") return !b.partnerId;
   if (locationType === "partner") return b.partnerId === partnerId;
-  return b.technicianId === technicianId;
+  if (partnerId) return b.technicianId === technicianId && b.partnerId === partnerId;
+  return b.technicianId === technicianId && !b.partnerId;
 }
 
 export function getBalanceQty(
@@ -221,14 +223,24 @@ export function setBalanceQty(
     matchBalance(b, itemId, locationType, technicianId, partnerId),
   );
   if (idx >= 0) {
-    state.balances[idx] = { ...state.balances[idx], qty, partnerId: locationType === "partner" ? partnerId : undefined };
+    state.balances[idx] = {
+      ...state.balances[idx],
+      qty,
+      partnerId:
+        locationType === "partner" || (locationType === "tech" && partnerId)
+          ? partnerId
+          : undefined,
+    };
     return;
   }
   state.balances.push({
     itemId,
     locationType,
     technicianId: locationType === "tech" ? technicianId : undefined,
-    partnerId: locationType === "partner" ? partnerId : undefined,
+    partnerId:
+      locationType === "partner" || (locationType === "tech" && partnerId)
+        ? partnerId
+        : undefined,
     qty,
   });
 }
@@ -243,12 +255,23 @@ export function warehouseQty(state: StockState, itemId: string): number {
   return getBalanceQty(state, itemId, "warehouse");
 }
 
-export function techQty(state: StockState, itemId: string, technicianId: string): number {
-  return getBalanceQty(state, itemId, "tech", technicianId);
+export function techQty(
+  state: StockState,
+  itemId: string,
+  technicianId: string,
+  partnerId?: string,
+): number {
+  return getBalanceQty(state, itemId, "tech", technicianId, partnerId);
 }
 
 export function partnerQty(state: StockState, itemId: string, partnerId: string): number {
   return getBalanceQty(state, itemId, "partner", undefined, partnerId);
+}
+
+export function partnerMasterQty(state: StockState, itemId: string, partnerId: string): number {
+  return state.balances
+    .filter((b) => b.itemId === itemId && b.partnerId === partnerId)
+    .reduce((sum, b) => sum + b.qty, 0);
 }
 
 export async function ensureStockSeeded(technicianId: string): Promise<StockState> {

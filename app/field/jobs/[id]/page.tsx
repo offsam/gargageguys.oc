@@ -6,7 +6,7 @@ import { FieldInvoiceWizard } from "@/components/bos/FieldInvoiceWizard";
 import { getSessionUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updateJobStatusAction } from "@/app/actions/dispatch";
-import { ensureStockSeeded, partnerQty, techQty } from "@/lib/stock/store";
+import { ensureStockSeeded, techQty } from "@/lib/stock/store";
 import { getFieldAttentionCount } from "@/lib/field/load-attention";
 import { ensureJobInvoice } from "@/lib/field/job-invoice";
 import { listPartnersAction } from "@/app/actions/partners";
@@ -46,10 +46,12 @@ export default async function FieldJobPage({
     .map((item) => ({
       id: item.id,
       name: item.name,
-      qty:
-        stockSource.from === "partner"
-          ? partnerQty(state, item.id, stockSource.owner)
-          : techQty(state, item.id, techId),
+      qty: techQty(
+        state,
+        item.id,
+        techId,
+        stockSource.from === "partner" ? stockSource.owner : undefined,
+      ),
       unitCostCents: item.unitCostCents || 0,
     }))
     .filter((row) => row.qty > 0);
@@ -99,8 +101,8 @@ export default async function FieldJobPage({
           <strong>Stock</strong>
           <br />
           {stockSource.from === "partner"
-            ? `Take parts from ${stockSource.label} stock`
-            : "Take parts from Garage Guys van"}
+            ? `Take ${stockSource.label} parts from your van`
+            : "Take Garage Guys parts from your van"}
         </p>
         <p>
           <strong>Notes</strong>

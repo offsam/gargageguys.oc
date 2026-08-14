@@ -10,6 +10,7 @@ import {
   ensureStockSeeded,
   loadStockState,
   masterQty,
+  partnerMasterQty,
   partnerQty,
   techQty,
   warehouseQty,
@@ -104,17 +105,25 @@ export default async function StockPage({
   const rows = state.items.map((item) => {
     const vans: Record<string, number> = {};
     for (const t of technicians) {
-      vans[t.id] = techQty(state, item.id, t.id);
+      vans[t.id] =
+        stockOwner === "gg"
+          ? techQty(state, item.id, t.id)
+          : techQty(state, item.id, t.id, stockOwner);
     }
-    const partnerCount = stockOwner !== "gg" ? partnerQty(state, item.id, stockOwner) : 0;
     return {
       id: item.id,
       name: item.name,
       category: item.category,
       subcategory: item.subcategory,
       sku: item.sku,
-      master: stockOwner === "gg" ? masterQty(state, item.id) : partnerCount,
-      warehouse: stockOwner === "gg" ? warehouseQty(state, item.id) : partnerCount,
+      master:
+        stockOwner === "gg"
+          ? masterQty(state, item.id)
+          : partnerMasterQty(state, item.id, stockOwner),
+      warehouse:
+        stockOwner === "gg"
+          ? warehouseQty(state, item.id)
+          : partnerQty(state, item.id, stockOwner),
       van: vans[selectedTechId] ?? 0,
       vans,
       unitCostCents: item.unitCostCents,
@@ -147,7 +156,7 @@ export default async function StockPage({
         subtitle={
           stockOwner === "gg"
             ? "Your Garage Guys van · no prices"
-            : `${stockOwners.find((o) => o.id === stockOwner)?.name || "Partner"} stock · take this on their jobs`
+            : `${stockOwners.find((o) => o.id === stockOwner)?.name || "Partner"} on your van · no prices`
         }
         active="stock"
         attentionCount={attentionCount}

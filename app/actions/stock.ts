@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   installOnJob,
   issueWarehouseToTech,
+  loadPartnerWarehouseOntoTech,
   moveGarageGuysStockToPartner,
   receivePartnerStock,
   receiveSupplier,
@@ -49,11 +50,13 @@ export async function issueToTechAction(formData: FormData) {
   const itemId = String(formData.get("itemId") || "");
   const technicianId = String(formData.get("technicianId") || "");
   const qty = Number(formData.get("qty") || 0);
+  const partnerId = String(formData.get("partnerId") || "") || undefined;
   await issueWarehouseToTech({
     itemId,
     technicianId,
     qty,
     createdBy: session.id,
+    partnerId,
   });
   revalidatePath("/stock");
 }
@@ -69,12 +72,14 @@ export async function receiveStockAction(formData: FormData) {
     | "tech";
   const technicianId = String(formData.get("technicianId") || "") || undefined;
   const qty = Number(formData.get("qty") || 0);
+  const partnerId = String(formData.get("partnerId") || "") || undefined;
   await receiveSupplier({
     itemId,
     qty,
     destination,
     technicianId,
     createdBy: session.id,
+    partnerId,
   });
   revalidatePath("/stock");
 }
@@ -176,12 +181,22 @@ export async function assignCurrentStockToChampionAction(): Promise<{
     createdBy: session.id,
     note: "Moved existing Garage Guys stock to Champion warehouse",
   });
-  revalidatePath("/stock");
-  revalidatePath("/partners");
-  revalidatePath("/sheet");
   if (!moved.ok) {
     return { ok: false, error: moved.error, movedQty: 0, movedItems: 0 };
   }
+
+  const seedTechId = await defaultTechnicianId();
+  if (seedTechId) {
+    await loadPartnerWarehouseOntoTech({
+      partnerId: champion.id,
+      technicianId: seedTechId,
+      createdBy: session.id,
+    });
+  }
+
+  revalidatePath("/stock");
+  revalidatePath("/partners");
+  revalidatePath("/sheet");
   return {
     ok: true,
     movedQty: moved.movedQty,

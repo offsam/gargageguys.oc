@@ -186,18 +186,16 @@ export function StockBoard({
     });
   }
 
-  const colSpan = partnerMode
-    ? 2 + (showPrices ? 1 : 0) + (canManage ? 1 : 0)
-    : isTechOnly
-      ? 2 + (showPrices ? 1 : 0)
-      : 2 +
-        (view === "master" || view === "warehouse" ? 1 : 0) +
-        (view === "master" || view === "tech" ? 1 : 0) +
-        (showPrices ? 1 : 0) +
-        (canManage ? 1 : 0);
+  const colSpan = isTechOnly
+    ? 2 + (showPrices ? 1 : 0)
+    : 2 +
+      (view === "master" || view === "warehouse" ? 1 : 0) +
+      (view === "master" || view === "tech" ? 1 : 0) +
+      (showPrices ? 1 : 0) +
+      (canManage ? 1 : 0);
 
   const showOwnerTabs = !isTechOnly || stockOwners.length > 1;
-  const techVanOnly = isTechOnly && !partnerMode;
+  const techVanOnly = isTechOnly;
 
   return (
     <div className="stock-board">
@@ -217,7 +215,8 @@ export function StockBoard({
           {notice ? <p className="stock-owner-hint">{notice}</p> : null}
           {!notice && isTechOnly && partnerWarehouseCount > 0 ? (
             <p className="stock-owner-hint">
-              Garage Guys = your van. Partner tabs = take those parts on that partner’s jobs.
+              Both stocks are on your van. Tabs are just to see counts. On a job you only pick
+              from that client’s stock.
             </p>
           ) : null}
           {!notice && !isTechOnly && partnerWarehouseCount < 1 ? (
@@ -229,7 +228,7 @@ export function StockBoard({
         </div>
       ) : null}
 
-      {!isTechOnly && !partnerMode ? (
+      {!isTechOnly ? (
         <div className="stock-tabs" role="tablist">
           {(
             [
@@ -261,7 +260,7 @@ export function StockBoard({
           onChange={(e) => setQ(e.target.value)}
           autoFocus
         />
-        {view === "tech" && !isTechOnly && !partnerMode ? (
+        {view === "tech" && !isTechOnly ? (
           <select
             className="stock-tech-select"
             value={techId}
@@ -286,13 +285,11 @@ export function StockBoard({
           <thead>
             <tr>
               <th className="stock-col-item">Item</th>
-              <th className="stock-col-num">
-                {partnerMode || techVanOnly ? "Qty" : "Master"}
-              </th>
-              {!partnerMode && !techVanOnly && (view === "master" || view === "warehouse") ? (
+              <th className="stock-col-num">{techVanOnly ? "Van" : "Master"}</th>
+              {!techVanOnly && (view === "master" || view === "warehouse") ? (
                 <th className="stock-col-num">Wh</th>
               ) : null}
-              {!partnerMode && !techVanOnly && (view === "master" || view === "tech") ? (
+              {!techVanOnly && (view === "master" || view === "tech") ? (
                 <th className="stock-col-num">Van</th>
               ) : null}
               {showPrices ? <th className="stock-col-cost">Cost</th> : null}
@@ -325,10 +322,10 @@ export function StockBoard({
                       <td className="stock-col-num stock-master">
                         {techVanOnly ? row.vans[techId] ?? row.van : row.master}
                       </td>
-                      {!partnerMode && !techVanOnly && (view === "master" || view === "warehouse") ? (
+                      {!techVanOnly && (view === "master" || view === "warehouse") ? (
                         <td className="stock-col-num">{row.warehouse}</td>
                       ) : null}
-                      {!partnerMode && !techVanOnly && (view === "master" || view === "tech") ? (
+                      {!techVanOnly && (view === "master" || view === "tech") ? (
                         <td className="stock-col-num">{row.vans[techId] ?? row.van}</td>
                       ) : null}
                       {showPrices ? (
@@ -355,12 +352,29 @@ export function StockBoard({
                           {open ? (
                             <div className="stock-act-pop">
                               {partnerMode ? (
-                                <form action={(fd) => run(receivePartnerStockAction, fd)}>
-                                  <input type="hidden" name="itemId" value={row.id} />
-                                  <input type="hidden" name="partnerId" value={stockOwner} />
-                                  <input name="qty" type="number" min={1} defaultValue={1} />
-                                  <button type="submit">+ Stock</button>
-                                </form>
+                                <>
+                                  <form action={(fd) => run(receivePartnerStockAction, fd)}>
+                                    <input type="hidden" name="itemId" value={row.id} />
+                                    <input type="hidden" name="partnerId" value={stockOwner} />
+                                    <input name="qty" type="number" min={1} defaultValue={1} />
+                                    <button type="submit">+Wh</button>
+                                  </form>
+                                  <form action={(fd) => run(receiveStockAction, fd)}>
+                                    <input type="hidden" name="itemId" value={row.id} />
+                                    <input type="hidden" name="destination" value="tech" />
+                                    <input type="hidden" name="technicianId" value={techId} />
+                                    <input type="hidden" name="partnerId" value={stockOwner} />
+                                    <input name="qty" type="number" min={1} defaultValue={1} />
+                                    <button type="submit">+Van</button>
+                                  </form>
+                                  <form action={(fd) => run(issueToTechAction, fd)}>
+                                    <input type="hidden" name="itemId" value={row.id} />
+                                    <input type="hidden" name="technicianId" value={techId} />
+                                    <input type="hidden" name="partnerId" value={stockOwner} />
+                                    <input name="qty" type="number" min={1} defaultValue={1} />
+                                    <button type="submit">Wh→Van</button>
+                                  </form>
+                                </>
                               ) : (
                                 <>
                                   <form action={(fd) => run(receiveStockAction, fd)}>
