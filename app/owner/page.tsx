@@ -11,6 +11,7 @@ import { getPublicReviewPayload } from "@/lib/reviews/store";
 import { loadStockState } from "@/lib/stock/store";
 import { summarizeStockPlaces } from "@/lib/stock/overview";
 import { buildSeoInsights } from "@/lib/seo/insights";
+import { loadFinanceRows } from "@/lib/finance/load";
 import { SHEET_STATUSES, sheetStatusFromLead } from "@/lib/leads/stage-sync";
 
 function money(cents: number) {
@@ -30,6 +31,18 @@ function usd(value: number | null | undefined) {
   });
 }
 
+function nonzero(counts: Record<string, number>, keys: readonly string[]) {
+  return keys.filter((key) => (counts[key] || 0) > 0).map((key) => [key, counts[key]] as const);
+}
+
+function isEarnedStatus(status: string) {
+  return ["paid", "complete", "signed", "completed", "partner"].includes(status);
+}
+
+function isOpenStatus(status: string) {
+  return ["draft", "sent", "overdue"].includes(status);
+}
+
 export default async function OwnerPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
@@ -40,7 +53,7 @@ export default async function OwnerPage() {
   const [
     leadsRes,
     jobsOpenRes,
-    invoicesOpenRes,
+    financeRows,
     staffRes,
     techsRes,
     inboxNewRes,
@@ -59,10 +72,7 @@ export default async function OwnerPage() {
       .from("jobs")
       .select("*", { count: "exact", head: true })
       .in("status", ["queued", "assigned", "en_route", "on_site"]),
-    supabase
-      .from("invoices")
-      .select("*", { count: "exact", head: true })
-      .in("status", ["draft", "sent", "overdue"]),
+    loadFinanceRows().catch(() => []),
     admin.from("profiles").select("*", { count: "exact", head: true }),
     admin
       .from("profiles")
@@ -143,18 +153,28 @@ export default async function OwnerPage() {
   const adsSpend = (Number(metaAds?.spend) || 0) + (Number(googleAds?.spend) || 0);
 
   const jobsOpen = jobsOpenRes.count ?? 0;
-  const invoicesOpen = invoicesOpenRes.count ?? 0;
+  const finance = financeRows || [];
+  const earnedCents = finance
+    .filter((row) => isEarnedStatus(row.status))
+    .reduce((sum, row) => sum + (row.amountCents || 0), 0);
+  const openCents = finance
+    .filter((row) => isOpenStatus(row.status))
+    .reduce((sum, row) => sum + (row.amountCents || 0), 0);
+  const openInvoiceCount = finance.filter((row) => isOpenStatus(row.status)).length;
   const staffCount = staffRes.count ?? 0;
   const techCount = technicians.length;
   const inboxNew = inboxNewRes.count ?? 0;
   const ownStockPartners = stockPartners.filter((p) => p.has_own_stock).length;
+  const crmCounts = nonzero(statusCounts, SHEET_STATUSES);
+  const sheetCounts = nonzero(statusCounts, ["Waiting", "No answer", "On site", "Completed"]);
+  const dispatchCounts = nonzero(statusCounts, ["Waiting", "Scheduled", "En route", "On site"]);
 
   return (
     <BosShell
       user={user}
       active="/owner"
       title="Overview"
-      subtitle="All categories at a glance — numbers first, details in each section"
+      subtitle="Numbers first — empty zeros stay off the board"
     >
       <div className="ov-dash">
         <Link href="/reviews" className="ov-tile ov-tile--reviews ov-tile--wide">
@@ -181,7 +201,6 @@ export default async function OwnerPage() {
               <div className="ov-reviews__count">{google.count} reviews</div>
             </div>
           </div>
-          <p className="ov-tile__hint">Live aggregates from synced snapshots</p>
         </Link>
 
         <Link href="/ads" className="ov-tile ov-tile--ads ov-tile--wide">
@@ -197,9 +216,7 @@ export default async function OwnerPage() {
             <li>
               <span>Meta</span>
               <strong>
-                {metaAds
-                  ? `${usd(metaAds.spend)} · ${metaAds.leads ?? 0} leads`
-                  : "Not synced"}
+                {metaAds ? `${usd(metaAds.spend)} · ${metaAds.leads ?? 0} leads` : "Not synced"}
               </strong>
             </li>
             <li>
@@ -212,32 +229,37 @@ export default async function OwnerPage() {
                     : `Setup · ${googleCfg.missing.length} missing`}
               </strong>
             </li>
-            <li>
-              <span>Meta CPL</span>
-              <strong>{metaAds?.cpl != null ? usd(metaAds.cpl) : "—"}</strong>
-            </li>
-            <li>
-              <span>Google CPL</span>
-              <strong>{googleAds?.cpl != null ? usd(googleAds.cpl) : "—"}</strong>
-            </li>
+            {metaAds?.cpl != null ? (
+              <li>
+                <span>Meta CPL</span>
+                <strong>{usd(metaAds.cpl)}</strong>
+              </li>
+            ) : null}
+            {googleAds?.cpl != null ? (
+              <li>
+                <span>Google CPL</span>
+                <strong>{usd(googleAds.cpl)}</strong>
+              </li>
+            ) : null}
           </ul>
         </Link>
 
-        <Link href="/crm" className="ov-tile ov-tile--tall">
+        <Link href="/crm" className="ov-tile">
           <div className="ov-tile__head">
-            <h3>CRM funnel</h3>
+            <h3>CRM</h3>
             <span className="ov-tile__link">Open →</span>
           </div>
           <div className="ov-big">{activePipeline}</div>
-          <p className="ov-tile__hint">Active now (Waiting / No answer → On site)</p>
-          <ul className="ov-mini-list">
-            {SHEET_STATUSES.map((status) => (
-              <li key={status}>
-                <span>{status}</span>
-                <strong>{statusCounts[status] || 0}</strong>
-              </li>
-            ))}
-          </ul>
+          <p className="ov-tile__hint">Active now</p>
+          {crmCounts.length ? (
+            <div className="ov-pills">
+              {crmCounts.map(([status, count]) => (
+                <span key={status}>
+                  {status} <strong>{count}</strong>
+                </span>
+              ))}
+            </div>
+          ) : null}
         </Link>
 
         <Link href="/sheet" className="ov-tile">
@@ -246,25 +268,17 @@ export default async function OwnerPage() {
             <span className="ov-tile__link">Open →</span>
           </div>
           <div className="ov-big">{leads.length}</div>
-          <p className="ov-tile__hint">Clients in the main ledger</p>
-          <ul className="ov-mini-list ov-mini-list--compact">
-            <li>
-              <span>Waiting</span>
-              <strong>{statusCounts.Waiting || 0}</strong>
-            </li>
-            <li>
-              <span>No answer</span>
-              <strong>{statusCounts["No answer"] || 0}</strong>
-            </li>
-            <li>
-              <span>On site</span>
-              <strong>{statusCounts["On site"] || 0}</strong>
-            </li>
-            <li>
-              <span>Completed</span>
-              <strong>{statusCounts.Completed || 0}</strong>
-            </li>
-          </ul>
+          <p className="ov-tile__hint">Clients in the ledger</p>
+          {sheetCounts.length ? (
+            <ul className="ov-mini-list ov-mini-list--compact">
+              {sheetCounts.map(([status, count]) => (
+                <li key={status}>
+                  <span>{status}</span>
+                  <strong>{count}</strong>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </Link>
 
         <Link href="/dispatch" className="ov-tile">
@@ -273,25 +287,17 @@ export default async function OwnerPage() {
             <span className="ov-tile__link">Open →</span>
           </div>
           <div className="ov-big">{jobsOpen}</div>
-          <p className="ov-tile__hint">Open field jobs · waiting queue + tech day lanes</p>
-          <ul className="ov-mini-list ov-mini-list--compact">
-            <li>
-              <span>Waiting</span>
-              <strong>{statusCounts.Waiting || 0}</strong>
-            </li>
-            <li>
-              <span>Scheduled</span>
-              <strong>{statusCounts.Scheduled || 0}</strong>
-            </li>
-            <li>
-              <span>En route</span>
-              <strong>{statusCounts["En route"] || 0}</strong>
-            </li>
-            <li>
-              <span>On site</span>
-              <strong>{statusCounts["On site"] || 0}</strong>
-            </li>
-          </ul>
+          <p className="ov-tile__hint">Open field jobs</p>
+          {dispatchCounts.length ? (
+            <ul className="ov-mini-list ov-mini-list--compact">
+              {dispatchCounts.map(([status, count]) => (
+                <li key={status}>
+                  <span>{status}</span>
+                  <strong>{count}</strong>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </Link>
 
         <Link href="/crm" className="ov-tile">
@@ -300,7 +306,7 @@ export default async function OwnerPage() {
             <span className="ov-tile__link">CRM →</span>
           </div>
           <div className="ov-big">{inboxNew}</div>
-          <p className="ov-tile__hint">New inbox items needing review</p>
+          <p className="ov-tile__hint">New items to review</p>
         </Link>
 
         <Link href="/stock" className="ov-tile ov-tile--stock ov-tile--wide">
@@ -316,13 +322,32 @@ export default async function OwnerPage() {
                 }`
               : "No inventory snapshot yet"}
           </p>
+          {stockSummary?.places.length ? (
+            <ul className="ov-mini-list ov-mini-list--compact">
+              {stockSummary.places.map((row) => (
+                <li key={row.label}>
+                  <span>{row.label}</span>
+                  <strong className={row.warn ? "ov-warn" : undefined}>{row.units}</strong>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </Link>
+
+        <Link href="/finance" className="ov-tile">
+          <div className="ov-tile__head">
+            <h3>Finance</h3>
+            <span className="ov-tile__link">Open →</span>
+          </div>
+          <div className="ov-big">{money(earnedCents)}</div>
+          <p className="ov-tile__hint">Earned · paid / completed</p>
           <ul className="ov-mini-list ov-mini-list--compact">
-            {(stockSummary?.places || [{ label: "No locations yet", units: 0 }]).map((row) => (
-              <li key={row.label}>
-                <span>{row.label}</span>
-                <strong className={row.warn ? "ov-warn" : undefined}>{row.units}</strong>
-              </li>
-            ))}
+            <li>
+              <span>Open invoices</span>
+              <strong>
+                {openInvoiceCount} · {money(openCents)}
+              </strong>
+            </li>
           </ul>
         </Link>
 
@@ -333,32 +358,18 @@ export default async function OwnerPage() {
           </div>
           <div className="ov-big">{stockPartners.length}</div>
           <p className="ov-tile__hint">
-            {ownStockPartners} with own warehouse · rest use Garage Guys parts
+            {ownStockPartners} with own warehouse · rest use GG parts
           </p>
-          <ul className="ov-mini-list ov-mini-list--compact">
-            {stockPartners.length ? (
-              stockPartners.slice(0, 6).map((p) => (
+          {stockPartners.length ? (
+            <ul className="ov-mini-list ov-mini-list--compact">
+              {stockPartners.slice(0, 4).map((p) => (
                 <li key={p.id}>
                   <span>{p.name}</span>
                   <strong>{p.has_own_stock ? "Own stock" : "Uses GG"}</strong>
                 </li>
-              ))
-            ) : (
-              <li>
-                <span>No partners yet</span>
-                <strong>—</strong>
-              </li>
-            )}
-          </ul>
-        </Link>
-
-        <Link href="/finance" className="ov-tile">
-          <div className="ov-tile__head">
-            <h3>Finance</h3>
-            <span className="ov-tile__link">Open →</span>
-          </div>
-          <div className="ov-big">{invoicesOpen}</div>
-          <p className="ov-tile__hint">Open invoices (draft / sent / overdue)</p>
+              ))}
+            </ul>
+          ) : null}
         </Link>
 
         <Link href="/employees" className="ov-tile">
@@ -376,7 +387,7 @@ export default async function OwnerPage() {
             <span className="ov-tile__link">Open →</span>
           </div>
           <div className="ov-big">{jobsOpen}</div>
-          <p className="ov-tile__hint">Jobs currently in the field pipeline</p>
+          <p className="ov-tile__hint">Jobs in the field pipeline</p>
         </Link>
 
         <Link href="/serm" className="ov-tile ov-tile--seo ov-tile--wide">
@@ -398,9 +409,7 @@ export default async function OwnerPage() {
                 <div>
                   <div className="ov-seo-label">Avg position</div>
                   <div className="ov-seo-value">
-                    {sc.totals?.position != null
-                      ? Number(sc.totals.position).toFixed(1)
-                      : "—"}
+                    {sc.totals?.position != null ? Number(sc.totals.position).toFixed(1) : "—"}
                   </div>
                 </div>
                 <div>
@@ -418,11 +427,7 @@ export default async function OwnerPage() {
                   </div>
                 </div>
               </div>
-              {searchInsight ? (
-                <p className="ov-tile__hint">
-                  {searchInsight.title}. {searchInsight.detail}
-                </p>
-              ) : null}
+              {searchInsight ? <p className="ov-tile__hint">{searchInsight.title}</p> : null}
             </>
           ) : (
             <p className="ov-tile__hint">No search snapshot yet — open Search after SEO sync.</p>

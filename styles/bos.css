@@ -182,21 +182,22 @@ textarea {
 /* —— Overview dashboard —— */
 .ov-dash {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 0.85rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: start;
 }
 
 .ov-tile {
-  grid-column: span 3;
+  grid-column: span 1;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 1rem 1.05rem;
+  gap: 0.28rem;
+  padding: 0.85rem 0.95rem;
   border: 1px solid var(--bos-border);
   border-radius: 14px;
   background: var(--bos-panel);
   box-shadow: var(--bos-shadow);
-  min-height: 140px;
+  min-height: 0;
   transition: border-color 0.15s, transform 0.15s;
 }
 
@@ -206,13 +207,7 @@ textarea {
 }
 
 .ov-tile--wide {
-  grid-column: span 6;
-}
-
-.ov-tile--tall {
-  grid-column: span 3;
-  grid-row: span 2;
-  min-height: 0;
+  grid-column: span 2;
 }
 
 .ov-tile--reviews {
@@ -254,7 +249,7 @@ textarea {
 }
 
 .ov-big {
-  font-size: clamp(1.8rem, 2.4vw, 2.4rem);
+  font-size: clamp(1.45rem, 2vw, 1.85rem);
   font-weight: 750;
   line-height: 1.1;
   color: var(--bos-text);
@@ -289,7 +284,7 @@ textarea {
 }
 
 .ov-reviews__score {
-  font-size: 2.2rem;
+  font-size: 1.7rem;
   font-weight: 750;
   line-height: 1.1;
   color: var(--bos-text);
@@ -309,11 +304,11 @@ textarea {
 
 .ov-mini-list {
   list-style: none;
-  margin: 0.55rem 0 0;
+  margin: 0.4rem 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.28rem;
+  gap: 0.22rem;
 }
 
 .ov-mini-list li {
@@ -330,8 +325,31 @@ textarea {
 }
 
 .ov-mini-list--compact {
-  margin-top: auto;
-  padding-top: 0.45rem;
+  margin-top: 0.4rem;
+  padding-top: 0;
+}
+
+.ov-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+
+.ov-pills span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: var(--bos-bg-accent);
+  color: var(--bos-muted);
+}
+
+.ov-pills strong {
+  color: var(--bos-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .ov-warn {
@@ -366,19 +384,25 @@ textarea {
 }
 
 @media (max-width: 1100px) {
+  .ov-dash {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .ov-tile,
-  .ov-tile--wide,
-  .ov-tile--tall {
-    grid-column: span 6;
-    grid-row: auto;
+  .ov-tile--wide {
+    grid-column: span 1;
+  }
+  .ov-tile--wide {
+    grid-column: span 2;
   }
 }
 
 @media (max-width: 700px) {
+  .ov-dash {
+    grid-template-columns: 1fr;
+  }
   .ov-tile,
-  .ov-tile--wide,
-  .ov-tile--tall {
-    grid-column: span 12;
+  .ov-tile--wide {
+    grid-column: span 1;
   }
   .ov-seo-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

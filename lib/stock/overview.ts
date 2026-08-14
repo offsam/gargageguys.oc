@@ -41,20 +41,19 @@ export function summarizeStockPlaces(
     }
   }
 
-  const places: StockPlaceRow[] = [
-    { label: "Garage Guys warehouse", units: ggWarehouse },
-  ];
+  const places: StockPlaceRow[] = [];
+  if (ggWarehouse > 0) places.push({ label: "Garage Guys warehouse", units: ggWarehouse });
   for (const tech of technicians) {
-    places.push({ label: `${tech.label} van · GG`, units: ggVan[tech.id] || 0 });
+    const units = ggVan[tech.id] || 0;
+    if (units > 0) places.push({ label: `${tech.label} van · GG`, units });
   }
   for (const partner of partners) {
     const warehouse = partnerWh[partner.id] || 0;
     const onVans = partnerVan[partner.id] || 0;
-    if (warehouse === 0 && onVans === 0) continue;
-    places.push({ label: `${partner.name} warehouse`, units: warehouse });
-    places.push({ label: `${partner.name} on vans`, units: onVans });
+    if (warehouse > 0) places.push({ label: `${partner.name} warehouse`, units: warehouse });
+    if (onVans > 0) places.push({ label: `${partner.name} on vans`, units: onVans });
   }
-  places.push({ label: "Low / reorder · GG", units: lowCount, warn: lowCount > 0 });
+  if (lowCount > 0) places.push({ label: "Low / reorder · GG", units: lowCount, warn: true });
 
   const totalUnits =
     ggWarehouse +
