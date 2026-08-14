@@ -550,10 +550,6 @@ textarea {
   font-style: italic;
   color: var(--bos-muted);
 }
-  margin-top: 6px;
-  font-size: 0.8rem;
-  color: var(--bos-muted);
-}
 
 .kanban-move {
   display: block;
@@ -1354,20 +1350,43 @@ body.sheet-col-resizing * {
 
 .partner-row-form {
   display: grid;
-  grid-template-columns: minmax(160px, 1.4fr) 88px minmax(120px, 1fr) 64px auto;
+  grid-template-columns: minmax(140px, 1.3fr) 72px minmax(140px, 1fr) minmax(100px, 1fr) 64px auto;
   gap: 0.45rem;
   align-items: center;
   padding: 0.55rem 0.65rem;
 }
 
 .partner-row-form input[type="text"],
-.partner-row-form input:not([type]) {
+.partner-row-form input:not([type]),
+.partner-row-form select {
   width: 100%;
   border: 1px solid var(--bos-border);
   border-radius: 8px;
   padding: 0.4rem 0.5rem;
   background: #fff;
   color: var(--bos-text);
+}
+
+.partner-stock-pick {
+  border: 1px solid var(--bos-border);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  margin: 0;
+}
+
+.partner-stock-pick legend {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--bos-muted);
+  padding: 0 0.25rem;
+}
+
+.partner-stock-pick label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+  margin-top: 0.35rem;
 }
 
 .partner-active {
