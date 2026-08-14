@@ -47,6 +47,8 @@ export type SheetRow = {
 export type StockPartOption = {
   name: string;
   unitCost: string;
+  /** On-hand qty for this catalog (GG or a partner warehouse). */
+  qty?: number;
 };
 
 const PAYMENT_TYPES = ["", "Credit Card", "Venmo", "Zelle", "Cash", "Check"] as const;
@@ -444,11 +446,14 @@ export function SheetTable({
   rows: initialRows,
   technicians,
   stockParts = [],
+  partnerStockParts = {},
   partners = [],
 }: {
   rows: SheetRow[];
   technicians: string[];
   stockParts?: StockPartOption[];
+  /** Parts + on-hand qty keyed by partner display name (own-stock partners). */
+  partnerStockParts?: Record<string, StockPartOption[]>;
   partners?: SheetPartner[];
 }) {
   useBosLiveRefresh(["leads", "jobs"]);
@@ -548,13 +553,44 @@ export function SheetTable({
     return map;
   }, [stockParts]);
 
-  const partNames = useMemo(() => {
-    const set = new Set<string>(stockParts.map((p) => p.name).filter(Boolean));
-    for (const row of rows) {
-      if (row.parts) set.add(row.parts);
+  const partnerPartsByName = useMemo(() => {
+    const map = new Map<string, StockPartOption[]>();
+    for (const [name, parts] of Object.entries(partnerStockParts)) {
+      const key = name.trim().toLowerCase();
+      if (!key) continue;
+      map.set(key, parts);
     }
-    return ["", ...[...set].sort((a, b) => a.localeCompare(b))];
-  }, [stockParts, rows]);
+    return map;
+  }, [partnerStockParts]);
+
+  function partLabel(name: string, qty: number | undefined): string {
+    if (!name) return "—";
+    if (qty == null || !Number.isFinite(qty)) return name;
+    return `${name} (${qty})`;
+  }
+
+  function partsOptionsForRow(row: SheetRow): Array<{ value: string; label: string }> {
+    const ownStock =
+      isPartnerWork(row.workSource) && partnerHasOwnStock(row.partnerName, partners);
+    const catalog = ownStock
+      ? partnerPartsByName.get(row.partnerName.trim().toLowerCase()) || []
+      : stockParts;
+    const byName = new Map<string, StockPartOption>();
+    for (const part of catalog) {
+      if (part.name) byName.set(part.name, part);
+    }
+    if (row.parts.trim() && !byName.has(row.parts.trim())) {
+      byName.set(row.parts.trim(), { name: row.parts.trim(), unitCost: "" });
+    }
+    const names = [...byName.keys()].sort((a, b) => a.localeCompare(b));
+    return [
+      { value: "", label: "—" },
+      ...names.map((name) => ({
+        value: name,
+        label: partLabel(name, byName.get(name)?.qty),
+      })),
+    ];
+  }
 
   const profitColIndex = COLUMNS.length;
   const deleteColWidth = 44;
@@ -900,7 +936,7 @@ export function SheetTable({
     if (kind === "payment") return [...PAYMENT_TYPES];
     if (kind === "status") return [...JOB_STATUSES];
     if (kind === "technician") return techOptions;
-    if (kind === "parts") return partNames;
+    if (kind === "parts") return [];
     if (kind === "service") {
       const set = new Set<string>(FIELD_SERVICE_NAMES);
       for (const row of rows) {
@@ -1169,11 +1205,17 @@ export function SheetTable({
                               patchRow(row.id, { [col.key]: e.target.value }, true);
                             }}
                           >
-                            {selectOptions(col.options).map((opt) => (
-                              <option key={opt || `${col.key}-empty`} value={opt}>
-                                {opt || "—"}
-                              </option>
-                            ))}
+                            {col.key === "parts"
+                              ? partsOptionsForRow(row).map((opt) => (
+                                  <option key={opt.value || `${col.key}-empty`} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))
+                              : selectOptions(col.options).map((opt) => (
+                                  <option key={opt || `${col.key}-empty`} value={opt}>
+                                    {opt || "—"}
+                                  </option>
+                                ))}
                           </select>
                         </td>
                       );

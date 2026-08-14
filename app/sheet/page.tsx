@@ -4,12 +4,13 @@ import { SheetTable, type SheetRow } from "@/components/bos/SheetTable";
 import { getSessionUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { loadStockState } from "@/lib/stock/store";
+import { loadStockState, masterQty, partnerMasterQty } from "@/lib/stock/store";
 import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
 import { listPartnersAction } from "@/app/actions/partners";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
 import { sheetIssueFromLead, sheetServiceFromLead } from "@/lib/sheet/issue-service";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
+import type { StockPartOption } from "@/components/bos/SheetTable";
 
 function asMeta(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -66,12 +67,14 @@ export default async function SheetPage() {
     if (label !== "—") jobNumberByLead.set(leadId, label);
   }
 
-  const stockParts = (() => {
-    const fromStock = (stockState?.items || [])
+  const stockParts: StockPartOption[] = (() => {
+    const items = stockState?.items || [];
+    const fromStock = items
       .filter((item) => item.active !== false && item.name)
       .map((item) => ({
         name: item.name,
         unitCost: (item.unitCostCents / 100).toFixed(2),
+        qty: stockState ? masterQty(stockState, item.id) : undefined,
       }));
     if (fromStock.length) {
       return fromStock.sort((a, b) => a.name.localeCompare(b.name));
@@ -80,6 +83,24 @@ export default async function SheetPage() {
       name: item.name,
       unitCost: "",
     })).sort((a, b) => a.name.localeCompare(b.name));
+  })();
+
+  const partnerStockParts: Record<string, StockPartOption[]> = (() => {
+    if (!stockState) return {};
+    const out: Record<string, StockPartOption[]> = {};
+    for (const partner of partners) {
+      if (!partner.active || !partner.name || partner.id.startsWith("seed-")) continue;
+      if (!partner.has_own_stock) continue;
+      out[partner.name] = stockState.items
+        .filter((item) => item.active !== false && item.name)
+        .map((item) => ({
+          name: item.name,
+          unitCost: (item.unitCostCents / 100).toFixed(2),
+          qty: partnerMasterQty(stockState, item.id, partner.id),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return out;
   })();
 
   const techById = new Map(
@@ -173,6 +194,7 @@ export default async function SheetPage() {
         rows={rows}
         technicians={technicianNames}
         stockParts={stockParts}
+        partnerStockParts={partnerStockParts}
         partners={partnerOpts}
       />
     </BosShell>
