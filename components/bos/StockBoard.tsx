@@ -418,10 +418,23 @@ export function StockBoard({
             </tr>
           </thead>
           <tbody>
-            {grouped.map(({ cat, items }) => (
+            {grouped.map(({ cat, items }) => {
+              const categoryQty = items.reduce((sum, row) => {
+                if (techVanOnly || view === "tech") {
+                  return sum + (row.vans[techId] ?? row.van);
+                }
+                if (view === "warehouse") return sum + row.warehouse;
+                return sum + row.master;
+              }, 0);
+              return (
               <Fragment key={cat}>
                 <tr className="stock-cat">
-                  <td colSpan={colSpan}>{cat}</td>
+                  <td colSpan={colSpan}>
+                    <span className="stock-cat-row">
+                      <span>{cat}</span>
+                      <span className="stock-cat-total">{categoryQty}</span>
+                    </span>
+                  </td>
                 </tr>
                 {items.map((row) => {
                   const open = openActionId === row.id;
@@ -527,7 +540,8 @@ export function StockBoard({
                   );
                 })}
               </Fragment>
-            ))}
+              );
+            })}
             {grouped.length === 0 ? (
               <tr>
                 <td colSpan={colSpan} className="stock-empty">

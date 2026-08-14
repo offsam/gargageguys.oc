@@ -1791,6 +1791,19 @@ body.sheet-col-resizing * {
   z-index: 1;
 }
 
+.stock-cat-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.stock-cat-total {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  font-size: 0.78rem;
+}
+
 .stock-col-item {
   min-width: 180px;
 }
