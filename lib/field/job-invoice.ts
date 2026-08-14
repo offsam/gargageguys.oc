@@ -7,6 +7,8 @@ import {
   type JobInvoice,
   type JobInvoiceStatus,
 } from "@/lib/field/job-invoice-types";
+import { allocateMonthlyJobNumber } from "@/lib/field/job-number-assign";
+import { isLegacyJobNumber } from "@/lib/field/job-number";
 
 export type { InvoiceLine, JobInvoice, JobInvoiceStatus };
 export { money, PAYMENT_OPTIONS, formatJobNumber } from "@/lib/field/job-invoice-types";
@@ -69,14 +71,7 @@ function mapRow(data: Record<string, unknown>): JobInvoice {
 }
 
 async function assignJobNumber(jobId: string): Promise<number | null> {
-  const admin = getSupabaseAdmin();
-  try {
-    const { data, error } = await admin.rpc("ensure_job_number", { p_job_id: jobId });
-    if (error) return null;
-    return data != null ? Number(data) : null;
-  } catch {
-    return null;
-  }
+  return allocateMonthlyJobNumber(jobId);
 }
 
 /** Create draft invoice (client data + job #) for every scheduled job that still lacks one. */
@@ -115,7 +110,7 @@ export async function ensureJobInvoice(input: {
 }): Promise<JobInvoice> {
   const existing = await getJobInvoiceByJobId(input.jobId);
   if (existing) {
-    if (!existing.job_number) {
+    if (!existing.job_number || isLegacyJobNumber(existing.job_number)) {
       const jobNumber = await assignJobNumber(input.jobId);
       if (jobNumber) {
         try {
@@ -166,7 +161,7 @@ export async function ensureJobInvoice(input: {
     job.job_number != null && Number.isFinite(Number(job.job_number))
       ? Number(job.job_number)
       : null;
-  if (!jobNumber) {
+  if (!jobNumber || isLegacyJobNumber(jobNumber)) {
     jobNumber = await assignJobNumber(job.id);
   }
 

@@ -8,7 +8,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updateJobStatusAction } from "@/app/actions/dispatch";
 import { ensureStockSeeded, techQty } from "@/lib/stock/store";
 import { getFieldAttentionCount } from "@/lib/field/load-attention";
-import { ensureJobInvoice } from "@/lib/field/job-invoice";
+import { ensureJobInvoice, formatJobNumber } from "@/lib/field/job-invoice";
 import { listPartnersAction } from "@/app/actions/partners";
 import { pickLeadWorkMeta, resolveJobStockSource } from "@/lib/stock/job-source";
 import { sheetServiceFromLead } from "@/lib/sheet/issue-service";
@@ -88,9 +88,10 @@ export default async function FieldJobPage({
             : null)) != null ? (
           <p>
             <strong>Job #</strong>{" "}
-            GG-
-            {invoice?.job_number ??
-              (job as { job_number?: number }).job_number}
+            {formatJobNumber(
+              invoice?.job_number ??
+                (job as { job_number?: number }).job_number,
+            )}
           </p>
         ) : null}
         <p>

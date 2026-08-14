@@ -112,7 +112,11 @@ export default async function SheetPage() {
           const raw = pick(meta, "jobNumber", "job_number");
           if (!raw) return "";
           const n = Number(raw);
-          return Number.isFinite(n) ? formatJobNumber(n) : raw.startsWith("GG-") ? raw : "";
+          return Number.isFinite(n)
+            ? formatJobNumber(n)
+            : /^GG\d{2}-\d{5}$/i.test(raw) || /^GG-\d+$/i.test(raw)
+              ? raw
+              : "";
         })(),
       workSource,
       partnerName: pick(meta, "partnerName", "partner_name", "partner"),

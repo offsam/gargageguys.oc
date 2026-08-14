@@ -53,10 +53,7 @@ export const PAYMENT_OPTIONS = [
   "Check",
 ] as const;
 
-export function formatJobNumber(jobNumber: number | null | undefined): string {
-  if (!jobNumber || !Number.isFinite(jobNumber)) return "—";
-  return `GG-${jobNumber}`;
-}
+export { formatJobNumber, isLegacyJobNumber, parseJobNumberLabel } from "@/lib/field/job-number";
 
 export function money(cents: number) {
   return (cents / 100).toLocaleString("en-US", {
