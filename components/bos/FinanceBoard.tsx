@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { updateInvoiceStatusAction } from "@/app/actions/finance";
 import { InvoiceSendButton } from "@/components/bos/InvoiceSendButton";
+import { earnedBySource } from "@/lib/finance/summary";
 import type { FinanceRow } from "@/lib/finance/types";
 
 const PERIODS = [
@@ -92,6 +93,7 @@ export function FinanceBoard({ rows }: { rows: FinanceRow[] }) {
   const openAmt = filtered
     .filter((r) => r.status === "sent" || r.status === "overdue" || r.status === "draft")
     .reduce((s, r) => s + r.amountCents, 0);
+  const bySource = earnedBySource(filtered);
 
   function openInvoice(row: FinanceRow) {
     setOpen(row);
@@ -112,6 +114,22 @@ export function FinanceBoard({ rows }: { rows: FinanceRow[] }) {
           <h3>Jobs in view</h3>
           <div className="value">{filtered.length}</div>
         </div>
+        <div className="bos-card">
+          <h3>Garage Guys</h3>
+          <div className="value">{money(bySource.garageGuysCents)}</div>
+        </div>
+        {bySource.partners.map((p) => (
+          <div className="bos-card" key={p.name}>
+            <h3>{p.name}</h3>
+            <div className="value">{money(p.cents)}</div>
+          </div>
+        ))}
+        {bySource.otherCents ? (
+          <div className="bos-card">
+            <h3>Other</h3>
+            <div className="value">{money(bySource.otherCents)}</div>
+          </div>
+        ) : null}
       </div>
 
       <div className="finance-filters">

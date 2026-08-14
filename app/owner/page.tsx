@@ -12,6 +12,7 @@ import { loadStockState } from "@/lib/stock/store";
 import { summarizeStockPlaces } from "@/lib/stock/overview";
 import { buildSeoInsights } from "@/lib/seo/insights";
 import { loadFinanceRows } from "@/lib/finance/load";
+import { earnedBySource, isFinanceEarned } from "@/lib/finance/summary";
 import { SHEET_STATUSES, sheetStatusFromLead } from "@/lib/leads/stage-sync";
 
 function money(cents: number) {
@@ -29,10 +30,6 @@ function usd(value: number | null | undefined) {
     currency: "USD",
     maximumFractionDigits: 0,
   });
-}
-
-function isEarnedStatus(status: string) {
-  return ["paid", "complete", "signed", "completed", "partner"].includes(status);
 }
 
 function isOpenStatus(status: string) {
@@ -154,13 +151,13 @@ export default async function OwnerPage() {
   const jobsOpen = jobsOpenRes.count ?? 0;
   const finance = financeRows || [];
   const earnedCents = finance
-    .filter((row) => isEarnedStatus(row.status))
+    .filter((row) => isFinanceEarned(row.status))
     .reduce((sum, row) => sum + (row.amountCents || 0), 0);
+  const bySource = earnedBySource(finance);
   const openCents = finance
     .filter((row) => isOpenStatus(row.status))
     .reduce((sum, row) => sum + (row.amountCents || 0), 0);
   const openInvoiceCount = finance.filter((row) => isOpenStatus(row.status)).length;
-  const earnedCount = finance.filter((row) => isEarnedStatus(row.status)).length;
   const staffCount = staffRes.count ?? 0;
   const techCount = technicians.length;
   const inboxNew = inboxNewRes.count ?? 0;
@@ -364,9 +361,21 @@ export default async function OwnerPage() {
           <p className="ov-tile__hint">Earned · paid / completed</p>
           <ul className="ov-mini-list ov-mini-list--compact">
             <li>
-              <span>Paid jobs</span>
-              <strong>{earnedCount}</strong>
+              <span>Garage Guys</span>
+              <strong>{money(bySource.garageGuysCents)}</strong>
             </li>
+            {bySource.partners.map((p) => (
+              <li key={p.name}>
+                <span>{p.name}</span>
+                <strong>{money(p.cents)}</strong>
+              </li>
+            ))}
+            {bySource.otherCents ? (
+              <li>
+                <span>Other</span>
+                <strong>{money(bySource.otherCents)}</strong>
+              </li>
+            ) : null}
             <li>
               <span>Open invoices</span>
               <strong>
