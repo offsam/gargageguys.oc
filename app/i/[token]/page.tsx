@@ -16,6 +16,18 @@ export default async function PublicInvoicePage({
         <p className="inv-public-brand">Garage Guys</p>
         <h1>Service invoice</h1>
         <p className="inv-public-job">Job # {formatJobNumber(invoice.job_number)}</p>
+        {invoice.completed_at ? (
+          <p>
+            Work date:{" "}
+            <strong>
+              {new Date(invoice.completed_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </strong>
+          </p>
+        ) : null}
         <p>
           Status: <strong>{invoice.status.replace(/_/g, " ")}</strong>
         </p>
