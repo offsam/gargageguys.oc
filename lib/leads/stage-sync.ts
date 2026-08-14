@@ -6,6 +6,7 @@ import type { LeadStage } from "@/lib/supabase/types";
  */
 export const SHEET_STATUSES = [
   "Waiting",
+  "No answer",
   "Scheduled",
   "Tech confirmed",
   "En route",
@@ -23,10 +24,15 @@ const LEGACY_STATUS_MAP: Record<string, SheetStatus> = {
   "Tech Confirmed": "Tech confirmed",
   "En Route": "En route",
   "On Site": "On site",
+  "Didn't answer": "No answer",
+  "Did not answer": "No answer",
+  "No Answer": "No answer",
+  "No-answer": "No answer",
 };
 
 export const STATUS_TO_STAGE: Record<SheetStatus, LeadStage> = {
   Waiting: "qualified",
+  "No answer": "qualified",
   Scheduled: "scheduled",
   "Tech confirmed": "in_progress",
   "En route": "in_progress",

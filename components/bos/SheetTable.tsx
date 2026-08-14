@@ -265,6 +265,8 @@ function statusClass(status: string): string {
       return "sheet-status-sched";
     case "Waiting":
       return "sheet-status-wait";
+    case "No answer":
+      return "sheet-status-noanswer";
     default:
       return "";
   }

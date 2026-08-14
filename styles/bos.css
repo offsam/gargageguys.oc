@@ -462,7 +462,7 @@ textarea {
 }
 
 .kanban--sheet-sync {
-  grid-template-columns: repeat(8, minmax(168px, 1fr));
+  grid-template-columns: repeat(9, minmax(168px, 1fr));
   overflow-x: auto;
   padding-bottom: 0.35rem;
 }
@@ -1223,6 +1223,9 @@ body.sheet-col-resizing * {
 }
 .sheet-status-wait {
   background: #fffbeb !important;
+}
+.sheet-status-noanswer {
+  background: #f1f5f9 !important;
 }
 
 .partner-row-form {

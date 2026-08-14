@@ -78,6 +78,7 @@ export default async function OwnerPage() {
 
   const activePipeline =
     (statusCounts.Waiting || 0) +
+    (statusCounts["No answer"] || 0) +
     (statusCounts.Scheduled || 0) +
     (statusCounts["Tech confirmed"] || 0) +
     (statusCounts["En route"] || 0) +
@@ -126,7 +127,7 @@ export default async function OwnerPage() {
       subtitle="All categories at a glance — numbers first, details in each section"
     >
       <div className="ov-dash">
-        <Link href="/serm" className="ov-tile ov-tile--reviews ov-tile--wide">
+        <Link href="/reviews" className="ov-tile ov-tile--reviews ov-tile--wide">
           <div className="ov-tile__head">
             <h3>Reviews</h3>
             <span className="ov-tile__link">SERM →</span>
@@ -159,7 +160,7 @@ export default async function OwnerPage() {
             <span className="ov-tile__link">Open →</span>
           </div>
           <div className="ov-big">{activePipeline}</div>
-          <p className="ov-tile__hint">Active now (Waiting → On site)</p>
+          <p className="ov-tile__hint">Active now (Waiting / No answer → On site)</p>
           <ul className="ov-mini-list">
             {SHEET_STATUSES.map((status) => (
               <li key={status}>
@@ -181,6 +182,10 @@ export default async function OwnerPage() {
             <li>
               <span>Waiting</span>
               <strong>{statusCounts.Waiting || 0}</strong>
+            </li>
+            <li>
+              <span>No answer</span>
+              <strong>{statusCounts["No answer"] || 0}</strong>
             </li>
             <li>
               <span>On site</span>
