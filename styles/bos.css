@@ -1204,8 +1204,11 @@ body.sheet-col-resizing * {
 }
 
 .sheet-addr-cell {
-  overflow: visible !important;
-  z-index: 4;
+  overflow: hidden;
+}
+
+.sheet-addr-cell .sheet-cell {
+  text-overflow: ellipsis;
 }
 
 .addr-ac {
@@ -1215,11 +1218,8 @@ body.sheet-col-resizing * {
 }
 
 .addr-ac-list {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  z-index: 30;
+  position: fixed;
+  z-index: 80;
   margin: 0;
   padding: 0.25rem 0;
   list-style: none;

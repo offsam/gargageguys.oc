@@ -356,6 +356,9 @@ export function SheetTable({
   const [status, setStatus] = useState<string>("");
   const [pending, setPending] = useState(false);
   const [dateSort, setDateSort] = useState<"newest" | "oldest">("newest");
+  const [freezeOrder, setFreezeOrder] = useState(false);
+  const frozenIdsRef = useRef<string[] | null>(null);
+  const focusGenRef = useRef(0);
   const [widths, setWidths] = useState<Record<string, number>>(defaultWidths);
   const dragRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
   const rowsRef = useRef(rows);
@@ -378,6 +381,8 @@ export function SheetTable({
   }, []);
 
   function changeDateSort(next: "newest" | "oldest") {
+    frozenIdsRef.current = null;
+    setFreezeOrder(false);
     setDateSort(next);
     try {
       localStorage.setItem(SORT_STORAGE_KEY, next);
@@ -698,7 +703,7 @@ export function SheetTable({
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [partners, rows]);
 
-  const displayRows = useMemo(() => {
+  const sortedRows = useMemo(() => {
     const filled = rows.filter(rowHasWork);
     const blanks = rows.filter((row) => !rowHasWork(row));
     filled.sort((a, b) => {
@@ -709,6 +714,28 @@ export function SheetTable({
     });
     return [...filled, ...blanks];
   }, [rows, dateSort]);
+
+  const displayRows = useMemo(() => {
+    const ids = freezeOrder ? frozenIdsRef.current : null;
+    if (!ids?.length) return sortedRows;
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    const locked = ids.map((id) => byId.get(id)).filter((row): row is SheetRow => Boolean(row));
+    const lockedSet = new Set(locked.map((row) => row.id));
+    const extras = sortedRows.filter((row) => !lockedSet.has(row.id));
+    return [...locked, ...extras];
+  }, [sortedRows, rows, freezeOrder]);
+
+  function freezeRowOrder() {
+    focusGenRef.current += 1;
+    if (freezeOrder) return;
+    frozenIdsRef.current = displayRows.map((row) => row.id);
+    setFreezeOrder(true);
+  }
+
+  function releaseRowOrder() {
+    frozenIdsRef.current = null;
+    setFreezeOrder(false);
+  }
 
   return (
     <div>
@@ -823,6 +850,12 @@ export function SheetTable({
                         ? "sheet-row-partner"
                         : "sheet-row-own"
                   }
+                  onFocusCapture={freezeRowOrder}
+                  onBlurCapture={(e) => {
+                    const next = e.relatedTarget as Node | null;
+                    if (next && e.currentTarget.contains(next)) return;
+                    window.setTimeout(releaseRowOrder, 200);
+                  }}
                 >
                   <th className="sheet-row-num">{rowIndex + 1}</th>
                   {COLUMNS.map((col) => {
