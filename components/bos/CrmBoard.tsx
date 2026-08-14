@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createCrmClientAction, deleteCrmLeadAction, updateLeadJobStatusAction } from "@/app/actions/crm";
-import { SHEET_STATUSES, type SheetStatus } from "@/lib/leads/stage-sync";
+import {
+  createCrmClientAction,
+  deleteCrmLeadAction,
+  scheduleCrmLeadAction,
+  updateLeadJobStatusAction,
+} from "@/app/actions/crm";
+import { SHEET_STATUSES, completeBlockedReason, type SheetStatus } from "@/lib/leads/stage-sync";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
+import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
+import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/ScheduleLeadModal";
 
 export type CrmLeadCard = {
   id: string;
@@ -15,8 +22,11 @@ export type CrmLeadCard = {
   jobType: string;
   technician: string;
   jobStatus: SheetStatus;
+  jobCost: string;
   createdAt: string;
 };
+
+export type { CrmTechnician };
 
 const LEAD_SOURCES = [
   "Facebook",
@@ -62,7 +72,7 @@ export function CrmBoard({
   stockParts = [],
 }: {
   leads: CrmLeadCard[];
-  technicians?: string[];
+  technicians?: CrmTechnician[];
   stockParts?: string[];
 }) {
   const router = useRouter();
@@ -72,9 +82,30 @@ export function CrmBoard({
   const [openAdd, setOpenAdd] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
+  const [scheduleLead, setScheduleLead] = useState<CrmLeadCard | null>(null);
+  const [scheduleError, setScheduleError] = useState("");
+  const [liveNotice, setLiveNotice] = useState("");
+  const seenIds = useRef(new Set(initialLeads.map((l) => l.id)));
+  const firstSync = useRef(true);
+
+  useBosLiveRefresh(["leads"]);
 
   useEffect(() => {
     setLeads(initialLeads);
+    if (firstSync.current) {
+      firstSync.current = false;
+      for (const lead of initialLeads) seenIds.current.add(lead.id);
+      return;
+    }
+    const fresh = initialLeads.filter((l) => !seenIds.current.has(l.id));
+    for (const lead of initialLeads) seenIds.current.add(lead.id);
+    if (fresh.length) {
+      const names = fresh
+        .map((l) => l.name || "New lead")
+        .slice(0, 3)
+        .join(", ");
+      setLiveNotice(`New lead in Waiting: ${names}`);
+    }
   }, [initialLeads]);
 
   const columns = useMemo(() => {
@@ -83,6 +114,39 @@ export function CrmBoard({
       items: leads.filter((l) => l.jobStatus === status),
     }));
   }, [leads]);
+
+  function requestStatus(lead: CrmLeadCard, jobStatus: SheetStatus) {
+    if (jobStatus === "Scheduled") {
+      setScheduleError("");
+      setScheduleLead(lead);
+      return;
+    }
+    const blocked = completeBlockedReason(jobStatus, lead.jobCost);
+    if (blocked) {
+      setError(blocked);
+      return;
+    }
+    moveLead(lead.id, jobStatus);
+  }
+
+  function submitSchedule(input: { technicianId: string; startAt: string; endAt: string }) {
+    if (!scheduleLead) return;
+    setScheduleError("");
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("leadId", scheduleLead.id);
+      fd.set("technicianId", input.technicianId);
+      fd.set("startAt", input.startAt);
+      fd.set("endAt", input.endAt);
+      const result = await scheduleCrmLeadAction(fd);
+      if (!result.ok) {
+        setScheduleError(result.error || "Could not schedule");
+        return;
+      }
+      setScheduleLead(null);
+      router.refresh();
+    });
+  }
 
   function moveLead(leadId: string, jobStatus: SheetStatus) {
     const prev = leads;
@@ -143,6 +207,11 @@ export function CrmBoard({
   function submitAdd(e: React.FormEvent) {
     e.preventDefault();
     setFormError("");
+    const blocked = completeBlockedReason(form.jobStatus, form.jobCost);
+    if (blocked) {
+      setFormError(blocked);
+      return;
+    }
     const fd = new FormData();
     for (const [key, value] of Object.entries(form)) {
       fd.set(key, value);
@@ -168,6 +237,7 @@ export function CrmBoard({
           {pending ? " Saving…" : null}
         </p>
         {error ? <span className="crm-sync-error">{error}</span> : null}
+        {liveNotice ? <span className="crm-live-notice">{liveNotice}</span> : null}
       </div>
       <div className="kanban kanban--sheet-sync">
         {columns.map((col) => (
@@ -216,7 +286,7 @@ export function CrmBoard({
                   <select
                     value={lead.jobStatus}
                     disabled={pending}
-                    onChange={(e) => moveLead(lead.id, e.target.value as SheetStatus)}
+                    onChange={(e) => requestStatus(lead, e.target.value as SheetStatus)}
                   >
                     {SHEET_STATUSES.map((s) => (
                       <option key={s} value={s}>
@@ -333,7 +403,7 @@ export function CrmBoard({
                   value={form.jobStatus}
                   onChange={(e) => setField("jobStatus", e.target.value)}
                 >
-                  {SHEET_STATUSES.map((s) => (
+                  {SHEET_STATUSES.filter((s) => s !== "Scheduled").map((s) => (
                     <option key={s} value={s}>
                       {s}
                     </option>
@@ -401,8 +471,8 @@ export function CrmBoard({
                 >
                   <option value="">—</option>
                   {technicians.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
+                    <option key={t.id} value={t.name}>
+                      {t.name}
                     </option>
                   ))}
                 </select>
@@ -426,6 +496,17 @@ export function CrmBoard({
             </form>
           </div>
         </div>
+      ) : null}
+
+      {scheduleLead ? (
+        <ScheduleLeadModal
+          leadName={scheduleLead.name}
+          technicians={technicians}
+          pending={pending}
+          error={scheduleError}
+          onClose={() => setScheduleLead(null)}
+          onSubmit={submitSchedule}
+        />
       ) : null}
     </div>
   );

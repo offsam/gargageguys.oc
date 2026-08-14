@@ -108,3 +108,27 @@ export function stageFromSheetStatus(status: string): LeadStage | undefined {
   if (!normalized) return undefined;
   return STATUS_TO_STAGE[normalized];
 }
+
+export const COMPLETE_NEEDS_PRICE = "Enter the job cost before moving to Completed";
+
+export function jobPriceAmount(...values: unknown[]): number {
+  for (const raw of values) {
+    if (raw == null || raw === "") continue;
+    if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) return raw;
+    const n = Number(String(raw).replace(/[^0-9.-]/g, ""));
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return 0;
+}
+
+export function hasJobPrice(...values: unknown[]): boolean {
+  return jobPriceAmount(...values) > 0;
+}
+
+/** Null if Completed is allowed (or status is not Completed). */
+export function completeBlockedReason(status: string, ...priceValues: unknown[]): string | null {
+  const normalized = normalizeSheetStatus(status);
+  if (normalized !== "Completed") return null;
+  if (hasJobPrice(...priceValues)) return null;
+  return COMPLETE_NEEDS_PRICE;
+}

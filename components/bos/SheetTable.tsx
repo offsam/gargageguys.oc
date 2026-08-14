@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveSheetRowAction, deleteSheetRowAction } from "@/app/actions/sheet";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
-import { SHEET_STATUSES } from "@/lib/leads/stage-sync";
+import { SHEET_STATUSES, completeBlockedReason } from "@/lib/leads/stage-sync";
 import {
   WORK_SOURCES,
   PARTNER_TECH_RATE,
@@ -854,7 +854,11 @@ export function SheetTable({
                   onBlurCapture={(e) => {
                     const next = e.relatedTarget as Node | null;
                     if (next && e.currentTarget.contains(next)) return;
-                    window.setTimeout(releaseRowOrder, 200);
+                    const gen = focusGenRef.current;
+                    window.setTimeout(() => {
+                      if (focusGenRef.current !== gen) return;
+                      releaseRowOrder();
+                    }, 200);
                   }}
                 >
                   <th className="sheet-row-num">{rowIndex + 1}</th>
@@ -899,6 +903,14 @@ export function SheetTable({
                               if (col.key === "parts") {
                                 onPartsChange(row.id, e.target.value, row.workSource);
                                 return;
+                              }
+                              if (col.key === "jobStatus") {
+                                const blocked = completeBlockedReason(e.target.value, row.jobCost);
+                                if (blocked) {
+                                  setStatus(blocked);
+                                  e.target.value = row.jobStatus;
+                                  return;
+                                }
                               }
                               patchRow(row.id, { [col.key]: e.target.value }, true);
                             }}

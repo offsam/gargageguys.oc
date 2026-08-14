@@ -35,15 +35,18 @@ export default async function CrmPage() {
       supabase.from("inbox_items").select("*").order("created_at", { ascending: false }).limit(50),
       admin
         .from("profiles")
-        .select("full_name, email")
+        .select("id, full_name, email")
         .eq("role", "technician")
         .order("created_at", { ascending: true }),
       loadStockState().catch(() => null),
     ]);
 
   const technicians = (techs || [])
-    .map((t) => t.full_name || t.email)
-    .filter((v): v is string => Boolean(v));
+    .map((t) => ({
+      id: t.id,
+      name: t.full_name || t.email || "Technician",
+    }))
+    .filter((t) => t.id);
 
   const stockParts = (() => {
     const fromStock = (stockState?.items || [])
@@ -71,6 +74,7 @@ export default async function CrmPage() {
         pick(meta, "jobType") || lead.deal_title || lead.lead_type || lead.message || "",
       technician: pick(meta, "technician") || "",
       jobStatus: sheetStatusFromLead({ stage: lead.stage, metadata: lead.metadata }),
+      jobCost: pick(meta, "jobCost", "job_cost") || lead.deal_price || "",
       createdAt: lead.created_at,
     };
   });

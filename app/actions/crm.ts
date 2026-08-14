@@ -9,6 +9,7 @@ import {
   stageFromSheetStatus,
   STATUS_TO_JOB_STATUS,
   STAGE_TO_STATUS,
+  completeBlockedReason,
   type SheetStatus,
 } from "@/lib/leads/stage-sync";
 import { parseLocalDateTime } from "@/lib/datetime";
@@ -45,7 +46,10 @@ export async function createCrmClientAction(formData: FormData) {
     date: String(formData.get("date") || "").trim() || todayISO(),
     clientName: String(formData.get("clientName") || "").trim(),
     clientAddress: String(formData.get("clientAddress") || "").trim(),
-    jobStatus: String(formData.get("jobStatus") || "").trim() || "Waiting",
+    jobStatus: (() => {
+      const status = String(formData.get("jobStatus") || "").trim() || "Waiting";
+      return status === "Scheduled" ? "Waiting" : status;
+    })(),
     jobType: String(formData.get("jobType") || "").trim(),
     parts: String(formData.get("parts") || "").trim(),
     paymentType: String(formData.get("paymentType") || "").trim(),
@@ -113,7 +117,7 @@ export async function updateLeadJobStatusAction(formData: FormData) {
   const admin = getSupabaseAdmin();
   const { data: existing } = await admin
     .from("leads")
-    .select("id, metadata")
+    .select("id, metadata, deal_price")
     .eq("id", leadId)
     .maybeSingle();
 
@@ -123,6 +127,14 @@ export async function updateLeadJobStatusAction(formData: FormData) {
     existing.metadata && typeof existing.metadata === "object"
       ? (existing.metadata as Record<string, unknown>)
       : {};
+
+  const blocked = completeBlockedReason(
+    jobStatus,
+    prev.jobCost,
+    prev.job_cost,
+    existing.deal_price,
+  );
+  if (blocked) return { ok: false as const, error: blocked };
 
   const stage = stageFromSheetStatus(jobStatus) as LeadStage;
   const { error } = await admin

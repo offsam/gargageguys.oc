@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { stageFromSheetStatus } from "@/lib/leads/stage-sync";
+import { stageFromSheetStatus, completeBlockedReason } from "@/lib/leads/stage-sync";
 
 export type SheetSaveInput = {
   id: string;
@@ -103,6 +103,9 @@ export async function saveSheetRowAction(
   if (!hasContent && isTempId(input.id)) {
     return { ok: true, id: input.id };
   }
+
+  const blocked = completeBlockedReason(input.jobStatus, input.jobCost);
+  if (blocked) return { ok: false, error: blocked };
 
   try {
     const admin = getSupabaseAdmin();

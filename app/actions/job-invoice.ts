@@ -250,6 +250,9 @@ export async function completeInvoiceAction(jobId: string) {
   const invoice = await getJobInvoiceByJobId(jobId);
   if (!invoice) return { ok: false as const, error: "Invoice not found" };
   if (!invoice.signature_data) return { ok: false as const, error: "Signature required" };
+  if (!(invoice.total_cents > 0)) {
+    return { ok: false as const, error: "Enter the job cost before completing" };
+  }
 
   const admin = getSupabaseAdmin();
   const now = new Date().toISOString();

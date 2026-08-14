@@ -465,7 +465,7 @@ export function FieldInvoiceWizard({
             <button
               type="button"
               className="inv-primary inv-sign-save"
-              disabled={pending || (!hasInk && !invoice.signature_data)}
+              disabled={pending || (!hasInk && !invoice.signature_data) || invoice.total_cents <= 0}
               onClick={() => submitSignature(true)}
             >
               {pending ? "Saving…" : "Save signature & finish"}
@@ -475,7 +475,7 @@ export function FieldInvoiceWizard({
             <button
               type="button"
               className="inv-primary"
-              disabled={pending}
+              disabled={pending || invoice.total_cents <= 0}
               onClick={() => run(() => completeInvoiceAction(jobId))}
             >
               Finish invoice
