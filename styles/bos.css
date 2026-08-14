@@ -210,6 +210,10 @@ textarea {
   grid-column: span 2;
 }
 
+.ov-tile--span3 {
+  grid-column: span 3;
+}
+
 .ov-tile--reviews {
   background: linear-gradient(160deg, #fff 0%, #f0f7ff 100%);
 }
@@ -329,6 +333,45 @@ textarea {
   padding-top: 0;
 }
 
+.ov-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem 1rem;
+  margin-top: 0.35rem;
+}
+
+.ov-split h4 {
+  margin: 0 0 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bos-muted);
+}
+
+.ov-places {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.15rem 1rem;
+  margin-top: 0.4rem;
+  list-style: none;
+  padding: 0;
+  margin-left: 0;
+}
+
+.ov-places li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--bos-muted);
+}
+
+.ov-places strong {
+  color: var(--bos-text);
+  font-variant-numeric: tabular-nums;
+}
+
 .ov-pills {
   display: flex;
   flex-wrap: wrap;
@@ -387,11 +430,11 @@ textarea {
   .ov-dash {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .ov-tile,
-  .ov-tile--wide {
+  .ov-tile {
     grid-column: span 1;
   }
-  .ov-tile--wide {
+  .ov-tile--wide,
+  .ov-tile--span3 {
     grid-column: span 2;
   }
 }
@@ -401,11 +444,16 @@ textarea {
     grid-template-columns: 1fr;
   }
   .ov-tile,
-  .ov-tile--wide {
+  .ov-tile--wide,
+  .ov-tile--span3 {
     grid-column: span 1;
   }
   .ov-seo-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov-split,
+  .ov-places {
+    grid-template-columns: 1fr;
   }
   .ov-reviews {
     gap: 0.85rem;
