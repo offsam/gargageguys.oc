@@ -3,6 +3,7 @@ import { BosShell } from "@/components/bos/BosShell";
 import { getSessionUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { assignJobAction, createJobFromLeadAction, updateJobStatusAction } from "@/app/actions/dispatch";
+import { isBusyJob } from "@/lib/field/busy";
 
 export default async function DispatchPage() {
   const user = await getSessionUser();
@@ -71,10 +72,39 @@ export default async function DispatchPage() {
           </tr>
         </thead>
         <tbody>
-          {(jobs || []).map((job) => (
-            <tr key={job.id}>
-              <td>{job.title}</td>
-              <td>{job.status}</td>
+          {(jobs || []).map((job) => {
+            const busy = isBusyJob(job);
+            return (
+            <tr key={job.id} className={busy ? "dispatch-row--busy" : undefined}>
+              <td>
+                {busy ? (
+                  <>
+                    <strong>Busy</strong>
+                    <div style={{ color: "var(--bos-muted)", fontSize: "0.8rem" }}>
+                      {String(job.notes || "")
+                        .replace("[BUSY]", "")
+                        .trim() || "Technician blocked this time"}
+                      {job.scheduled_start
+                        ? ` · ${new Date(job.scheduled_start).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}`
+                        : ""}
+                      {job.scheduled_end
+                        ? ` – ${new Date(job.scheduled_end).toLocaleTimeString([], {
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}`
+                        : ""}
+                    </div>
+                  </>
+                ) : (
+                  job.title
+                )}
+              </td>
+              <td>{busy ? "busy" : job.status}</td>
               <td>
                 {(techs || []).find((t) => t.id === job.technician_id)?.full_name ||
                   (techs || []).find((t) => t.id === job.technician_id)?.email ||
@@ -107,7 +137,8 @@ export default async function DispatchPage() {
                 </form>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </BosShell>
