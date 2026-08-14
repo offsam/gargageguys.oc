@@ -15,8 +15,9 @@ export type Partner = {
 };
 
 const SEED_NAME = "Champion Garage Doors Service";
-const PARTNER_STOCK_SQL = "Run supabase/migrations/202608140007_partner_stock.sql in Supabase SQL Editor";
-const PARTNERS_SQL = "Run supabase/migrations/202608140005_partners.sql in Supabase SQL Editor";
+const PARTNER_STOCK_SQL =
+  "Run supabase/migrations/202608140007_partner_stock.sql in Supabase SQL Editor (creates partners + own-stock flag)";
+const PARTNERS_SQL = PARTNER_STOCK_SQL;
 const SELECT_WITH_STOCK = "id, name, notes, tech_percent, has_own_stock, active, created_at";
 const SELECT_LEGACY = "id, name, notes, tech_percent, active, created_at";
 
