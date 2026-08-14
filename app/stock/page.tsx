@@ -176,11 +176,7 @@ export default async function StockPage({
       user={user}
       active="/stock"
       title="Stock"
-      subtitle={
-        stockOwner === "gg"
-          ? "Garage Guys warehouse and vans"
-          : `${stockOwners.find((o) => o.id === stockOwner)?.name || "Partner"} stock`
-      }
+      subtitle="Parts inventory and service prices"
     >
       {board}
     </BosShell>

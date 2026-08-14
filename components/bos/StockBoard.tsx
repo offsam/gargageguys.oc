@@ -9,6 +9,7 @@ import {
   receiveStockAction,
   saveItemCostAction,
 } from "@/app/actions/stock";
+import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 
 export type StockRow = {
   id: string;
@@ -184,6 +185,26 @@ export function StockBoard({
     }));
   }, [filtered]);
 
+  const serviceGroups = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const services = FIELD_SERVICES.filter((s) => s.id !== "svc-custom").filter((s) => {
+      if (!needle) return true;
+      return `${s.name} ${s.category}`.toLowerCase().includes(needle);
+    });
+    const map = new Map<string, typeof services>();
+    for (const service of services) {
+      const list = map.get(service.category) || [];
+      list.push(service);
+      map.set(service.category, list);
+    }
+    return [...map.keys()]
+      .sort((a, b) => a.localeCompare(b))
+      .map((cat) => ({
+        cat,
+        items: (map.get(cat) || []).slice().sort((a, b) => a.name.localeCompare(b.name)),
+      }));
+  }, [q]);
+
   const inventoryValue = useMemo(() => {
     if (!showPrices) return 0;
     return rows.reduce((sum, r) => sum + r.master * (costs[r.id] ?? r.unitCostCents), 0);
@@ -292,7 +313,7 @@ export function StockBoard({
         <input
           className="stock-search"
           type="search"
-          placeholder="Search part…"
+          placeholder="Search part or service…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           autoFocus={!addOpen}
@@ -517,6 +538,52 @@ export function StockBoard({
           </tbody>
         </table>
       </div>
+
+      <section className="stock-services">
+        <div className="stock-services-head">
+          <h2>Services</h2>
+          <span className="stock-meta">
+            {serviceGroups.reduce((sum, g) => sum + g.items.length, 0)} listed · same list as Field
+            invoice
+          </span>
+        </div>
+        <div className="stock-wrap stock-services-wrap">
+          <table className="stock-table">
+            <thead>
+              <tr>
+                <th className="stock-col-item">Service</th>
+                <th className="stock-col-cost">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              {serviceGroups.map(({ cat, items }) => (
+                <Fragment key={`svc-${cat}`}>
+                  <tr className="stock-cat">
+                    <td colSpan={2}>{cat}</td>
+                  </tr>
+                  {items.map((service) => (
+                    <tr key={service.id}>
+                      <td className="stock-col-item">
+                        <span className="stock-name">{service.name}</span>
+                      </td>
+                      <td className="stock-col-cost stock-service-price">
+                        {service.unitPriceCents > 0 ? `$${money(service.unitPriceCents)}` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
+              ))}
+              {serviceGroups.length === 0 ? (
+                <tr>
+                  <td colSpan={2} className="stock-empty">
+                    Nothing matches “{q}”
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

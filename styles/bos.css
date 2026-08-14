@@ -223,6 +223,10 @@ textarea {
   background: linear-gradient(160deg, #fff 0%, #f7fbf4 100%);
 }
 
+.ov-tile--ads {
+  background: linear-gradient(160deg, #fff 0%, #f3eefc 100%);
+}
+
 .ov-tile--seo {
   background: linear-gradient(160deg, #fff 0%, #fff8eb 100%);
 }
@@ -1916,6 +1920,39 @@ body.sheet-col-resizing * {
   text-align: center;
   color: var(--bos-muted);
   padding: 1.5rem 0.5rem !important;
+}
+
+.stock-services {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.stock-services-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.stock-services-head h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: var(--bos-text);
+}
+
+.stock-services-wrap {
+  max-height: none;
+}
+
+.stock-service-price {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  text-align: right !important;
+  white-space: nowrap;
 }
 
 /* —— Field app (phone / tech) —— */
