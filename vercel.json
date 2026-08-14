@@ -7,6 +7,10 @@
     {
       "path": "/api/google-reviews-sync",
       "schedule": "0 15 */3 * *"
+    },
+    {
+      "path": "/api/ads-sync",
+      "schedule": "30 14 * * *"
     }
   ]
 }

@@ -10,6 +10,8 @@ const PROTECTED = [
   "/field",
   "/crm",
   "/serm",
+  "/ads",
+  "/reviews",
 ];
 
 /**
@@ -49,5 +51,7 @@ export const config = {
     "/field/:path*",
     "/crm/:path*",
     "/serm/:path*",
+    "/ads/:path*",
+    "/reviews/:path*",
   ],
 };

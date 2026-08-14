@@ -27,7 +27,9 @@ function mapWebsiteSource(source?: string): string {
   const lower = raw.toLowerCase();
   if (lower.includes("thumbtack")) return "Thumbtack";
   if (lower.includes("yelp")) return "Yelp";
-  if (lower.includes("facebook") || lower.includes("fb")) return "Facebook";
+  if (lower.includes("facebook") || lower.includes("fb") || lower.includes("meta")) {
+    return "Facebook";
+  }
   if (lower.includes("google")) return "Google";
   if (lower.includes("referral")) return "Referral";
   if (lower.includes("garageguys") || lower.includes("website") || lower.includes("pullgarage")) {

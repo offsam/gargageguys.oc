@@ -1,6 +1,12 @@
 .env
 .env.local
+.env.vercel.local
+.env*.local
 .vercel
+.DS_Store
+.next/
+node_modules/
+*.tsbuildinfo
 
 # Legacy Vercel serverless (conflicts with app/api)
 /api/

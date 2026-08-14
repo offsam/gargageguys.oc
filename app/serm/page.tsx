@@ -8,24 +8,13 @@ export default async function SermPage() {
   if (!user) redirect("/login");
 
   const supabase = await createSupabaseServerClient();
-  const [{ data: snapshots }, { data: reviewSnapshots }, { data: reviews }] =
-    await Promise.all([
-      supabase
-        .from("seo_snapshots")
-        .select("*")
-        .order("period_end", { ascending: false })
-        .limit(12),
-      supabase.from("review_snapshots").select("*").order("source"),
-      supabase
-        .from("reviews")
-        .select("id, source, author_name, rating, text, posted_at, owner_reply, synced_at")
-        .order("posted_at", { ascending: false, nullsFirst: false })
-        .limit(40),
-    ]);
+  const { data: snapshots } = await supabase
+    .from("seo_snapshots")
+    .select("*")
+    .order("period_end", { ascending: false })
+    .limit(12);
 
   const latest = snapshots?.[0];
-  const googleSnap = reviewSnapshots?.find((r) => r.source === "google");
-  const thumbtackSnap = reviewSnapshots?.find((r) => r.source === "thumbtack");
   const sc = (latest?.search_console || {}) as {
     totals?: { clicks?: number; impressions?: number; ctr?: number; position?: number };
     topQueries?: Array<{ key: string; clicks: number; impressions: number; position: number }>;
@@ -41,67 +30,14 @@ export default async function SermPage() {
       user={user}
       active="/serm"
       title="SERM"
-      subtitle="Search & reputation metrics (GSC + GA4 + Google reviews)"
+      subtitle="Search Console & GA4"
     >
-      <div className="bos-grid">
-        <div className="bos-card">
-          <h3>Google reviews</h3>
-          <div className="value">
-            {googleSnap ? `${googleSnap.rating ?? "—"}★ · ${googleSnap.review_count}` : "—"}
-          </div>
-        </div>
-        <div className="bos-card">
-          <h3>Thumbtack reviews</h3>
-          <div className="value">
-            {thumbtackSnap
-              ? `${thumbtackSnap.rating ?? "—"}★ · ${thumbtackSnap.review_count}`
-              : "—"}
-          </div>
-        </div>
-        <div className="bos-card">
-          <h3>Reviews synced</h3>
-          <div className="value">{reviews?.length ?? 0}</div>
-        </div>
-      </div>
-
-      <h2>Recent reviews</h2>
-      {!reviews?.length ? (
-        <div className="bos-card">
-          No reviews in DB yet. Apply migration <code>202608130003_reviews.sql</code>, then run{" "}
-          <code>/api/google-reviews-sync</code>.
-        </div>
-      ) : (
-        <table className="bos-table">
-          <thead>
-            <tr>
-              <th>Source</th>
-              <th>Author</th>
-              <th>Rating</th>
-              <th>Text</th>
-              <th>Posted</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reviews.map((row) => (
-              <tr key={row.id}>
-                <td>{row.source}</td>
-                <td>{row.author_name || "—"}</td>
-                <td>{row.rating ?? "—"}</td>
-                <td>{(row.text || "").slice(0, 140)}</td>
-                <td>{row.posted_at ? new Date(row.posted_at).toLocaleDateString() : "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
       {!latest ? (
-        <div className="bos-card" style={{ marginTop: 24 }}>
+        <div className="bos-card">
           No SEO snapshots yet. Run <code>/api/seo-sync</code> (cron or manual with CRON_SECRET).
         </div>
       ) : (
         <>
-          <h2 style={{ marginTop: 32 }}>Search Console / GA4</h2>
           <div className="bos-grid">
             <div className="bos-card">
               <h3>Period</h3>
@@ -119,7 +55,9 @@ export default async function SermPage() {
             </div>
             <div className="bos-card">
               <h3>Avg position</h3>
-              <div className="value">{sc.totals?.position?.toFixed?.(1) ?? sc.totals?.position ?? "—"}</div>
+              <div className="value">
+                {sc.totals?.position?.toFixed?.(1) ?? sc.totals?.position ?? "—"}
+              </div>
             </div>
             <div className="bos-card">
               <h3>GA4 sessions</h3>
