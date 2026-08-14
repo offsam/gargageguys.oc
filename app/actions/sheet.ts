@@ -73,7 +73,14 @@ async function syncPartnerSheetStock(input: {
   createdBy: string;
 }) {
   let owner: "none" | "gg" | string = "none";
-  if (isPartnerWork(input.workSource) && input.partnerName.trim()) {
+  const adminForJobs = getSupabaseAdmin();
+  const { data: fieldJobs } = await adminForJobs
+    .from("jobs")
+    .select("id")
+    .eq("lead_id", input.leadId)
+    .limit(1);
+  const fieldWillDeduct = Boolean(fieldJobs?.length);
+  if (!fieldWillDeduct && isPartnerWork(input.workSource) && input.partnerName.trim()) {
     const partners = await listPartnersAction();
     const match = partners.find(
       (p) => p.name.trim().toLowerCase() === input.partnerName.trim().toLowerCase(),

@@ -188,15 +188,20 @@ export function StockBoard({
 
   const colSpan = partnerMode
     ? 2 + (showPrices ? 1 : 0) + (canManage ? 1 : 0)
-    : 2 +
-      (view === "master" || view === "warehouse" ? 1 : 0) +
-      (view === "master" || view === "tech" ? 1 : 0) +
-      (showPrices ? 1 : 0) +
-      (canManage ? 1 : 0);
+    : isTechOnly
+      ? 2 + (showPrices ? 1 : 0)
+      : 2 +
+        (view === "master" || view === "warehouse" ? 1 : 0) +
+        (view === "master" || view === "tech" ? 1 : 0) +
+        (showPrices ? 1 : 0) +
+        (canManage ? 1 : 0);
+
+  const showOwnerTabs = !isTechOnly || stockOwners.length > 1;
+  const techVanOnly = isTechOnly && !partnerMode;
 
   return (
     <div className="stock-board">
-      {!isTechOnly ? (
+      {showOwnerTabs ? (
         <div className="stock-owner-block">
           <div className="stock-owner-tabs" role="tablist" aria-label="Stock owner">
             {(stockOwners.length ? stockOwners : [{ id: "gg", name: "Garage Guys" }]).map((owner) => (
@@ -210,7 +215,12 @@ export function StockBoard({
             ))}
           </div>
           {notice ? <p className="stock-owner-hint">{notice}</p> : null}
-          {!notice && partnerWarehouseCount < 1 ? (
+          {!notice && isTechOnly && partnerWarehouseCount > 0 ? (
+            <p className="stock-owner-hint">
+              Garage Guys = your van. Partner tabs = take those parts on that partner’s jobs.
+            </p>
+          ) : null}
+          {!notice && !isTechOnly && partnerWarehouseCount < 1 ? (
             <p className="stock-owner-hint">
               This is Garage Guys stock (Master / Warehouse / vans). A partner tab appears after
               you set <strong>Own stock</strong> on Partners and Save.
@@ -276,11 +286,13 @@ export function StockBoard({
           <thead>
             <tr>
               <th className="stock-col-item">Item</th>
-              <th className="stock-col-num">{partnerMode ? "Qty" : "Master"}</th>
-              {!partnerMode && (view === "master" || view === "warehouse") ? (
+              <th className="stock-col-num">
+                {partnerMode || techVanOnly ? "Qty" : "Master"}
+              </th>
+              {!partnerMode && !techVanOnly && (view === "master" || view === "warehouse") ? (
                 <th className="stock-col-num">Wh</th>
               ) : null}
-              {!partnerMode && (view === "master" || view === "tech") ? (
+              {!partnerMode && !techVanOnly && (view === "master" || view === "tech") ? (
                 <th className="stock-col-num">Van</th>
               ) : null}
               {showPrices ? <th className="stock-col-cost">Cost</th> : null}
@@ -296,18 +308,27 @@ export function StockBoard({
                 {items.map((row) => {
                   const open = openActionId === row.id;
                   return (
-                    <tr key={row.id} className={row.master === 0 ? "stock-zero" : undefined}>
+                    <tr
+                      key={row.id}
+                      className={
+                        (techVanOnly ? row.vans[techId] ?? row.van : row.master) === 0
+                          ? "stock-zero"
+                          : undefined
+                      }
+                    >
                       <td className="stock-col-item">
                         <span className="stock-name">{row.name}</span>
                         {row.subcategory ? (
                           <span className="stock-sub">{row.subcategory}</span>
                         ) : null}
                       </td>
-                      <td className="stock-col-num stock-master">{row.master}</td>
-                      {!partnerMode && (view === "master" || view === "warehouse") ? (
+                      <td className="stock-col-num stock-master">
+                        {techVanOnly ? row.vans[techId] ?? row.van : row.master}
+                      </td>
+                      {!partnerMode && !techVanOnly && (view === "master" || view === "warehouse") ? (
                         <td className="stock-col-num">{row.warehouse}</td>
                       ) : null}
-                      {!partnerMode && (view === "master" || view === "tech") ? (
+                      {!partnerMode && !techVanOnly && (view === "master" || view === "tech") ? (
                         <td className="stock-col-num">{row.vans[techId] ?? row.van}</td>
                       ) : null}
                       {showPrices ? (

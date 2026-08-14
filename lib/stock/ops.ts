@@ -130,20 +130,26 @@ export async function installOnJob(input: {
   jobId?: string;
   createdBy?: string;
   note?: string;
+  owner?: "gg" | string;
 }): Promise<StockOpResult> {
   if (input.qty <= 0) return { ok: false, error: "Qty must be > 0" };
   const state = await loadStockState();
   if (!state.items.some((i) => i.id === input.itemId)) {
     return { ok: false, error: "Item not found" };
   }
-  const err = applyDelta(state, input.itemId, "tech", -input.qty, input.technicianId);
+  const partnerId =
+    input.owner && input.owner !== "gg" ? input.owner : undefined;
+  const err = partnerId
+    ? applyDelta(state, input.itemId, "partner", -input.qty, undefined, partnerId)
+    : applyDelta(state, input.itemId, "tech", -input.qty, input.technicianId);
   if (err) return { ok: false, error: err };
   pushMovement(state, {
     itemId: input.itemId,
     qty: input.qty,
-    kind: "install_on_job",
-    fromLocationType: "tech",
-    fromTechnicianId: input.technicianId,
+    kind: partnerId ? "install_partner" : "install_on_job",
+    fromLocationType: partnerId ? "partner" : "tech",
+    fromTechnicianId: partnerId ? undefined : input.technicianId,
+    partnerId,
     jobId: input.jobId,
     createdBy: input.createdBy,
     note: input.note,

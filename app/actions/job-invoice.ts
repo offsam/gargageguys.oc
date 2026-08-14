@@ -6,6 +6,8 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { installOnJob } from "@/lib/stock/ops";
 import { loadStockState } from "@/lib/stock/store";
+import { pickLeadWorkMeta, resolveJobStockSource } from "@/lib/stock/job-source";
+import { listPartnersAction } from "@/app/actions/partners";
 import { findFieldService } from "@/lib/field/services-catalog";
 import {
   ensureJobInvoice,
@@ -23,6 +25,7 @@ function revalidateJob(jobId: string) {
   revalidatePath("/sheet");
   revalidatePath("/crm");
   revalidatePath("/owner");
+  revalidatePath("/stock");
 }
 
 async function requireTechOrStaff() {
@@ -59,12 +62,40 @@ export async function addPartToInvoiceAction(formData: FormData) {
       ? session.id
       : String(formData.get("technicianId") || session.id);
 
+  const admin = getSupabaseAdmin();
+  const { data: job } = await admin
+    .from("jobs")
+    .select("id, lead_id")
+    .eq("id", jobId)
+    .maybeSingle();
+  if (!job) return { ok: false as const, error: "Job not found" };
+
+  let workSource = "";
+  let partnerName = "";
+  if (job.lead_id) {
+    const { data: lead } = await admin
+      .from("leads")
+      .select("metadata")
+      .eq("id", job.lead_id)
+      .maybeSingle();
+    const meta =
+      lead?.metadata && typeof lead.metadata === "object"
+        ? (lead.metadata as Record<string, unknown>)
+        : {};
+    const picked = pickLeadWorkMeta(meta);
+    workSource = picked.workSource;
+    partnerName = picked.partnerName;
+  }
+  const source = resolveJobStockSource(workSource, partnerName, await listPartnersAction());
+
   const stock = await installOnJob({
     itemId,
     qty,
     technicianId,
     jobId,
     createdBy: session.id,
+    owner: source.owner,
+    note: `Field install from ${source.label}`,
   });
   if (!stock.ok) return { ok: false as const, error: stock.error };
 

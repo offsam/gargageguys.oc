@@ -6,9 +6,11 @@ import { FieldInvoiceWizard } from "@/components/bos/FieldInvoiceWizard";
 import { getSessionUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updateJobStatusAction } from "@/app/actions/dispatch";
-import { ensureStockSeeded, techQty } from "@/lib/stock/store";
+import { ensureStockSeeded, partnerQty, techQty } from "@/lib/stock/store";
 import { getFieldAttentionCount } from "@/lib/field/load-attention";
 import { ensureJobInvoice } from "@/lib/field/job-invoice";
+import { listPartnersAction } from "@/app/actions/partners";
+import { pickLeadWorkMeta, resolveJobStockSource } from "@/lib/stock/job-source";
 
 export default async function FieldJobPage({
   params,
@@ -27,12 +29,27 @@ export default async function FieldJobPage({
   }
 
   const techId = user.role === "technician" ? user.id : job.technician_id || user.id;
-  const state = await ensureStockSeeded(techId);
-  const vanParts = state.items
+  const [state, partners, leadRow] = await Promise.all([
+    ensureStockSeeded(techId),
+    listPartnersAction(),
+    job.lead_id
+      ? supabase.from("leads").select("metadata").eq("id", job.lead_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const leadMeta =
+    leadRow.data?.metadata && typeof leadRow.data.metadata === "object"
+      ? (leadRow.data.metadata as Record<string, unknown>)
+      : {};
+  const { workSource, partnerName } = pickLeadWorkMeta(leadMeta);
+  const stockSource = resolveJobStockSource(workSource, partnerName, partners);
+  const availableParts = state.items
     .map((item) => ({
       id: item.id,
       name: item.name,
-      qty: techQty(state, item.id, techId),
+      qty:
+        stockSource.from === "partner"
+          ? partnerQty(state, item.id, stockSource.owner)
+          : techQty(state, item.id, techId),
       unitCostCents: item.unitCostCents || 0,
     }))
     .filter((row) => row.qty > 0);
@@ -79,6 +96,13 @@ export default async function FieldJobPage({
           {[job.address, job.zip].filter(Boolean).join(", ") || "—"}
         </p>
         <p>
+          <strong>Stock</strong>
+          <br />
+          {stockSource.from === "partner"
+            ? `Take parts from ${stockSource.label} stock`
+            : "Take parts from Garage Guys van"}
+        </p>
+        <p>
           <strong>Notes</strong>
           <br />
           {job.notes || "—"}
@@ -106,7 +130,9 @@ export default async function FieldJobPage({
         <FieldInvoiceWizard
           jobId={job.id}
           technicianId={techId}
-          vanParts={vanParts}
+          vanParts={availableParts}
+          stockSourceLabel={stockSource.label}
+          stockFrom={stockSource.from}
           invoice={invoice}
           jobStatus={job.status}
         />

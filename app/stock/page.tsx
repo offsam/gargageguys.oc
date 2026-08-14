@@ -95,7 +95,11 @@ export default async function StockPage({
   const defaultOwner =
     ggTotal === 0 && championOwner ? championOwner.id : "gg";
   const stockOwner =
-    params.owner && stockOwners.some((o) => o.id === params.owner) ? params.owner : defaultOwner;
+    params.owner && stockOwners.some((o) => o.id === params.owner)
+      ? params.owner
+      : isTechOnly
+        ? "gg"
+        : defaultOwner;
 
   const rows = state.items.map((item) => {
     const vans: Record<string, number> = {};
@@ -140,7 +144,11 @@ export default async function StockPage({
       <FieldShell
         user={user}
         title="Stock"
-        subtitle="Your van · no prices"
+        subtitle={
+          stockOwner === "gg"
+            ? "Your Garage Guys van · no prices"
+            : `${stockOwners.find((o) => o.id === stockOwner)?.name || "Partner"} stock · take this on their jobs`
+        }
         active="stock"
         attentionCount={attentionCount}
       >

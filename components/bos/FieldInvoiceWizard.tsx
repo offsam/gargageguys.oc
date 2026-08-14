@@ -45,12 +45,16 @@ export function FieldInvoiceWizard({
   jobId,
   technicianId,
   vanParts,
+  stockSourceLabel = "Garage Guys",
+  stockFrom = "van",
   invoice: initial,
   jobStatus,
 }: {
   jobId: string;
   technicianId: string;
   vanParts: VanPart[];
+  stockSourceLabel?: string;
+  stockFrom?: "van" | "partner";
   invoice: JobInvoice;
   jobStatus: string;
 }) {
@@ -253,10 +257,14 @@ export function FieldInvoiceWizard({
 
       {(invoice.status === "draft" || invoice.status === "estimate_ready") && (
         <div className="field-detail-card inv-build">
-          <h3>Add parts</h3>
+          <h3>Add parts · {stockSourceLabel}</h3>
           <div className="inv-row">
             <select value={partId} onChange={(e) => setPartId(e.target.value)}>
-              <option value="">Part from van…</option>
+              <option value="">
+                {stockFrom === "partner"
+                  ? `Part from ${stockSourceLabel}…`
+                  : "Part from van…"}
+              </option>
               {vanParts.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name} ({p.qty}) · {money(p.unitCostCents)}
@@ -284,6 +292,13 @@ export function FieldInvoiceWizard({
               Add part
             </button>
           </div>
+          {vanParts.length === 0 ? (
+            <p className="field-muted">
+              {stockFrom === "partner"
+                ? `No ${stockSourceLabel} stock on hand. Office needs to receive parts into that warehouse.`
+                : "No parts on your van for this job."}
+            </p>
+          ) : null}
 
           <h3>Add service</h3>
           <div className="inv-row">
