@@ -80,7 +80,7 @@ export default async function CrmPage() {
       user={user}
       active="/crm"
       title="CRM"
-      subtitle="Funnel synced with Sheet — website forms and + Add land here"
+      subtitle="Same funnel as Sheet — website forms and + Add land here"
     >
       <h2 style={{ marginTop: 0 }}>Lead funnel</h2>
       <CrmBoard leads={cards} technicians={technicians} stockParts={stockParts} />

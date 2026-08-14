@@ -78,7 +78,7 @@ const COLUMNS: Array<{
   { key: "leadCost", label: "Lead cost", width: 100, money: true },
   { key: "clientName", label: "Client name", width: 150 },
   { key: "clientAddress", label: "Address", width: 200 },
-  { key: "jobStatus", label: "Status", width: 130, kind: "select", options: "status" },
+  { key: "jobStatus", label: "Status", width: 140, kind: "select", options: "status" },
   { key: "jobType", label: "Job type", width: 140 },
   { key: "parts", label: "Parts", width: 180, kind: "select", options: "parts" },
   { key: "jobCost", label: "Job cost", width: 100, money: true },

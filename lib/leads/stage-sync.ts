@@ -1,8 +1,9 @@
 import type { LeadStage } from "@/lib/supabase/types";
 
 /**
- * Sheet / CRM funnel statuses.
- * Tech field stages: Tech confirmed → En route → On site → Completed.
+ * Shared CRM funnel + Sheet Status list.
+ * CRM columns and the Sheet Status dropdown are the same array — add a status here
+ * and it appears in both. Nothing is maintained separately.
  */
 export const SHEET_STATUSES = [
   "Waiting",
@@ -63,6 +64,16 @@ export const STATUS_TO_JOB_STATUS: Partial<
   "On site": "on_site",
   Completed: "done",
   Cancelled: "cancelled",
+};
+
+/** Inverse of STATUS_TO_JOB_STATUS — Field/Dispatch writes back into the same funnel. */
+export const JOB_STATUS_TO_SHEET: Partial<Record<string, SheetStatus>> = {
+  queued: "Scheduled",
+  assigned: "Tech confirmed",
+  en_route: "En route",
+  on_site: "On site",
+  done: "Completed",
+  cancelled: "Cancelled",
 };
 
 export function isSheetStatus(value: string): value is SheetStatus {

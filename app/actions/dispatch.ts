@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { JobStatus } from "@/lib/supabase/types";
+import { JOB_STATUS_TO_SHEET, stageFromSheetStatus } from "@/lib/leads/stage-sync";
 
 export async function createJobFromLeadAction(formData: FormData) {
   const leadId = String(formData.get("leadId") || "");
@@ -19,20 +20,6 @@ export async function createJobFromLeadAction(formData: FormData) {
     zip: lead.zip,
     notes: lead.message,
   });
-
-  const prev =
-    lead.metadata && typeof lead.metadata === "object"
-      ? (lead.metadata as Record<string, unknown>)
-      : {};
-
-  await supabase
-    .from("leads")
-    .update({
-      stage: "scheduled",
-      metadata: { ...prev, jobStatus: "Scheduled" },
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", leadId);
 
   revalidatePath("/dispatch");
   revalidatePath("/field");
@@ -74,15 +61,7 @@ export async function updateJobStatusAction(formData: FormData) {
     .eq("id", jobId);
 
   if (job?.lead_id) {
-    const jobToSheet: Partial<Record<JobStatus, string>> = {
-      assigned: "Tech confirmed",
-      en_route: "En route",
-      on_site: "On site",
-      done: "Completed",
-      cancelled: "Cancelled",
-      queued: "Scheduled",
-    };
-    const sheetStatus = jobToSheet[status];
+    const sheetStatus = JOB_STATUS_TO_SHEET[status];
     if (sheetStatus) {
       const { data: lead } = await supabase
         .from("leads")
@@ -93,18 +72,10 @@ export async function updateJobStatusAction(formData: FormData) {
         lead?.metadata && typeof lead.metadata === "object"
           ? (lead.metadata as Record<string, unknown>)
           : {};
-      const stageMap: Record<string, string> = {
-        "Tech confirmed": "in_progress",
-        "En route": "in_progress",
-        "On site": "in_progress",
-        Completed: "completed",
-        Cancelled: "cancelled",
-        Scheduled: "scheduled",
-      };
       await supabase
         .from("leads")
         .update({
-          stage: stageMap[sheetStatus] || undefined,
+          stage: stageFromSheetStatus(sheetStatus),
           metadata: { ...prev, jobStatus: sheetStatus },
           updated_at: new Date().toISOString(),
         })

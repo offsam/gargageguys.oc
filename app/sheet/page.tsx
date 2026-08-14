@@ -7,7 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { loadStockState } from "@/lib/stock/store";
 import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
 import { listPartnersAction } from "@/app/actions/partners";
-import { STAGE_TO_STATUS, sheetStatusFromLead } from "@/lib/leads/stage-sync";
+import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
 
 function asMeta(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -98,11 +98,7 @@ export default async function SheetPage() {
         lead.address ||
         pick(meta, "clientAddress", "client_address", "address") ||
         "",
-      jobStatus: (() => {
-        const fromMeta = pick(meta, "jobStatus", "job_status");
-        if (fromMeta) return fromMeta;
-        return STAGE_TO_STATUS[String(lead.stage || "")] || sheetStatusFromLead(lead);
-      })(),
+      jobStatus: sheetStatusFromLead(lead),
       jobType,
       parts: pick(meta, "parts"),
       paymentType: pick(meta, "paymentType", "payment_type"),
@@ -132,7 +128,8 @@ export default async function SheetPage() {
           <strong>Garage Guys Sheet</strong>
           <p>
             Pick Work source first (Garage Guys or Partner) — only the needed columns unlock.
-            Partner: Gross → tech gets 30%. Own jobs: full costs and clear profit.
+            Status is the same funnel as CRM (Waiting, No answer, Scheduled…). Partner: Gross →
+            tech gets 30%.
           </p>
         </div>
         <span className="bos-badge scheduled">Synced with CRM</span>

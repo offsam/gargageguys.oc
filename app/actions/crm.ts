@@ -8,8 +8,10 @@ import {
   normalizeSheetStatus,
   stageFromSheetStatus,
   STATUS_TO_JOB_STATUS,
+  STAGE_TO_STATUS,
   type SheetStatus,
 } from "@/lib/leads/stage-sync";
+import { parseLocalDateTime } from "@/lib/datetime";
 import type { LeadStage } from "@/lib/supabase/types";
 import { deleteSheetRowAction, saveSheetRowAction, type SheetSaveInput } from "@/app/actions/sheet";
 
@@ -104,6 +106,10 @@ export async function updateLeadJobStatusAction(formData: FormData) {
   const session = await getSessionUser();
   if (!session) return { ok: false as const, error: "Not signed in" };
 
+  if (jobStatus === "Scheduled") {
+    return { ok: false as const, error: "Pick time and technician first" };
+  }
+
   const admin = getSupabaseAdmin();
   const { data: existing } = await admin
     .from("leads")
@@ -143,6 +149,100 @@ export async function updateLeadJobStatusAction(formData: FormData) {
   return { ok: true as const, jobStatus };
 }
 
+export async function scheduleCrmLeadAction(formData: FormData) {
+  const leadId = String(formData.get("leadId") || "").trim();
+  const technicianId = String(formData.get("technicianId") || "").trim();
+  const start = parseLocalDateTime(String(formData.get("startAt") || ""));
+  const endRaw = parseLocalDateTime(String(formData.get("endAt") || ""));
+
+  if (!leadId) return { ok: false as const, error: "Missing lead" };
+  if (!technicianId) return { ok: false as const, error: "Pick a technician" };
+  if (!start) return { ok: false as const, error: "Pick a start time" };
+
+  const end =
+    endRaw && endRaw.getTime() > start.getTime()
+      ? endRaw
+      : new Date(start.getTime() + 60 * 60 * 1000);
+
+  const session = await getSessionUser();
+  if (!session) return { ok: false as const, error: "Not signed in" };
+
+  const admin = getSupabaseAdmin();
+  const [{ data: lead }, { data: tech }] = await Promise.all([
+    admin.from("leads").select("*").eq("id", leadId).maybeSingle(),
+    admin.from("profiles").select("id, full_name, email").eq("id", technicianId).maybeSingle(),
+  ]);
+
+  if (!lead) return { ok: false as const, error: "Lead not found" };
+  if (!tech) return { ok: false as const, error: "Technician not found" };
+
+  const techName = tech.full_name || tech.email || "Technician";
+  const prev =
+    lead.metadata && typeof lead.metadata === "object"
+      ? (lead.metadata as Record<string, unknown>)
+      : {};
+  const address =
+    (typeof (lead as { address?: string | null }).address === "string"
+      ? (lead as { address?: string | null }).address
+      : "") ||
+    String(prev.clientAddress || prev.address || "").trim();
+  const zip = lead.zip || String(prev.zip || "").trim() || null;
+  const title = `${lead.name || "Job"}${zip ? ` — ${zip}` : ""}`.trim();
+
+  const { error: leadErr } = await admin
+    .from("leads")
+    .update({
+      stage: "scheduled",
+      assigned_to: technicianId,
+      scheduled_at: start.toISOString(),
+      updated_at: new Date().toISOString(),
+      metadata: {
+        ...prev,
+        jobStatus: "Scheduled",
+        technician: techName,
+        sheetDate: start.toISOString().slice(0, 10),
+      },
+    })
+    .eq("id", leadId);
+
+  if (leadErr) return { ok: false as const, error: leadErr.message };
+
+  const { data: existingJobs } = await admin
+    .from("jobs")
+    .select("id")
+    .eq("lead_id", leadId)
+    .neq("status", "cancelled")
+    .limit(1);
+
+  const existingJobId = existingJobs?.[0]?.id;
+  const jobPayload = {
+    technician_id: technicianId,
+    title,
+    status: "assigned" as const,
+    scheduled_start: start.toISOString(),
+    scheduled_end: end.toISOString(),
+    address: address || null,
+    zip,
+    notes: lead.message || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (existingJobId) {
+    const { error: jobErr } = await admin.from("jobs").update(jobPayload).eq("id", existingJobId);
+    if (jobErr) return { ok: false as const, error: jobErr.message };
+  } else {
+    const { error: jobErr } = await admin.from("jobs").insert({
+      ...jobPayload,
+      lead_id: leadId,
+      customer_id: lead.customer_id,
+    });
+    if (jobErr) return { ok: false as const, error: jobErr.message };
+  }
+
+  revalidateCrmAndSheet();
+  return { ok: true as const, jobStatus: "Scheduled" as const };
+}
+
 export async function deleteCrmLeadAction(leadId: string) {
   const session = await getSessionUser();
   if (!session) return { ok: false as const, error: "Not signed in" };
@@ -157,21 +257,12 @@ export async function deleteCrmLeadAction(leadId: string) {
 /** @deprecated use updateLeadJobStatusAction — kept for old forms */
 export async function updateLeadStageAction(formData: FormData) {
   const stage = String(formData.get("stage") || "");
-  const mapped: Record<string, SheetStatus> = {
-    new: "Waiting",
-    qualified: "Waiting",
-    scheduled: "Scheduled",
-    in_progress: "Tech confirmed",
-    completed: "Completed",
-    won: "Completed",
-    cancelled: "Cancelled",
-    lost: "No-show",
-  };
-  const jobStatus = mapped[stage];
+  const jobStatus = STAGE_TO_STATUS[stage];
   if (!jobStatus) return;
   const next = new FormData();
   next.set("leadId", String(formData.get("leadId") || ""));
   next.set("jobStatus", jobStatus);
+  if (jobStatus === "Scheduled") return;
   await updateLeadJobStatusAction(next);
 }
 
