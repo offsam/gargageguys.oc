@@ -62,11 +62,11 @@ const COLUMNS: Array<{
   kind?: "text" | "select" | "date" | "combo";
   options?: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource";
 }> = [
+  { key: "date", label: "Date", width: 130, kind: "date" },
   { key: "workSource", label: "Work source", width: 130, kind: "select", options: "workSource" },
   { key: "partnerName", label: "Partner", width: 140, kind: "combo" },
   { key: "leadSource", label: "Lead source", width: 140, kind: "combo", options: "leadSource" },
   { key: "leadCost", label: "Lead cost", width: 100 },
-  { key: "date", label: "Date", width: 130, kind: "date" },
   { key: "clientName", label: "Client name", width: 150 },
   { key: "clientAddress", label: "Address", width: 200 },
   { key: "jobStatus", label: "Status", width: 130, kind: "select", options: "status" },
