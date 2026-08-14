@@ -67,6 +67,14 @@ function revalidateSheetSurfaces() {
   revalidatePath("/field");
 }
 
+/** Soft revalidate — skip /sheet so the live grid isn't yanked mid-edit. */
+function revalidateRelatedSurfaces() {
+  revalidatePath("/crm");
+  revalidatePath("/dispatch");
+  revalidatePath("/owner");
+  revalidatePath("/field");
+}
+
 export async function saveSheetRowAction(
   input: SheetSaveInput,
 ): Promise<{ ok: boolean; id?: string; error?: string }> {
@@ -141,7 +149,7 @@ export async function saveSheetRowAction(
       }
 
       if (error) return { ok: false, error: error.message };
-      revalidateSheetSurfaces();
+      revalidateRelatedSurfaces();
       return { ok: true, id: data!.id };
     }
 
@@ -181,7 +189,7 @@ export async function saveSheetRowAction(
     }
 
     if (error) return { ok: false, error: error.message };
-    revalidateSheetSurfaces();
+    revalidateRelatedSurfaces();
     return { ok: true, id: input.id };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Save failed" };

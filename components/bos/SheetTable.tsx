@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveSheetRowAction, deleteSheetRowAction } from "@/app/actions/sheet";
 import { SHEET_STATUSES } from "@/lib/leads/stage-sync";
@@ -313,12 +313,28 @@ export function SheetTable({
     ];
   });
   const [status, setStatus] = useState<string>("");
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [widths, setWidths] = useState<Record<string, number>>(defaultWidths);
   const dragRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
+  const rowsRef = useRef(rows);
+  const saveTimersRef = useRef<Map<string, number>>(new Map());
+  const saveEpochRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
 
   useEffect(() => {
     setWidths(loadWidths());
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      for (const timer of saveTimersRef.current.values()) {
+        window.clearTimeout(timer);
+      }
+      saveTimersRef.current.clear();
+    };
   }, []);
 
   const techOptions = useMemo(() => {
@@ -438,8 +454,10 @@ export function SheetTable({
     setRows((prev) => prev.filter((r) => r.id !== row.id));
     if (isTemp) return;
 
-    startTransition(async () => {
+    void (async () => {
+      setPending(true);
       const result = await deleteSheetRowAction(row.id);
+      setPending(false);
       if (!result.ok) {
         setStatus(result.error || "Delete failed");
         setRows((prev) => {
@@ -451,12 +469,40 @@ export function SheetTable({
       setStatus("Deleted");
       window.setTimeout(() => setStatus(""), 1200);
       router.refresh();
-    });
+    })();
   }
 
-  function persistRow(row: SheetRow, refresh = true) {
-    startTransition(async () => {
+  function rowWorthSaving(row: SheetRow) {
+    // Don't insert empty leads when only Work source was toggled on a blank row.
+    if (!row.id.startsWith("new-")) return true;
+    return [
+      row.partnerName,
+      row.leadSource,
+      row.leadCost,
+      row.clientName,
+      row.clientAddress,
+      row.jobStatus,
+      row.jobType,
+      row.parts,
+      row.paymentType,
+      row.checkNumber,
+      row.jobCost,
+      row.bankFee,
+      row.partsCost,
+      row.technician,
+      row.techSalary,
+    ].some((v) => String(v || "").trim());
+  }
+
+  async function persistRowNow(row: SheetRow) {
+    if (!rowWorthSaving(row)) return;
+    const epoch = (saveEpochRef.current.get(row.id) || 0) + 1;
+    saveEpochRef.current.set(row.id, epoch);
+    setPending(true);
+    try {
       const result = await saveSheetRowAction(row);
+      // Ignore stale responses if a newer edit superseded this save.
+      if ((saveEpochRef.current.get(row.id) || 0) !== epoch) return;
       if (!result.ok) {
         setStatus(result.error || "Save failed");
         return;
@@ -465,29 +511,61 @@ export function SheetTable({
         setRows((prev) =>
           prev.map((r) => (r.id === row.id ? { ...r, id: result.id! } : r)),
         );
+        rowsRef.current = rowsRef.current.map((r) =>
+          r.id === row.id ? { ...r, id: result.id! } : r,
+        );
+        const pendingTimer = saveTimersRef.current.get(row.id);
+        if (pendingTimer) {
+          saveTimersRef.current.delete(row.id);
+          saveTimersRef.current.set(result.id, pendingTimer);
+        }
+        const oldEpoch = saveEpochRef.current.get(row.id);
+        saveEpochRef.current.delete(row.id);
+        if (oldEpoch != null) saveEpochRef.current.set(result.id, oldEpoch);
       }
       setStatus("Saved");
       window.setTimeout(() => setStatus(""), 1200);
-      // Refresh after workSource toggle was snapping the select back mid-click.
-      if (refresh) router.refresh();
-    });
+    } finally {
+      if ((saveEpochRef.current.get(row.id) || 0) === epoch) {
+        setPending(false);
+      }
+    }
+  }
+
+  function schedulePersist(rowId: string, immediate = false) {
+    const existing = saveTimersRef.current.get(rowId);
+    if (existing) window.clearTimeout(existing);
+
+    const run = () => {
+      saveTimersRef.current.delete(rowId);
+      const current = rowsRef.current.find((r) => r.id === rowId);
+      if (current) void persistRowNow(current);
+    };
+
+    if (immediate) {
+      run();
+      return;
+    }
+
+    const timer = window.setTimeout(run, 280);
+    saveTimersRef.current.set(rowId, timer);
   }
 
   function patchRow(rowId: string, patch: Partial<SheetRow>, save: boolean) {
     setRows((prev) => {
-      let saved: SheetRow | null = null;
       const nextRows = prev.map((row) => {
         if (row.id !== rowId) return row;
-        const next = applyRowRules(row, patch);
-        saved = next;
-        return next;
+        return applyRowRules(row, patch);
       });
-      if (save && saved) {
-        const sourceToggle = Object.prototype.hasOwnProperty.call(patch, "workSource");
-        persistRow(saved, !sourceToggle);
-      }
+      rowsRef.current = nextRows;
       return nextRows;
     });
+
+    if (!save) return;
+
+    const sourceToggle = Object.prototype.hasOwnProperty.call(patch, "workSource");
+    // Work source must feel instant: update UI now, save quietly in background.
+    schedulePersist(rowId, sourceToggle);
   }
 
   function onPartsChange(rowId: string, value: string, workSource: string) {
@@ -688,11 +766,7 @@ export function SheetTable({
                             }}
                             onBlur={() => {
                               if (!editable) return;
-                              setRows((prev) => {
-                                const current = prev.find((r) => r.id === row.id);
-                                if (current) persistRow(current);
-                                return prev;
-                              });
+                              schedulePersist(row.id, true);
                             }}
                           />
                         </td>
@@ -738,11 +812,7 @@ export function SheetTable({
                           }}
                           onBlur={() => {
                             if (!editable || isComputedPartnerSalary) return;
-                            setRows((prev) => {
-                              const current = prev.find((r) => r.id === row.id);
-                              if (current) persistRow(current);
-                              return prev;
-                            });
+                            schedulePersist(row.id, true);
                           }}
                           placeholder={
                             col.key === "checkNumber" && needCheck
