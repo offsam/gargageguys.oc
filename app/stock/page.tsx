@@ -76,14 +76,30 @@ export default async function StockPage({
   const isTechOnly = user.role === "technician";
   const canManage = !isTechOnly;
 
+  const partnerIdsWithStock = new Set(
+    state.balances.filter((b) => b.partnerId && (Number(b.qty) || 0) > 0).map((b) => b.partnerId as string),
+  );
   const partnerWarehouses = partners
-    .filter((p) => p.active && p.has_own_stock && !p.id.startsWith("seed-"))
+    .filter(
+      (p) =>
+        p.active &&
+        !p.id.startsWith("seed-") &&
+        (p.has_own_stock || partnerIdsWithStock.has(p.id)),
+    )
     .map((p) => ({ id: p.id, name: p.name }));
   const stockOwners = [{ id: "gg", name: "Garage Guys" }, ...partnerWarehouses];
-  const ggTotal = state.items.reduce((sum, item) => sum + masterQty(state, item.id), 0);
+  const ownerTotals: Record<string, number> = {
+    gg: state.items.reduce((sum, item) => sum + masterQty(state, item.id), 0),
+  };
+  for (const warehouse of partnerWarehouses) {
+    ownerTotals[warehouse.id] = state.items.reduce(
+      (sum, item) => sum + partnerMasterQty(state, item.id, warehouse.id),
+      0,
+    );
+  }
   const championOwner = partnerWarehouses.find((p) => /champion/i.test(p.name));
   const defaultOwner =
-    ggTotal === 0 && championOwner ? championOwner.id : "gg";
+    ownerTotals.gg === 0 && championOwner ? championOwner.id : "gg";
   const stockOwner =
     params.owner && stockOwners.some((o) => o.id === params.owner)
       ? params.owner
@@ -132,6 +148,7 @@ export default async function StockPage({
       isTechOnly={isTechOnly}
       stockOwners={stockOwners}
       stockOwner={stockOwner}
+      ownerTotals={ownerTotals}
       partnerWarehouseCount={partnerWarehouses.length}
     />
   );

@@ -401,3 +401,70 @@ export async function loadPartnerWarehouseOntoTech(input: {
   if (movedQty > 0) await saveStockState(state);
   return { ok: true, state: await loadStockState(), movedQty };
 }
+
+function skuFromName(name: string) {
+  const base = name
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24);
+  return `CUS-${base || "PART"}`;
+}
+
+export async function createStockItem(input: {
+  name: string;
+  category: string;
+  subcategory?: string;
+  sku?: string;
+  unitCostCents?: number;
+  qty?: number;
+  partnerId?: string;
+  createdBy?: string;
+}): Promise<StockOpResult> {
+  const name = input.name.trim();
+  const category = input.category.trim() || "Misc";
+  if (!name) return { ok: false, error: "Name required" };
+
+  const state = await loadStockState();
+  let sku = (input.sku || "").trim().toUpperCase() || skuFromName(name);
+  if (state.items.some((item) => item.sku.toLowerCase() === sku.toLowerCase())) {
+    sku = `${sku}-${randomUUID().slice(0, 4).toUpperCase()}`;
+  }
+  if (state.items.some((item) => item.name.toLowerCase() === name.toLowerCase())) {
+    return { ok: false, error: "That part already exists" };
+  }
+
+  const id = randomUUID();
+  state.items.push({
+    id,
+    sku,
+    name,
+    category,
+    subcategory: input.subcategory?.trim() || undefined,
+    unitCostCents: Math.max(0, Math.round(input.unitCostCents || 0)),
+    unit: "ea",
+    reorderAt: 0,
+    active: true,
+  });
+
+  const qty = Math.max(0, Math.floor(Number(input.qty) || 0));
+  if (input.partnerId) {
+    setBalanceQty(state, id, "partner", qty, undefined, input.partnerId);
+  } else {
+    setBalanceQty(state, id, "warehouse", qty);
+  }
+  if (qty > 0) {
+    pushMovement(state, {
+      itemId: id,
+      qty,
+      kind: input.partnerId ? "receive_supplier_to_partner" : "receive_supplier_to_warehouse",
+      toLocationType: input.partnerId ? "partner" : "warehouse",
+      partnerId: input.partnerId,
+      createdBy: input.createdBy,
+      note: "New stock item",
+    });
+  }
+
+  await saveStockState(state);
+  return { ok: true, state: await loadStockState() };
+}

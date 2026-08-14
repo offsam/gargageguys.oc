@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
+  createStockItem,
   installOnJob,
   issueWarehouseToTech,
   loadPartnerWarehouseOntoTech,
@@ -99,6 +100,33 @@ export async function receivePartnerStockAction(formData: FormData) {
     createdBy: session.id,
   });
   revalidatePath("/stock");
+}
+
+export async function createStockItemAction(formData: FormData) {
+  const session = await requireStaff();
+  if (!session) return { ok: false as const, error: "Not signed in" };
+  if (session.role === "technician") return { ok: false as const, error: "Not allowed" };
+
+  const name = String(formData.get("name") || "");
+  const category = String(formData.get("category") || "Misc");
+  const subcategory = String(formData.get("subcategory") || "");
+  const sku = String(formData.get("sku") || "");
+  const dollars = Number(formData.get("unitCost") || 0);
+  const qty = Number(formData.get("qty") || 0);
+  const partnerId = String(formData.get("partnerId") || "") || undefined;
+  const result = await createStockItem({
+    name,
+    category,
+    subcategory,
+    sku,
+    unitCostCents: Number.isFinite(dollars) ? Math.round(dollars * 100) : 0,
+    qty: Number.isFinite(qty) ? qty : 0,
+    partnerId,
+    createdBy: session.id,
+  });
+  if (!result.ok) return { ok: false as const, error: result.error };
+  revalidatePath("/stock");
+  return { ok: true as const };
 }
 
 export async function saveItemCostAction(formData: FormData) {

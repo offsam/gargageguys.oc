@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  createStockItemAction,
   issueToTechAction,
   receivePartnerStockAction,
   receiveStockAction,
@@ -122,6 +123,7 @@ export function StockBoard({
   isTechOnly,
   stockOwners = [],
   stockOwner = "gg",
+  ownerTotals = {},
   partnerWarehouseCount = 0,
   notice = "",
 }: {
@@ -133,6 +135,7 @@ export function StockBoard({
   isTechOnly: boolean;
   stockOwners?: { id: string; name: string }[];
   stockOwner?: string;
+  ownerTotals?: Record<string, number>;
   partnerWarehouseCount?: number;
   notice?: string;
 }) {
@@ -143,12 +146,20 @@ export function StockBoard({
   const [q, setQ] = useState("");
   const [pending, startTransition] = useTransition();
   const [openActionId, setOpenActionId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addError, setAddError] = useState("");
   const [costs, setCosts] = useState<Record<string, number>>(() =>
     Object.fromEntries(rows.map((r) => [r.id, r.unitCostCents])),
   );
 
   useEffect(() => {
     setCosts(Object.fromEntries(rows.map((r) => [r.id, r.unitCostCents])));
+  }, [rows]);
+
+  const categories = useMemo(() => {
+    const fromRows = sortCategories([...new Set(rows.map((r) => r.category).filter(Boolean))]);
+    const extra = CATEGORY_ORDER.filter((cat) => !fromRows.includes(cat));
+    return [...fromRows, ...extra];
   }, [rows]);
 
   const filtered = useMemo(() => {
@@ -186,6 +197,29 @@ export function StockBoard({
     });
   }
 
+  function ownerHref(ownerId: string) {
+    const qs = new URLSearchParams();
+    qs.set("owner", ownerId);
+    if (initialTechId) qs.set("tech", initialTechId);
+    return `/stock?${qs.toString()}`;
+  }
+
+  function submitNewItem(form: HTMLFormElement) {
+    setAddError("");
+    const fd = new FormData(form);
+    if (partnerMode) fd.set("partnerId", stockOwner);
+    startTransition(async () => {
+      const result = await createStockItemAction(fd);
+      if (!result.ok) {
+        setAddError(result.error || "Could not add item");
+        return;
+      }
+      form.reset();
+      setAddOpen(false);
+      router.refresh();
+    });
+  }
+
   const colSpan = isTechOnly
     ? 2 + (showPrices ? 1 : 0)
     : 2 +
@@ -205,10 +239,13 @@ export function StockBoard({
             {(stockOwners.length ? stockOwners : [{ id: "gg", name: "Garage Guys" }]).map((owner) => (
               <a
                 key={owner.id}
-                href={owner.id === "gg" ? "/stock" : `/stock?owner=${owner.id}`}
+                href={ownerHref(owner.id)}
+                role="tab"
+                aria-selected={stockOwner === owner.id}
                 className={stockOwner === owner.id ? "active" : undefined}
               >
                 {owner.name}
+                <span className="stock-owner-count">{ownerTotals[owner.id] ?? 0}</span>
               </a>
             ))}
           </div>
@@ -258,7 +295,7 @@ export function StockBoard({
           placeholder="Search part…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          autoFocus
+          autoFocus={!addOpen}
         />
         {view === "tech" && !isTechOnly ? (
           <select
@@ -273,12 +310,75 @@ export function StockBoard({
             ))}
           </select>
         ) : null}
+        {canManage ? (
+          <button
+            type="button"
+            className="stock-add-btn"
+            aria-label="Add stock item"
+            aria-expanded={addOpen}
+            onClick={() => {
+              setAddError("");
+              setAddOpen((open) => !open);
+            }}
+          >
+            +
+          </button>
+        ) : null}
         <span className="stock-meta">
           {filtered.length}/{rows.length}
           {showPrices ? ` · value $${money(inventoryValue)}` : ""}
           {pending ? " · saving…" : ""}
         </span>
       </div>
+
+      {addOpen && canManage ? (
+        <form
+          className="stock-add-form bos-card"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitNewItem(e.currentTarget);
+          }}
+        >
+          <div className="emp-create-head">
+            <h3>New item</h3>
+            <button type="button" className="emp-cancel" onClick={() => setAddOpen(false)}>
+              Cancel
+            </button>
+          </div>
+          <label>
+            Name
+            <input name="name" required autoFocus placeholder="LM 8500 7-ft" />
+          </label>
+          <label>
+            Category
+            <select name="category" defaultValue={categories[0] || "Misc"}>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            SKU <span className="stock-optional">(optional)</span>
+            <input name="sku" placeholder="Auto if empty" />
+          </label>
+          {showPrices ? (
+            <label>
+              Cost
+              <input name="unitCost" type="number" min="0" step="0.01" inputMode="decimal" defaultValue="0" />
+            </label>
+          ) : null}
+          <label>
+            Qty in this stock
+            <input name="qty" type="number" min="0" step="1" defaultValue="0" />
+          </label>
+          {addError ? <p className="stock-add-error">{addError}</p> : null}
+          <button type="submit" className="emp-add-btn" disabled={pending}>
+            Add item
+          </button>
+        </form>
+      ) : null}
 
       <div className="stock-wrap">
         <table className="stock-table">
