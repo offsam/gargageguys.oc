@@ -317,8 +317,9 @@ export function SheetTable({
   const [widths, setWidths] = useState<Record<string, number>>(defaultWidths);
   const dragRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
   const rowsRef = useRef(rows);
-  const saveTimersRef = useRef<Map<string, number>>(new Map());
-  const saveEpochRef = useRef<Map<string, number>>(new Map());
+  const inFlightRef = useRef(0);
+  const dirtyIdsRef = useRef<Set<string>>(new Set());
+  const savingIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     rowsRef.current = rows;
@@ -329,12 +330,26 @@ export function SheetTable({
   }, []);
 
   useEffect(() => {
-    return () => {
-      for (const timer of saveTimersRef.current.values()) {
-        window.clearTimeout(timer);
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (dirtyIdsRef.current.size > 0 || inFlightRef.current > 0) {
+        void flushDirtyRows();
+        e.preventDefault();
+        e.returnValue = "";
       }
-      saveTimersRef.current.clear();
+    }
+    function onHide() {
+      if (document.visibilityState === "hidden") {
+        void flushDirtyRows();
+      }
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("visibilitychange", onHide);
+      void flushDirtyRows();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- flush uses refs
   }, []);
 
   const techOptions = useMemo(() => {
@@ -441,6 +456,7 @@ export function SheetTable({
     ].some((v) => String(v || "").trim());
 
     if (isTemp && !hasContent) {
+      dirtyIdsRef.current.delete(row.id);
       setRows((prev) => prev.filter((r) => r.id !== row.id));
       return;
     }
@@ -451,6 +467,7 @@ export function SheetTable({
       : `Delete ${label} from Sheet and the whole system?\n\nThis removes the lead, related jobs, invoices, inbox items, and chat. Cannot be undone.`;
     if (!window.confirm(msg)) return;
 
+    dirtyIdsRef.current.delete(row.id);
     setRows((prev) => prev.filter((r) => r.id !== row.id));
     if (isTemp) return;
 
@@ -473,7 +490,7 @@ export function SheetTable({
   }
 
   function rowWorthSaving(row: SheetRow) {
-    // Don't insert empty leads when only Work source was toggled on a blank row.
+    // Don't insert empty leads when only Work source / date were set on a blank row.
     if (!row.id.startsWith("new-")) return true;
     return [
       row.partnerName,
@@ -494,61 +511,71 @@ export function SheetTable({
     ].some((v) => String(v || "").trim());
   }
 
-  async function persistRowNow(row: SheetRow) {
-    if (!rowWorthSaving(row)) return;
-    const epoch = (saveEpochRef.current.get(row.id) || 0) + 1;
-    saveEpochRef.current.set(row.id, epoch);
+  async function writeRow(row: SheetRow) {
+    if (!rowWorthSaving(row)) return { ok: true as const, id: row.id };
+    inFlightRef.current += 1;
     setPending(true);
     try {
       const result = await saveSheetRowAction(row);
-      // Ignore stale responses if a newer edit superseded this save.
-      if ((saveEpochRef.current.get(row.id) || 0) !== epoch) return;
       if (!result.ok) {
         setStatus(result.error || "Save failed");
-        return;
+        return result;
       }
       if (result.id && result.id !== row.id) {
-        setRows((prev) =>
-          prev.map((r) => (r.id === row.id ? { ...r, id: result.id! } : r)),
-        );
-        rowsRef.current = rowsRef.current.map((r) =>
-          r.id === row.id ? { ...r, id: result.id! } : r,
-        );
-        const pendingTimer = saveTimersRef.current.get(row.id);
-        if (pendingTimer) {
-          saveTimersRef.current.delete(row.id);
-          saveTimersRef.current.set(result.id, pendingTimer);
-        }
-        const oldEpoch = saveEpochRef.current.get(row.id);
-        saveEpochRef.current.delete(row.id);
-        if (oldEpoch != null) saveEpochRef.current.set(result.id, oldEpoch);
+        setRows((prev) => {
+          const next = prev.map((r) => (r.id === row.id ? { ...r, id: result.id! } : r));
+          rowsRef.current = next;
+          return next;
+        });
       }
       setStatus("Saved");
       window.setTimeout(() => setStatus(""), 1200);
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Save failed";
+      setStatus(message);
+      return { ok: false as const, error: message };
     } finally {
-      if ((saveEpochRef.current.get(row.id) || 0) === epoch) {
-        setPending(false);
-      }
+      inFlightRef.current = Math.max(0, inFlightRef.current - 1);
+      if (inFlightRef.current === 0) setPending(false);
     }
   }
 
-  function schedulePersist(rowId: string, immediate = false) {
-    const existing = saveTimersRef.current.get(rowId);
-    if (existing) window.clearTimeout(existing);
-
-    const run = () => {
-      saveTimersRef.current.delete(rowId);
-      const current = rowsRef.current.find((r) => r.id === rowId);
-      if (current) void persistRowNow(current);
-    };
-
-    if (immediate) {
-      run();
-      return;
+  async function drainPersist(rowId: string) {
+    if (savingIdsRef.current.has(rowId)) return;
+    savingIdsRef.current.add(rowId);
+    try {
+      let activeId = rowId;
+      while (dirtyIdsRef.current.has(activeId) || dirtyIdsRef.current.has(rowId)) {
+        dirtyIdsRef.current.delete(activeId);
+        dirtyIdsRef.current.delete(rowId);
+        const current =
+          rowsRef.current.find((r) => r.id === activeId) ||
+          rowsRef.current.find((r) => r.id === rowId);
+        if (!current) break;
+        const result = await writeRow(current);
+        if (!result.ok) {
+          dirtyIdsRef.current.add(current.id);
+          break;
+        }
+        if (result.id) activeId = result.id;
+      }
+    } finally {
+      savingIdsRef.current.delete(rowId);
+      savingIdsRef.current.delete(
+        rowsRef.current.find((r) => r.id === rowId)?.id || rowId,
+      );
     }
+  }
 
-    const timer = window.setTimeout(run, 280);
-    saveTimersRef.current.set(rowId, timer);
+  async function flushDirtyRows() {
+    const ids = [...dirtyIdsRef.current];
+    await Promise.all(ids.map((id) => drainPersist(id)));
+  }
+
+  function queuePersist(rowId: string) {
+    dirtyIdsRef.current.add(rowId);
+    void drainPersist(rowId);
   }
 
   function patchRow(rowId: string, patch: Partial<SheetRow>, save: boolean) {
@@ -561,11 +588,9 @@ export function SheetTable({
       return nextRows;
     });
 
-    if (!save) return;
-
-    const sourceToggle = Object.prototype.hasOwnProperty.call(patch, "workSource");
-    // Work source must feel instant: update UI now, save quietly in background.
-    schedulePersist(rowId, sourceToggle);
+    // Always track dirty so refresh can't silently drop typed-but-not-blurred cells.
+    dirtyIdsRef.current.add(rowId);
+    if (save) queuePersist(rowId);
   }
 
   function onPartsChange(rowId: string, value: string, workSource: string) {
@@ -766,7 +791,7 @@ export function SheetTable({
                             }}
                             onBlur={() => {
                               if (!editable) return;
-                              schedulePersist(row.id, true);
+                              queuePersist(row.id);
                             }}
                           />
                         </td>
@@ -812,7 +837,7 @@ export function SheetTable({
                           }}
                           onBlur={() => {
                             if (!editable || isComputedPartnerSalary) return;
-                            schedulePersist(row.id, true);
+                            queuePersist(row.id);
                           }}
                           placeholder={
                             col.key === "checkNumber" && needCheck
