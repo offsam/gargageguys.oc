@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   normalizeSheetStatus,
   stageFromSheetStatus,
+  sheetStatusFromLead,
   STATUS_TO_JOB_STATUS,
   STAGE_TO_STATUS,
   completeBlockedReason,
@@ -29,16 +30,9 @@ function todayISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Create a client from CRM — same fields as Sheet, appears in both. */
-export async function createCrmClientAction(formData: FormData) {
-  const session = await getSessionUser();
-  if (!session) return { ok: false as const, error: "Not signed in" };
-
-  const phone = String(formData.get("phone") || "").trim();
-  const zip = String(formData.get("zip") || "").trim();
-
-  const input: SheetSaveInput = {
-    id: `new-crm-${Date.now()}`,
+function crmSheetInput(formData: FormData, id: string, jobStatus: string): SheetSaveInput {
+  return {
+    id,
     workSource: String(formData.get("workSource") || "").trim() || "Garage Guys",
     partnerName: String(formData.get("partnerName") || "").trim(),
     leadSource: String(formData.get("leadSource") || "").trim(),
@@ -46,10 +40,7 @@ export async function createCrmClientAction(formData: FormData) {
     date: String(formData.get("date") || "").trim() || todayISO(),
     clientName: String(formData.get("clientName") || "").trim(),
     clientAddress: String(formData.get("clientAddress") || "").trim(),
-    jobStatus: (() => {
-      const status = String(formData.get("jobStatus") || "").trim() || "Waiting";
-      return status === "Scheduled" ? "Waiting" : status;
-    })(),
+    jobStatus,
     jobType: String(formData.get("jobType") || "").trim(),
     parts: String(formData.get("parts") || "").trim(),
     paymentType: String(formData.get("paymentType") || "").trim(),
@@ -60,6 +51,42 @@ export async function createCrmClientAction(formData: FormData) {
     technician: String(formData.get("technician") || "").trim(),
     techSalary: String(formData.get("techSalary") || "").trim(),
   };
+}
+
+async function patchLeadPhoneZip(leadId: string, phone: string, zip: string) {
+  if (!phone && !zip) return;
+  const admin = getSupabaseAdmin();
+  const { data: lead } = await admin
+    .from("leads")
+    .select("id, metadata, phone, zip")
+    .eq("id", leadId)
+    .maybeSingle();
+  if (!lead) return;
+  const prev =
+    lead.metadata && typeof lead.metadata === "object"
+      ? (lead.metadata as Record<string, unknown>)
+      : {};
+  await admin
+    .from("leads")
+    .update({
+      phone: phone || lead.phone || null,
+      zip: zip || lead.zip || null,
+      metadata: { ...prev, phone: phone || prev.phone || "", zip: zip || prev.zip || "" },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", leadId);
+}
+
+/** Create a client from CRM — same fields as Sheet, appears in both. */
+export async function createCrmClientAction(formData: FormData) {
+  const session = await getSessionUser();
+  if (!session) return { ok: false as const, error: "Not signed in" };
+
+  const phone = String(formData.get("phone") || "").trim();
+  const zip = String(formData.get("zip") || "").trim();
+  const rawStatus = String(formData.get("jobStatus") || "").trim() || "Waiting";
+  const jobStatus = rawStatus === "Scheduled" ? "Waiting" : rawStatus;
+  const input = crmSheetInput(formData, `new-crm-${Date.now()}`, jobStatus);
 
   if (!input.clientName && !phone && !input.clientAddress) {
     return { ok: false as const, error: "Name, phone, or address is required" };
@@ -70,32 +97,45 @@ export async function createCrmClientAction(formData: FormData) {
     return { ok: false as const, error: result.error || "Could not create client" };
   }
 
-  if (phone || zip) {
-    const admin = getSupabaseAdmin();
-    const { data: lead } = await admin
-      .from("leads")
-      .select("id, metadata, phone, zip")
-      .eq("id", result.id)
-      .maybeSingle();
-    if (lead) {
-      const prev =
-        lead.metadata && typeof lead.metadata === "object"
-          ? (lead.metadata as Record<string, unknown>)
-          : {};
-      await admin
-        .from("leads")
-        .update({
-          phone: phone || lead.phone || null,
-          zip: zip || lead.zip || null,
-          metadata: { ...prev, phone: phone || prev.phone || "", zip: zip || prev.zip || "" },
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", result.id);
-    }
-  }
-
+  await patchLeadPhoneZip(result.id, phone, zip);
   revalidateCrmAndSheet();
   return { ok: true as const, id: result.id };
+}
+
+/** Save Sheet fields from a CRM card double-click. */
+export async function updateCrmClientAction(formData: FormData) {
+  const session = await getSessionUser();
+  if (!session) return { ok: false as const, error: "Not signed in" };
+
+  const leadId = String(formData.get("leadId") || "").trim();
+  if (!leadId) return { ok: false as const, error: "Missing client" };
+
+  const phone = String(formData.get("phone") || "").trim();
+  const zip = String(formData.get("zip") || "").trim();
+  const jobStatus = String(formData.get("jobStatus") || "").trim() || "Waiting";
+
+  const admin = getSupabaseAdmin();
+  const { data: existing } = await admin
+    .from("leads")
+    .select("id, metadata, stage")
+    .eq("id", leadId)
+    .maybeSingle();
+  if (!existing) return { ok: false as const, error: "Lead not found" };
+
+  const prevStatus = sheetStatusFromLead({ stage: existing.stage, metadata: existing.metadata });
+  if (jobStatus === "Scheduled" && prevStatus !== "Scheduled") {
+    return { ok: false as const, error: "Pick time and technician from the card status menu" };
+  }
+
+  const input = crmSheetInput(formData, leadId, jobStatus);
+  const result = await saveSheetRowAction(input);
+  if (!result.ok) {
+    return { ok: false as const, error: result.error || "Could not save client" };
+  }
+
+  await patchLeadPhoneZip(leadId, phone, zip);
+  revalidateCrmAndSheet();
+  return { ok: true as const, id: leadId };
 }
 
 /** Move a lead in the CRM funnel — keeps Sheet Status (+ linked jobs) in sync. */

@@ -6,6 +6,7 @@ import {
   createCrmClientAction,
   deleteCrmLeadAction,
   scheduleCrmLeadAction,
+  updateCrmClientAction,
   updateLeadJobStatusAction,
 } from "@/app/actions/crm";
 import { SHEET_STATUSES, completeBlockedReason, type SheetStatus } from "@/lib/leads/stage-sync";
@@ -17,12 +18,23 @@ export type CrmLeadCard = {
   id: string;
   name: string;
   phone: string;
+  zip: string;
   address: string;
+  workSource: string;
+  partnerName: string;
   source: string;
+  leadCost: string;
+  date: string;
   jobType: string;
   technician: string;
   jobStatus: SheetStatus;
   jobCost: string;
+  parts: string;
+  paymentType: string;
+  checkNumber: string;
+  bankFee: string;
+  partsCost: string;
+  techSalary: string;
   createdAt: string;
 };
 
@@ -66,6 +78,30 @@ const EMPTY_FORM = {
   techSalary: "",
 };
 
+function formFromLead(lead: CrmLeadCard): typeof EMPTY_FORM {
+  return {
+    workSource: lead.workSource || "Garage Guys",
+    partnerName: lead.partnerName,
+    clientName: lead.name,
+    phone: lead.phone,
+    zip: lead.zip,
+    clientAddress: lead.address,
+    leadSource: lead.source,
+    leadCost: lead.leadCost,
+    date: lead.date || todayISO(),
+    jobStatus: lead.jobStatus,
+    jobType: lead.jobType,
+    parts: lead.parts,
+    paymentType: lead.paymentType,
+    checkNumber: lead.checkNumber,
+    jobCost: lead.jobCost,
+    bankFee: lead.bankFee,
+    partsCost: lead.partsCost,
+    technician: lead.technician,
+    techSalary: lead.techSalary,
+  };
+}
+
 export function CrmBoard({
   leads: initialLeads,
   technicians = [],
@@ -80,6 +116,7 @@ export function CrmBoard({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [openAdd, setOpenAdd] = useState(false);
+  const [editLead, setEditLead] = useState<CrmLeadCard | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
   const [scheduleLead, setScheduleLead] = useState<CrmLeadCard | null>(null);
@@ -195,9 +232,23 @@ export function CrmBoard({
   }
 
   function openAddModal(status: SheetStatus = "Waiting") {
+    setEditLead(null);
     setForm({ ...EMPTY_FORM, date: todayISO(), jobStatus: status });
     setFormError("");
     setOpenAdd(true);
+  }
+
+  function openDetail(lead: CrmLeadCard) {
+    setForm(formFromLead(lead));
+    setFormError("");
+    setEditLead(lead);
+    setOpenAdd(true);
+  }
+
+  function closeEditor() {
+    setOpenAdd(false);
+    setEditLead(null);
+    setFormError("");
   }
 
   function setField(key: keyof typeof EMPTY_FORM, value: string) {
@@ -216,14 +267,17 @@ export function CrmBoard({
     for (const [key, value] of Object.entries(form)) {
       fd.set(key, value);
     }
+    if (editLead) fd.set("leadId", editLead.id);
 
     startTransition(async () => {
-      const result = await createCrmClientAction(fd);
+      const result = editLead
+        ? await updateCrmClientAction(fd)
+        : await createCrmClientAction(fd);
       if (!result.ok) {
-        setFormError(result.error || "Could not create client");
+        setFormError(result.error || "Could not save client");
         return;
       }
-      setOpenAdd(false);
+      closeEditor();
       setForm(EMPTY_FORM);
       router.refresh();
     });
@@ -233,7 +287,7 @@ export function CrmBoard({
     <div>
       <div className="crm-sync-bar">
         <p>
-          Same clients as <strong>Sheet</strong>. Website callback / book forms land here too.
+          Same clients as <strong>Sheet</strong>. Double-click a card to open every Sheet field.
           {pending ? " Saving…" : null}
         </p>
         {error ? <span className="crm-sync-error">{error}</span> : null}
@@ -262,13 +316,19 @@ export function CrmBoard({
               <p className="kanban-empty">No clients</p>
             ) : null}
             {col.items.map((lead) => (
-              <div key={lead.id} className="kanban-card">
+              <div
+                key={lead.id}
+                className="kanban-card"
+                title="Double-click to open full details"
+                onDoubleClick={() => openDetail(lead)}
+              >
                 <div className="kanban-card-top">
                   <strong>{lead.name || "Unknown"}</strong>
                   <button
                     type="button"
                     className="crm-card-delete"
                     onClick={() => deleteLead(lead)}
+                    onDoubleClick={(e) => e.stopPropagation()}
                     disabled={pending}
                     title="Delete lead"
                   >
@@ -281,7 +341,7 @@ export function CrmBoard({
                   {[lead.source, lead.jobType, lead.technician].filter(Boolean).join(" · ") ||
                     "—"}
                 </div>
-                <label className="kanban-move">
+                <label className="kanban-move" onDoubleClick={(e) => e.stopPropagation()}>
                   <span className="sr-only">Move status</span>
                   <select
                     value={lead.jobStatus}
@@ -307,17 +367,19 @@ export function CrmBoard({
             type="button"
             className="crm-modal__backdrop"
             aria-label="Close"
-            onClick={() => setOpenAdd(false)}
+            onClick={closeEditor}
           />
           <div className="crm-modal__panel">
             <div className="crm-modal__head">
-              <h3 id="crm-add-title">Add client</h3>
-              <button type="button" className="crm-modal__close" onClick={() => setOpenAdd(false)}>
+              <h3 id="crm-add-title">{editLead ? editLead.name || "Client" : "Add client"}</h3>
+              <button type="button" className="crm-modal__close" onClick={closeEditor}>
                 ×
               </button>
             </div>
             <p className="crm-modal__hint">
-              Fills the same columns as Sheet. Client appears in CRM and Sheet immediately.
+              {editLead
+                ? "All Sheet columns for this client. Save writes back to Sheet."
+                : "Fills the same columns as Sheet. Client appears in CRM and Sheet immediately."}
             </p>
             <form className="crm-add-form" onSubmit={submitAdd}>
               <label>
@@ -403,7 +465,7 @@ export function CrmBoard({
                   value={form.jobStatus}
                   onChange={(e) => setField("jobStatus", e.target.value)}
                 >
-                  {SHEET_STATUSES.filter((s) => s !== "Scheduled").map((s) => (
+                  {SHEET_STATUSES.filter((s) => (editLead ? true : s !== "Scheduled")).map((s) => (
                     <option key={s} value={s}>
                       {s}
                     </option>
@@ -486,11 +548,11 @@ export function CrmBoard({
               </label>
               {formError ? <p className="crm-form-error crm-span-2">{formError}</p> : null}
               <div className="crm-form-actions crm-span-2">
-                <button type="button" className="crm-btn-secondary" onClick={() => setOpenAdd(false)}>
+                <button type="button" className="crm-btn-secondary" onClick={closeEditor}>
                   Cancel
                 </button>
                 <button type="submit" className="crm-btn-primary" disabled={pending}>
-                  {pending ? "Saving…" : "Add client"}
+                  {pending ? "Saving…" : editLead ? "Save" : "Add client"}
                 </button>
               </div>
             </form>

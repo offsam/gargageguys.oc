@@ -17,6 +17,7 @@ function pick(meta: Record<string, unknown>, ...keys: string[]): string {
   for (const key of keys) {
     const v = meta[key];
     if (typeof v === "string" && v.trim()) return v.trim();
+    if (typeof v === "number" && Number.isFinite(v)) return String(v);
   }
   return "";
 }
@@ -64,17 +65,32 @@ export default async function CrmPage() {
         : null) ||
       pick(meta, "clientAddress", "address") ||
       "";
+    const workSource = pick(meta, "workSource", "work_source", "owner") || "Garage Guys";
     return {
       id: lead.id,
-      name: lead.name || pick(meta, "clientName") || "Unknown",
+      name: lead.name || pick(meta, "clientName", "client_name") || "Unknown",
       phone: lead.phone || pick(meta, "phone") || "",
+      zip: lead.zip || pick(meta, "zip") || "",
       address,
-      source: lead.source || pick(meta, "leadSource") || "",
+      workSource,
+      partnerName: pick(meta, "partnerName", "partner_name", "partner"),
+      source:
+        workSource === "Partner"
+          ? pick(meta, "leadSource", "lead_source")
+          : lead.source || pick(meta, "leadSource", "lead_source") || "",
+      leadCost: pick(meta, "leadCost", "lead_cost"),
+      date: pick(meta, "sheetDate", "date") || new Date(lead.created_at).toISOString().slice(0, 10),
       jobType:
         pick(meta, "jobType") || lead.deal_title || lead.lead_type || lead.message || "",
-      technician: pick(meta, "technician") || "",
+      technician: pick(meta, "technician", "tech_name") || "",
       jobStatus: sheetStatusFromLead({ stage: lead.stage, metadata: lead.metadata }),
       jobCost: pick(meta, "jobCost", "job_cost") || lead.deal_price || "",
+      parts: pick(meta, "parts"),
+      paymentType: pick(meta, "paymentType", "payment_type"),
+      checkNumber: pick(meta, "checkNumber", "check_number"),
+      bankFee: pick(meta, "bankFee", "bank_fee"),
+      partsCost: pick(meta, "partsCost", "parts_cost"),
+      techSalary: pick(meta, "techSalary", "tech_salary"),
       createdAt: lead.created_at,
     };
   });
