@@ -14,7 +14,7 @@ const LINKS: Array<{ href: string; label: string; roles?: Array<SessionUser["rol
   { href: "/stock", label: "Stock", roles: ["owner", "office", "dispatcher", "technician"] },
   { href: "/ads", label: "Ads", roles: ["owner", "office"] },
   { href: "/reviews", label: "Reviews", roles: ["owner", "office"] },
-  { href: "/serm", label: "SERM", roles: ["owner", "office"] },
+  { href: "/serm", label: "Search", roles: ["owner", "office"] },
   { href: "/dispatch", label: "Dispatch", roles: ["owner", "dispatcher"] },
   { href: "/finance", label: "Finance", roles: ["owner", "accountant"] },
   { href: "/field", label: "Field", roles: ["owner", "technician", "dispatcher"] },

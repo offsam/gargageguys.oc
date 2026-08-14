@@ -130,7 +130,7 @@ export default async function OwnerPage() {
         <Link href="/reviews" className="ov-tile ov-tile--reviews ov-tile--wide">
           <div className="ov-tile__head">
             <h3>Reviews</h3>
-            <span className="ov-tile__link">SERM →</span>
+            <span className="ov-tile__link">Reviews →</span>
           </div>
           <div className="ov-reviews">
             <div>
@@ -273,7 +273,7 @@ export default async function OwnerPage() {
         <Link href="/serm" className="ov-tile ov-tile--seo ov-tile--wide">
           <div className="ov-tile__head">
             <h3>SEO / traffic</h3>
-            <span className="ov-tile__link">SERM →</span>
+            <span className="ov-tile__link">Search →</span>
           </div>
           {seo ? (
             <div className="ov-seo-grid">
@@ -309,7 +309,7 @@ export default async function OwnerPage() {
               </div>
             </div>
           ) : (
-            <p className="ov-tile__hint">No SEO snapshot yet — run SEO sync from SERM.</p>
+            <p className="ov-tile__hint">No search snapshot yet — open Search after SEO sync.</p>
           )}
         </Link>
       </div>

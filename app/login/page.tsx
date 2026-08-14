@@ -10,7 +10,7 @@ export default async function LoginPage({
     <div className="login-page">
       <div className="login-card">
         <h1>Garage Guys</h1>
-        <p>Sign in to CRM, SERM, Dispatch, Finance, or Field.</p>
+        <p>Sign in to CRM, Search, Dispatch, Finance, or Field.</p>
         {params.error ? <div className="error">{params.error}</div> : null}
         <form action={signInAction}>
           <input type="hidden" name="next" value={params.next || ""} />
