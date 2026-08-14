@@ -1,0 +1,33 @@
+---
+description: Keep git, other agents, and production in sync so deploys never wipe Ads or other BOS features
+alwaysApply: true
+---
+
+# Multi-agent git + deploy (Garage Guys BOS)
+
+Two agents and GitHub all ship **production**. Wiping Ads/Reviews/OAuth happened because features lived only on disk while `main` auto-deployed without them.
+
+## Start of every task
+
+1. `git fetch origin` and `git pull --rebase origin main`.
+2. `git status`. If the branch is behind origin, **do not** code or deploy until pulled.
+3. Product pages/nav/API belong in git. Do not leave `/ads`, `/reviews`, Google OAuth, or similar **untracked**.
+
+## While working (other agent may be in another chat)
+
+1. After a complete slice, **commit** (no `.env`, `.next`, secrets).
+2. `git pull --rebase origin main` then `git push origin main` so the other agent can pull it.
+3. If rebase conflicts: merge both sides. Never `push --force` to `main`. Never throw away the other agent's files.
+
+## Deploy
+
+Production is `garageguysoc.com` via Vercel **Git `main`** and `vercel deploy --prod`.
+
+1. Deploy only after the commit is on `origin/main` (push first).
+2. Before CLI deploy: `git pull --rebase origin main` so you upload **their work + yours**.
+3. Do not `vercel deploy --prod` from a tree that is behind `origin/main`.
+4. Do not Vercel **Redeploy** an old git SHA that predates Ads/Reviews.
+
+## Check
+
+If `/ads` 404s after a deploy, `main` was missing those files. Restore from git (they must already be committed), then deploy that commit — do not rebuild a parallel untracked copy.
