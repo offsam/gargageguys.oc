@@ -48,7 +48,6 @@ export function FieldInvoiceWizard({
   stockSourceLabel = "Garage Guys",
   stockFrom = "van",
   invoice: initial,
-  jobStatus,
 }: {
   jobId: string;
   technicianId: string;
@@ -56,7 +55,6 @@ export function FieldInvoiceWizard({
   stockSourceLabel?: string;
   stockFrom?: "van" | "partner";
   invoice: JobInvoice;
-  jobStatus: string;
 }) {
   const router = useRouter();
   const [invoice, setInvoice] = useState(initial);
@@ -213,20 +211,6 @@ export function FieldInvoiceWizard({
       if (done.invoice) setInvoice(done.invoice);
       router.refresh();
     });
-  }
-
-  if (jobStatus !== "on_site" && jobStatus !== "done" && invoice.status === "draft" && !invoice.lines.length) {
-    return (
-      <section className="field-section inv-locked">
-        <h2>Invoice</h2>
-        <div className="field-detail-card">
-          <p className="field-muted">
-            Set status to <strong>on site</strong> to start the invoice (parts, services, payment,
-            signature).
-          </p>
-        </div>
-      </section>
-    );
   }
 
   return (

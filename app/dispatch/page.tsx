@@ -14,6 +14,7 @@ import {
   type FieldJob,
 } from "@/lib/field/days";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
+import { ensureInvoicesForScheduledJobs } from "@/lib/field/job-invoice";
 
 function asMeta(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -47,6 +48,11 @@ export default async function DispatchPage({
   const isToday = selectedDay === todayKey;
 
   const supabase = await createSupabaseServerClient();
+  try {
+    await ensureInvoicesForScheduledJobs(user.id);
+  } catch (err) {
+    console.error("[dispatch] ensure invoices", err);
+  }
   const [{ data: jobsRaw }, { data: queueRaw }, { data: techs }] = await Promise.all([
     supabase.from("jobs").select("*").order("scheduled_start", { ascending: true }).limit(500),
     supabase

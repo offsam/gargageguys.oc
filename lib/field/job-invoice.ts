@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { isBusyJob } from "@/lib/field/busy";
 import {
   parseInvoiceLines,
   sumInvoiceLines,
@@ -76,6 +77,36 @@ async function assignJobNumber(jobId: string): Promise<number | null> {
   } catch {
     return null;
   }
+}
+
+/** Create draft invoice (client data + job #) for every scheduled job that still lacks one. */
+export async function ensureInvoicesForScheduledJobs(createdBy?: string): Promise<number> {
+  const admin = getSupabaseAdmin();
+  const { data: jobs, error } = await admin
+    .from("jobs")
+    .select("id, title, notes")
+    .not("scheduled_start", "is", null)
+    .neq("status", "cancelled")
+    .order("scheduled_start", { ascending: false })
+    .limit(300);
+  if (error) throw error;
+  const realJobs = (jobs || []).filter((j) => !isBusyJob(j));
+  if (!realJobs.length) return 0;
+
+  const jobIds = realJobs.map((j) => j.id);
+  const { data: existing } = await admin.from("job_invoices").select("job_id").in("job_id", jobIds);
+  const have = new Set((existing || []).map((row) => String(row.job_id)));
+  let created = 0;
+  for (const job of realJobs) {
+    if (have.has(job.id)) continue;
+    try {
+      await ensureJobInvoice({ jobId: job.id, createdBy });
+      created += 1;
+    } catch (err) {
+      console.error("[ensureInvoicesForScheduledJobs]", job.id, err);
+    }
+  }
+  return created;
 }
 
 export async function ensureJobInvoice(input: {

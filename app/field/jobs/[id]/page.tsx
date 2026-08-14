@@ -121,11 +121,6 @@ export default async function FieldJobPage({
           </select>
           <button type="submit">Update status</button>
         </form>
-        {job.status !== "on_site" && job.status !== "done" ? (
-          <p className="field-muted" style={{ marginTop: 8 }}>
-            Tip: set <strong>on site</strong> to unlock the invoice flow.
-          </p>
-        ) : null}
       </section>
 
       {invoice ? (
@@ -136,7 +131,6 @@ export default async function FieldJobPage({
           stockSourceLabel={stockSource.label}
           stockFrom={stockSource.from}
           invoice={invoice}
-          jobStatus={job.status}
         />
       ) : (
         <section className="field-section">

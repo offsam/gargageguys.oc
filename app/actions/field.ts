@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { BUSY_JOB_MARKER } from "@/lib/field/busy";
+import { ensureJobInvoice } from "@/lib/field/job-invoice";
 
 function revalidateField() {
   revalidatePath("/field");
@@ -11,6 +12,7 @@ function revalidateField() {
   revalidatePath("/crm");
   revalidatePath("/sheet");
   revalidatePath("/owner");
+  revalidatePath("/finance");
 }
 
 function parseLocalDateTime(value: string): Date | null {
@@ -102,6 +104,12 @@ export async function createFieldClientJobAction(formData: FormData) {
 
   if (jobErr || !job) {
     return { ok: false as const, error: jobErr?.message || "Could not create job" };
+  }
+
+  try {
+    await ensureJobInvoice({ jobId: job.id, createdBy: session.id });
+  } catch (err) {
+    console.error("[createFieldClientJobAction] invoice", err);
   }
 
   revalidateField();

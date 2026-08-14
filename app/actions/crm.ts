@@ -16,6 +16,7 @@ import {
 import { parseLocalDateTime } from "@/lib/datetime";
 import type { LeadStage } from "@/lib/supabase/types";
 import { deleteSheetRowAction, saveSheetRowAction, type SheetSaveInput } from "@/app/actions/sheet";
+import { ensureJobInvoice } from "@/lib/field/job-invoice";
 
 function revalidateCrmAndSheet() {
   revalidatePath("/crm");
@@ -23,6 +24,7 @@ function revalidateCrmAndSheet() {
   revalidatePath("/dispatch");
   revalidatePath("/owner");
   revalidatePath("/field");
+  revalidatePath("/finance");
 }
 
 function todayISO(): string {
@@ -280,16 +282,30 @@ export async function scheduleCrmLeadAction(formData: FormData) {
     updated_at: new Date().toISOString(),
   };
 
+  let jobId = existingJobId || "";
   if (existingJobId) {
     const { error: jobErr } = await admin.from("jobs").update(jobPayload).eq("id", existingJobId);
     if (jobErr) return { ok: false as const, error: jobErr.message };
   } else {
-    const { error: jobErr } = await admin.from("jobs").insert({
-      ...jobPayload,
-      lead_id: leadId,
-      customer_id: lead.customer_id,
-    });
-    if (jobErr) return { ok: false as const, error: jobErr.message };
+    const { data: created, error: jobErr } = await admin
+      .from("jobs")
+      .insert({
+        ...jobPayload,
+        lead_id: leadId,
+        customer_id: lead.customer_id,
+      })
+      .select("id")
+      .single();
+    if (jobErr || !created) {
+      return { ok: false as const, error: jobErr?.message || "Could not create job" };
+    }
+    jobId = created.id;
+  }
+
+  try {
+    await ensureJobInvoice({ jobId, createdBy: session.id });
+  } catch (err) {
+    console.error("[scheduleCrmLeadAction] invoice", err);
   }
 
   revalidateCrmAndSheet();
