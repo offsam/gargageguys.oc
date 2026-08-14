@@ -55,28 +55,37 @@ const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths-v2";
 const LEAD_SOURCE_LIST_ID = "sheet-lead-source-list";
 const PARTNER_LIST_ID = "sheet-partner-list";
 
+const MONEY_KEYS = new Set<SheetColumnKey>([
+  "leadCost",
+  "jobCost",
+  "bankFee",
+  "partsCost",
+  "techSalary",
+]);
+
 const COLUMNS: Array<{
   key: SheetColumnKey;
   label: string;
   width: number;
   kind?: "text" | "select" | "date" | "combo";
   options?: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource";
+  money?: boolean;
 }> = [
   { key: "date", label: "Date", width: 130, kind: "date" },
   { key: "workSource", label: "Work source", width: 130, kind: "select", options: "workSource" },
   { key: "partnerName", label: "Partner", width: 140, kind: "combo" },
   { key: "leadSource", label: "Lead source", width: 140, kind: "combo", options: "leadSource" },
-  { key: "leadCost", label: "Lead cost", width: 100 },
+  { key: "leadCost", label: "Lead cost", width: 100, money: true },
   { key: "clientName", label: "Client name", width: 150 },
   { key: "clientAddress", label: "Address", width: 200 },
   { key: "jobStatus", label: "Status", width: 130, kind: "select", options: "status" },
   { key: "jobType", label: "Job type", width: 140 },
   { key: "parts", label: "Parts", width: 180, kind: "select", options: "parts" },
-  { key: "jobCost", label: "Job cost", width: 100 },
+  { key: "jobCost", label: "Job cost", width: 100, money: true },
   { key: "paymentType", label: "Payment type", width: 140, kind: "select", options: "payment" },
   { key: "checkNumber", label: "Check #", width: 110 },
-  { key: "bankFee", label: "Bank fee", width: 90 },
-  { key: "partsCost", label: "Parts cost", width: 100 },
+  { key: "bankFee", label: "Bank fee", width: 90, money: true },
+  { key: "partsCost", label: "Parts cost", width: 100, money: true },
   {
     key: "technician",
     label: "Technician",
@@ -84,7 +93,7 @@ const COLUMNS: Array<{
     kind: "select",
     options: "technician",
   },
-  { key: "techSalary", label: "Tech salary", width: 110 },
+  { key: "techSalary", label: "Tech salary", width: 110, money: true },
 ];
 
 const PROFIT_DEFAULT_WIDTH = 110;
@@ -665,7 +674,9 @@ export function SheetTable({
               {COLUMNS.map((col, idx) => (
                 <th key={col.key} style={{ width: widths[col.key] || col.width }}>
                   <span className="sheet-col-letter">{String.fromCharCode(65 + idx)}</span>
-                  <span className="sheet-col-label">{col.label}</span>
+                  <span className="sheet-col-label">
+                    {col.money ? `$ ${col.label}` : col.label}
+                  </span>
                   <span
                     className="sheet-col-resize"
                     onMouseDown={(e) => startResize(col.key, e)}
@@ -679,7 +690,7 @@ export function SheetTable({
                 <span className="sheet-col-letter">
                   {String.fromCharCode(65 + profitColIndex)}
                 </span>
-                <span className="sheet-col-label">Clear profit</span>
+                <span className="sheet-col-label">$ Clear profit</span>
                 <span
                   className="sheet-col-resize"
                   onMouseDown={(e) => startResize("__profit", e)}
@@ -818,37 +829,46 @@ export function SheetTable({
 
                     const isComputedPartnerSalary =
                       col.key === "techSalary" && isPartnerWork(row.workSource);
+                    const isMoney = col.money || MONEY_KEYS.has(col.key);
 
                     return (
                       <td key={col.key} className={cellClass}>
-                        <input
-                          className="sheet-cell"
-                          value={
-                            isComputedPartnerSalary
-                              ? row.techSalary || partnerTechSalary(row.jobCost)
-                              : row[col.key]
-                          }
-                          disabled={!editable}
-                          readOnly={!editable || isComputedPartnerSalary}
-                          tabIndex={editable ? 0 : -1}
-                          onChange={(e) => {
-                            if (!editable || isComputedPartnerSalary) return;
-                            patchRow(row.id, { [col.key]: e.target.value }, false);
-                          }}
-                          onBlur={() => {
-                            if (!editable || isComputedPartnerSalary) return;
-                            queuePersist(row.id);
-                          }}
-                          placeholder={
-                            col.key === "checkNumber" && needCheck
-                              ? "Required"
-                              : col.key === "bankFee" && cardPay
-                                ? "3.5%"
-                              : col.key === "techSalary" && isPartnerWork(row.workSource)
-                                ? "30% Gross"
-                                : ""
-                          }
-                        />
+                        <div className={isMoney ? "sheet-money" : undefined}>
+                          {isMoney ? <span className="sheet-money-prefix">$</span> : null}
+                          <input
+                            className="sheet-cell"
+                            value={
+                              isComputedPartnerSalary
+                                ? row.techSalary || partnerTechSalary(row.jobCost)
+                                : row[col.key]
+                            }
+                            disabled={!editable}
+                            readOnly={!editable || isComputedPartnerSalary}
+                            tabIndex={editable ? 0 : -1}
+                            inputMode={isMoney ? "decimal" : undefined}
+                            onChange={(e) => {
+                              if (!editable || isComputedPartnerSalary) return;
+                              const raw = e.target.value;
+                              const next = isMoney ? raw.replace(/[^0-9.-]/g, "") : raw;
+                              patchRow(row.id, { [col.key]: next }, false);
+                            }}
+                            onBlur={() => {
+                              if (!editable || isComputedPartnerSalary) return;
+                              queuePersist(row.id);
+                            }}
+                            placeholder={
+                              col.key === "checkNumber" && needCheck
+                                ? "Required"
+                                : col.key === "bankFee" && cardPay
+                                  ? "3.5%"
+                                  : col.key === "techSalary" && isPartnerWork(row.workSource)
+                                    ? "30% Gross"
+                                    : isMoney
+                                      ? "0.00"
+                                      : ""
+                            }
+                          />
+                        </div>
                       </td>
                     );
                   })}
@@ -857,12 +877,14 @@ export function SheetTable({
                       sourcePicked ? "sheet-profit" : "sheet-profit sheet-cell-muted"
                     }
                   >
-                    <input
-                      className="sheet-cell"
-                      value={clearProfitFor(row)}
-                      readOnly
-                      tabIndex={-1}
-                    />
+                    <div className="sheet-money">
+                      <input
+                        className="sheet-cell"
+                        value={clearProfitFor(row)}
+                        readOnly
+                        tabIndex={-1}
+                      />
+                    </div>
                   </td>
                   <td className="sheet-del-cell">
                     <button

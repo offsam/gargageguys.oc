@@ -1225,6 +1225,25 @@ body.sheet-col-resizing * {
   background: #fffbeb !important;
 }
 
+.sheet-money {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+
+.sheet-money-prefix {
+  flex: 0 0 auto;
+  padding-left: 0.45rem;
+  color: var(--bos-muted);
+  font-weight: 650;
+  font-size: 0.85rem;
+}
+
+.sheet-money .sheet-cell {
+  padding-left: 0.25rem;
+}
+
 .sheet-profit .sheet-cell {
   font-weight: 700;
   color: var(--bos-ok);
