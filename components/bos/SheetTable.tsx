@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { saveSheetRowAction, deleteSheetRowAction } from "@/app/actions/sheet";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { SHEET_STATUSES, completeBlockedReason } from "@/lib/leads/stage-sync";
 import { FIELD_SERVICE_NAMES } from "@/lib/field/services-catalog";
@@ -21,6 +19,7 @@ import {
 
 export type SheetRow = {
   id: string;
+  clientKey?: string;
   jobNumber: string;
   workSource: string;
   partnerName: string;
@@ -182,8 +181,10 @@ function partnerTechSalary(gross: string): string {
 }
 
 function emptyRow(index: number): SheetRow {
+  const id = `new-${index}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   return {
-    id: `new-${index}-${Date.now()}`,
+    id,
+    clientKey: id,
     jobNumber: "",
     workSource: "",
     partnerName: "",
@@ -343,6 +344,102 @@ function dateSortValue(row: SheetRow): string {
   return toDateInputValue(row.date) || "";
 }
 
+function rowKey(row: Pick<SheetRow, "id" | "clientKey">): string {
+  return row.clientKey || row.id;
+}
+
+type SheetSaveResult = { ok: true; id?: string; jobNumber?: string } | { ok: false; error: string };
+
+async function postSheetRow(row: SheetRow): Promise<SheetSaveResult> {
+  const res = await fetch("/api/sheet/row", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(row),
+  });
+  const data = (await res.json().catch(() => null)) as {
+    ok?: boolean;
+    id?: string;
+    error?: string;
+    jobNumber?: string;
+  } | null;
+  if (!res.ok || !data?.ok) {
+    return { ok: false, error: data?.error || `Save failed (${res.status})` };
+  }
+  return { ok: true, id: data.id, jobNumber: data.jobNumber || "" };
+}
+
+async function deleteSheetRow(id: string): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch(`/api/sheet/row?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+  const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+  if (!res.ok || !data?.ok) {
+    return { ok: false, error: data?.error || `Delete failed (${res.status})` };
+  }
+  return { ok: true };
+}
+
+/** Survives Next.js remounts on the same tab so in-progress rows aren't wiped. */
+let liveRowsCache: SheetRow[] | null = null;
+
+function withClientKeys(rows: SheetRow[]): SheetRow[] {
+  return rows.map((r) => ({
+    ...r,
+    clientKey: r.clientKey || r.id,
+    workSource: normalizeWorkSource(r.workSource) || r.workSource || "",
+    date: toDateInputValue(r.date),
+  }));
+}
+
+function padBlankRows(rows: SheetRow[]): SheetRow[] {
+  const blanks = rows.filter((row) => !rowHasWork(row));
+  if (blanks.length >= 8) return rows;
+  return [
+    ...rows,
+    ...Array.from({ length: 8 - blanks.length }, (_, i) => emptyRow(rows.length + i)),
+  ];
+}
+
+function mergeLiveRows(live: SheetRow[], server: SheetRow[]): SheetRow[] {
+  const serverById = new Map(
+    server.filter((row) => !row.id.startsWith("new-")).map((row) => [row.id, row]),
+  );
+  const out: SheetRow[] = [];
+  for (const row of live) {
+    if (row.id.startsWith("new-")) {
+      if (rowHasWork(row)) out.push(row);
+      continue;
+    }
+    const fromServer = serverById.get(row.id);
+    serverById.delete(row.id);
+    if (!fromServer) {
+      out.push(row);
+      continue;
+    }
+    out.push({
+      ...row,
+      jobNumber: row.jobNumber || fromServer.jobNumber,
+    });
+  }
+  for (const leftover of serverById.values()) {
+    out.push(leftover);
+  }
+  return padBlankRows(out);
+}
+
+function seedRows(initialRows: SheetRow[]): SheetRow[] {
+  const seeded = withClientKeys(initialRows);
+  const extras = Math.max(8, 14 - seeded.length);
+  const next = [
+    ...seeded,
+    ...Array.from({ length: extras }, (_, i) => emptyRow(i)),
+  ];
+  if (!liveRowsCache?.length) return next;
+  return mergeLiveRows(liveRowsCache, next);
+}
+
+function rememberRows(rows: SheetRow[]) {
+  liveRowsCache = rows;
+}
+
 function cellMutedClass(
   workSource: string,
   key: SheetColumnKey,
@@ -366,18 +463,7 @@ export function SheetTable({
   stockParts?: StockPartOption[];
   partners?: SheetPartner[];
 }) {
-  const router = useRouter();
-  const [rows, setRows] = useState<SheetRow[]>(() => {
-    const extras = Math.max(8, 14 - initialRows.length);
-    return [
-      ...initialRows.map((r) => ({
-        ...r,
-        workSource: normalizeWorkSource(r.workSource) || r.workSource || "",
-        date: toDateInputValue(r.date),
-      })),
-      ...Array.from({ length: extras }, (_, i) => emptyRow(i)),
-    ];
-  });
+  const [rows, setRows] = useState<SheetRow[]>(() => seedRows(initialRows));
   const [status, setStatus] = useState<string>("");
   const [pending, setPending] = useState(false);
   const [dateSort, setDateSort] = useState<"newest" | "oldest">("newest");
@@ -391,8 +477,13 @@ export function SheetTable({
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const savingIdsRef = useRef<Set<string>>(new Set());
 
+  const persistTimersRef = useRef<Map<string, number>>(new Map());
+  const pendingDrainRef = useRef<Set<string>>(new Set());
+  const releaseQueuedRef = useRef(false);
+
   useEffect(() => {
     rowsRef.current = rows;
+    rememberRows(rows);
   }, [rows]);
 
   useEffect(() => {
@@ -522,6 +613,7 @@ export function SheetTable({
   }, [onResizeMove, onResizeEnd]);
 
   function removeRow(row: SheetRow) {
+    const key = rowKey(row);
     const isTemp = row.id.startsWith("new-");
     const hasContent = [
       row.workSource,
@@ -545,8 +637,8 @@ export function SheetTable({
     ].some((v) => String(v || "").trim());
 
     if (isTemp && !hasContent) {
-      dirtyIdsRef.current.delete(row.id);
-      setRows((prev) => prev.filter((r) => r.id !== row.id));
+      dirtyIdsRef.current.delete(key);
+      setRows((prev) => prev.filter((r) => rowKey(r) !== key));
       return;
     }
 
@@ -556,25 +648,24 @@ export function SheetTable({
       : `Delete ${label} from Sheet and the whole system?\n\nThis removes the lead, related jobs, invoices, inbox items, and chat. Cannot be undone.`;
     if (!window.confirm(msg)) return;
 
-    dirtyIdsRef.current.delete(row.id);
-    setRows((prev) => prev.filter((r) => r.id !== row.id));
+    dirtyIdsRef.current.delete(key);
+    setRows((prev) => prev.filter((r) => rowKey(r) !== key));
     if (isTemp) return;
 
     void (async () => {
       setPending(true);
-      const result = await deleteSheetRowAction(row.id);
+      const result = await deleteSheetRow(row.id);
       setPending(false);
       if (!result.ok) {
         setStatus(result.error || "Delete failed");
         setRows((prev) => {
-          if (prev.some((r) => r.id === row.id)) return prev;
+          if (prev.some((r) => rowKey(r) === key || r.id === row.id)) return prev;
           return [...prev, row];
         });
         return;
       }
       setStatus("Deleted");
       window.setTimeout(() => setStatus(""), 1200);
-      router.refresh();
     })();
   }
 
@@ -603,25 +694,36 @@ export function SheetTable({
   }
 
   async function writeRow(row: SheetRow) {
-    if (!rowWorthSaving(row)) return { ok: true as const, id: row.id };
+    if (!rowWorthSaving(row)) return { ok: true as const, id: row.id, jobNumber: row.jobNumber };
     inFlightRef.current += 1;
     setPending(true);
     try {
-      const result = await saveSheetRowAction(row);
+      const result = await postSheetRow(row);
       if (!result.ok) {
         setStatus(result.error || "Save failed");
         return result;
       }
-      if (result.id && result.id !== row.id) {
+      const nextId = result.id || row.id;
+      const nextJob = result.jobNumber || "";
+      if (nextId !== row.id || (nextJob && nextJob !== row.jobNumber)) {
         setRows((prev) => {
-          const next = prev.map((r) => (r.id === row.id ? { ...r, id: result.id! } : r));
+          const next = prev.map((r) => {
+            if (rowKey(r) !== rowKey(row) && r.id !== row.id) return r;
+            return { ...r, id: nextId, jobNumber: nextJob || r.jobNumber };
+          });
           rowsRef.current = next;
+          rememberRows(next);
           return next;
         });
+        if (frozenIdsRef.current) {
+          frozenIdsRef.current = frozenIdsRef.current.map((id) =>
+            id === row.id || id === rowKey(row) ? rowKey(row) : id,
+          );
+        }
       }
       setStatus("Saved");
       window.setTimeout(() => setStatus(""), 1200);
-      return result;
+      return { ok: true as const, id: nextId, jobNumber: nextJob };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Save failed";
       setStatus(message);
@@ -632,47 +734,66 @@ export function SheetTable({
     }
   }
 
-  async function drainPersist(rowId: string) {
-    if (savingIdsRef.current.has(rowId)) return;
-    savingIdsRef.current.add(rowId);
+  async function drainPersist(key: string) {
+    if (savingIdsRef.current.has(key)) {
+      pendingDrainRef.current.add(key);
+      return;
+    }
+    savingIdsRef.current.add(key);
     try {
-      let activeId = rowId;
-      while (dirtyIdsRef.current.has(activeId) || dirtyIdsRef.current.has(rowId)) {
-        dirtyIdsRef.current.delete(activeId);
-        dirtyIdsRef.current.delete(rowId);
-        const current =
-          rowsRef.current.find((r) => r.id === activeId) ||
-          rowsRef.current.find((r) => r.id === rowId);
+      do {
+        dirtyIdsRef.current.delete(key);
+        pendingDrainRef.current.delete(key);
+        const current = rowsRef.current.find((r) => rowKey(r) === key || r.id === key);
         if (!current) break;
         const result = await writeRow(current);
         if (!result.ok) {
-          dirtyIdsRef.current.add(current.id);
+          dirtyIdsRef.current.add(key);
           break;
         }
-        if (result.id) activeId = result.id;
-      }
+      } while (dirtyIdsRef.current.has(key) || pendingDrainRef.current.has(key));
     } finally {
-      savingIdsRef.current.delete(rowId);
-      savingIdsRef.current.delete(
-        rowsRef.current.find((r) => r.id === rowId)?.id || rowId,
-      );
+      savingIdsRef.current.delete(key);
+      if (dirtyIdsRef.current.has(key) || pendingDrainRef.current.has(key)) {
+        void drainPersist(key);
+      } else if (releaseQueuedRef.current) {
+        releaseRowOrder();
+      }
     }
   }
 
   async function flushDirtyRows() {
-    const ids = [...dirtyIdsRef.current];
-    await Promise.all(ids.map((id) => drainPersist(id)));
+    for (const timer of persistTimersRef.current.values()) window.clearTimeout(timer);
+    persistTimersRef.current.clear();
+    const ids = new Set([...dirtyIdsRef.current, ...pendingDrainRef.current]);
+    await Promise.all([...ids].map((id) => drainPersist(id)));
   }
 
-  function queuePersist(rowId: string) {
-    dirtyIdsRef.current.add(rowId);
-    void drainPersist(rowId);
+  function queuePersist(key: string) {
+    dirtyIdsRef.current.add(key);
+    const prev = persistTimersRef.current.get(key);
+    if (prev) window.clearTimeout(prev);
+    const t = window.setTimeout(() => {
+      persistTimersRef.current.delete(key);
+      void drainPersist(key);
+    }, 400);
+    persistTimersRef.current.set(key, t);
+  }
+
+  function queuePersistNow(key: string) {
+    dirtyIdsRef.current.add(key);
+    const prev = persistTimersRef.current.get(key);
+    if (prev) window.clearTimeout(prev);
+    persistTimersRef.current.delete(key);
+    void drainPersist(key);
   }
 
   function patchRow(rowId: string, patch: Partial<SheetRow>, save: boolean) {
+    let key = rowId;
     setRows((prev) => {
       const nextRows = prev.map((row) => {
-        if (row.id !== rowId) return row;
+        if (rowKey(row) !== rowId && row.id !== rowId) return row;
+        key = rowKey(row);
         const next = applyRowRules(row, patch, partners);
         if (
           usesOurParts(next.workSource, next.partnerName, partners) &&
@@ -686,12 +807,12 @@ export function SheetTable({
         return next;
       });
       rowsRef.current = nextRows;
+      rememberRows(nextRows);
       return nextRows;
     });
 
-    // Always track dirty so refresh can't silently drop typed-but-not-blurred cells.
-    dirtyIdsRef.current.add(rowId);
-    if (save) queuePersist(rowId);
+    dirtyIdsRef.current.add(key);
+    if (save) queuePersist(key);
   }
 
   function onPartsChange(rowId: string, value: string, row: SheetRow) {
@@ -764,21 +885,30 @@ export function SheetTable({
   const displayRows = useMemo(() => {
     const ids = freezeOrder ? frozenIdsRef.current : null;
     if (!ids?.length) return sortedRows;
-    const byId = new Map(rows.map((row) => [row.id, row]));
-    const locked = ids.map((id) => byId.get(id)).filter((row): row is SheetRow => Boolean(row));
-    const lockedSet = new Set(locked.map((row) => row.id));
-    const extras = sortedRows.filter((row) => !lockedSet.has(row.id));
+    const byKey = new Map<string, SheetRow>();
+    for (const row of rows) {
+      byKey.set(rowKey(row), row);
+      byKey.set(row.id, row);
+    }
+    const locked = ids.map((id) => byKey.get(id)).filter((row): row is SheetRow => Boolean(row));
+    const lockedSet = new Set(locked.map((row) => rowKey(row)));
+    const extras = sortedRows.filter((row) => !lockedSet.has(rowKey(row)));
     return [...locked, ...extras];
   }, [sortedRows, rows, freezeOrder]);
 
   function freezeRowOrder() {
     focusGenRef.current += 1;
     if (freezeOrder) return;
-    frozenIdsRef.current = displayRows.map((row) => row.id);
+    frozenIdsRef.current = displayRows.map((row) => rowKey(row));
     setFreezeOrder(true);
   }
 
   function releaseRowOrder() {
+    if (dirtyIdsRef.current.size > 0 || inFlightRef.current > 0) {
+      releaseQueuedRef.current = true;
+      return;
+    }
+    releaseQueuedRef.current = false;
     frozenIdsRef.current = null;
     setFreezeOrder(false);
   }
@@ -891,7 +1021,7 @@ export function SheetTable({
 
               return (
                 <tr
-                  key={row.id}
+                  key={rowKey(row)}
                   className={
                     !sourcePicked
                       ? "sheet-row-need-source"
@@ -998,7 +1128,7 @@ export function SheetTable({
                             }}
                             onBlur={() => {
                               if (!editable) return;
-                              queuePersist(row.id);
+                              queuePersistNow(rowKey(row));
                             }}
                           />
                         </td>
@@ -1042,7 +1172,7 @@ export function SheetTable({
                             }}
                             onBlur={() => {
                               if (!editable) return;
-                              queuePersist(row.id);
+                              queuePersistNow(rowKey(row));
                             }}
                           />
                         </td>
@@ -1076,7 +1206,7 @@ export function SheetTable({
                             }}
                             onBlur={() => {
                               if (!editable || isComputedPartnerSalary) return;
-                              queuePersist(row.id);
+                              queuePersistNow(rowKey(row));
                             }}
                             placeholder={
                               col.key === "checkNumber" && needCheck

@@ -8,6 +8,7 @@ import { isPartnerWork } from "@/lib/sheet/work-source";
 import { listPartnersAction } from "@/app/actions/partners";
 import { parseSheetStockPull, syncSheetPartStock } from "@/lib/stock/ops";
 import { ensureLeadWorkOrder } from "@/lib/field/job-invoice";
+import { formatJobNumber } from "@/lib/field/job-invoice-types";
 
 export type SheetSaveInput = {
   id: string;
@@ -135,9 +136,21 @@ function revalidateRelatedSurfaces() {
   revalidatePath("/stock");
 }
 
+async function workOrderNumber(leadId: string, address: string): Promise<string> {
+  if (!String(address || "").trim()) return "";
+  try {
+    const wo = await ensureLeadWorkOrder({ leadId });
+    const label = formatJobNumber(wo.jobNumber);
+    return label === "—" ? "" : label;
+  } catch {
+    return "";
+  }
+}
+
 export async function saveSheetRowAction(
   input: SheetSaveInput,
-): Promise<{ ok: boolean; id?: string; error?: string }> {
+  opts?: { silent?: boolean },
+): Promise<{ ok: boolean; id?: string; error?: string; jobNumber?: string }> {
   const session = await getSessionUser();
   if (!session) return { ok: false, error: "Not signed in" };
 
@@ -226,15 +239,9 @@ export async function saveSheetRowAction(
       } catch {
         /* stock pull is best-effort */
       }
-      if (String(input.clientAddress || "").trim()) {
-        try {
-          await ensureLeadWorkOrder({ leadId: data!.id });
-        } catch {
-          /* numbering is best-effort */
-        }
-      }
-      revalidateRelatedSurfaces();
-      return { ok: true, id: data!.id };
+      const jobNumber = await workOrderNumber(data!.id, input.clientAddress);
+      if (!opts?.silent) revalidateRelatedSurfaces();
+      return { ok: true, id: data!.id, jobNumber };
     }
 
     const { data: existing } = await admin
@@ -285,15 +292,9 @@ export async function saveSheetRowAction(
     } catch {
       /* stock pull is best-effort */
     }
-    if (String(input.clientAddress || "").trim()) {
-      try {
-        await ensureLeadWorkOrder({ leadId: input.id });
-      } catch {
-        /* numbering is best-effort */
-      }
-    }
-    revalidateRelatedSurfaces();
-    return { ok: true, id: input.id };
+    const jobNumber = await workOrderNumber(input.id, input.clientAddress);
+    if (!opts?.silent) revalidateRelatedSurfaces();
+    return { ok: true, id: input.id, jobNumber };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Save failed" };
   }
@@ -301,6 +302,7 @@ export async function saveSheetRowAction(
 
 export async function deleteSheetRowAction(
   id: string,
+  opts?: { silent?: boolean },
 ): Promise<{ ok: boolean; error?: string }> {
   const session = await getSessionUser();
   if (!session) return { ok: false, error: "Not signed in" };
@@ -382,9 +384,11 @@ export async function deleteSheetRowAction(
       }
     }
 
-    revalidateSheetSurfaces();
-    revalidatePath("/finance");
-    revalidatePath("/stock");
+    if (!opts?.silent) {
+      revalidateSheetSurfaces();
+      revalidatePath("/finance");
+      revalidatePath("/stock");
+    }
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Delete failed" };
