@@ -140,7 +140,9 @@ async function ensureBucket() {
   }
 }
 
-export async function loadStockState(): Promise<StockState> {
+export async function loadStockState(options?: {
+  skipRepair?: boolean;
+}): Promise<StockState> {
   await ensureBucket();
   const admin = getSupabaseAdmin();
   const { data, error } = await admin.storage.from(STOCK_BUCKET).download(STOCK_OBJECT);
@@ -153,7 +155,16 @@ export async function loadStockState(): Promise<StockState> {
   }
   const text = await data.text();
   if (!text.trim()) return emptyState();
-  return JSON.parse(text) as StockState;
+  const state = JSON.parse(text) as StockState;
+  if (options?.skipRepair) return state;
+  const removed = stripDuplicatedPartnerWarehouse(state);
+  if (removed <= 0) return state;
+  await saveStockState(state);
+  return {
+    ...state,
+    version: state.version + 1,
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 export async function saveStockState(state: StockState): Promise<void> {
@@ -272,6 +283,73 @@ export function partnerMasterQty(state: StockState, itemId: string, partnerId: s
   return state.balances
     .filter((b) => b.itemId === itemId && b.partnerId === partnerId)
     .reduce((sum, b) => sum + b.qty, 0);
+}
+
+const CHAMPION_LOAD_NOTE = "Loaded partner warehouse onto van";
+
+/** Extra Champion warehouse copies from the Stock page re-running the move. Van qty stays. */
+export function stripDuplicatedPartnerWarehouse(state: StockState): number {
+  const partnerIds = [
+    ...new Set(
+      state.balances.map((b) => b.partnerId).filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  if (partnerIds.length === 0) return 0;
+
+  let removed = 0;
+  for (const partnerId of partnerIds) {
+    const lastLoadAt = state.movements
+      .filter((m) => m.note === CHAMPION_LOAD_NOTE && m.partnerId === partnerId)
+      .reduce((latest, m) => ((m.createdAt || "") > latest ? m.createdAt : latest), "");
+
+    for (const item of state.items) {
+      const warehouse = getBalanceQty(state, item.id, "partner", undefined, partnerId);
+      if (warehouse <= 0) continue;
+      const van = state.balances
+        .filter(
+          (b) =>
+            b.itemId === item.id &&
+            b.locationType === "tech" &&
+            b.partnerId === partnerId,
+        )
+        .reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
+
+      let keep = warehouse;
+      if (lastLoadAt) {
+        keep = 0;
+        for (const m of state.movements) {
+          if (m.itemId !== item.id || m.partnerId !== partnerId) continue;
+          if ((m.createdAt || "") <= lastLoadAt) continue;
+          if (m.kind === "receive_supplier_to_partner") keep += Number(m.qty) || 0;
+          if (m.kind === "issue_warehouse_to_tech" && m.fromLocationType === "partner") {
+            keep -= Number(m.qty) || 0;
+          }
+        }
+        keep = Math.max(0, keep);
+      } else if (van > 0 && warehouse % van === 0) {
+        keep = 0;
+      } else {
+        continue;
+      }
+
+      if (keep >= warehouse) continue;
+      removed += warehouse - keep;
+      setBalanceQty(state, item.id, "partner", keep, undefined, partnerId);
+    }
+  }
+
+  if (removed > 0) {
+    state.movements.unshift({
+      id: randomUUID(),
+      itemId: state.items[0]?.id || "stock",
+      qty: removed,
+      kind: "adjust",
+      note: "Removed duplicate Champion warehouse counts from repeated Stock page move",
+      createdAt: new Date().toISOString(),
+    });
+    if (state.movements.length > 500) state.movements.length = 500;
+  }
+  return removed;
 }
 
 export async function ensureStockSeeded(technicianId: string): Promise<StockState> {

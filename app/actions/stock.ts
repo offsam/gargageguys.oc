@@ -13,7 +13,7 @@ import {
   receiveSupplier,
   updateItemCost,
 } from "@/lib/stock/ops";
-import { ensureStockSeeded } from "@/lib/stock/store";
+import { ensureStockSeeded, loadStockState } from "@/lib/stock/store";
 import { listPartnersAction } from "@/app/actions/partners";
 
 async function requireStaff() {
@@ -202,6 +202,20 @@ export async function assignCurrentStockToChampionAction(): Promise<{
     .eq("id", champion.id);
   if (flagErr) {
     return { ok: false, error: flagErr.message, movedQty: 0, movedItems: 0 };
+  }
+
+  const existing = await loadStockState();
+  const alreadyOnChampion = existing.balances.some(
+    (b) => b.partnerId === champion.id && (Number(b.qty) || 0) > 0,
+  );
+  if (alreadyOnChampion) {
+    return {
+      ok: true,
+      movedQty: 0,
+      movedItems: 0,
+      partnerId: champion.id,
+      partnerName: champion.name,
+    };
   }
 
   const moved = await moveGarageGuysStockToPartner({

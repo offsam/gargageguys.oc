@@ -321,7 +321,7 @@ export async function moveGarageGuysStockToPartner(input: {
   const state = await loadStockState();
   const byItem = new Map<string, number>();
   for (const balance of [...state.balances]) {
-    if (balance.locationType === "partner") continue;
+    if (balance.locationType === "partner" || balance.partnerId) continue;
     const qty = Number(balance.qty) || 0;
     if (qty <= 0) continue;
     byItem.set(balance.itemId, (byItem.get(balance.itemId) || 0) + qty);
