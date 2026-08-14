@@ -52,6 +52,7 @@ const LEAD_SOURCES = [
 ] as const;
 const BANK_FEE_RATE = 0.035;
 const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths-v2";
+const SORT_STORAGE_KEY = "bos-sheet-date-sort";
 const LEAD_SOURCE_LIST_ID = "sheet-lead-source-list";
 const PARTNER_LIST_ID = "sheet-partner-list";
 
@@ -295,6 +296,32 @@ function loadWidths(): Record<string, number> {
   return base;
 }
 
+function rowHasWork(row: SheetRow): boolean {
+  if (!row.id.startsWith("new-")) return true;
+  return [
+    row.workSource,
+    row.partnerName,
+    row.leadSource,
+    row.leadCost,
+    row.clientName,
+    row.clientAddress,
+    row.jobStatus,
+    row.jobType,
+    row.parts,
+    row.paymentType,
+    row.checkNumber,
+    row.jobCost,
+    row.bankFee,
+    row.partsCost,
+    row.technician,
+    row.techSalary,
+  ].some((v) => String(v || "").trim());
+}
+
+function dateSortValue(row: SheetRow): string {
+  return toDateInputValue(row.date) || "";
+}
+
 function cellMutedClass(workSource: string, key: SheetColumnKey, extra?: string) {
   const editable = isColumnEditable(workSource, key);
   const parts = [extra];
@@ -327,6 +354,7 @@ export function SheetTable({
   });
   const [status, setStatus] = useState<string>("");
   const [pending, setPending] = useState(false);
+  const [dateSort, setDateSort] = useState<"newest" | "oldest">("newest");
   const [widths, setWidths] = useState<Record<string, number>>(defaultWidths);
   const dragRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
   const rowsRef = useRef(rows);
@@ -340,7 +368,22 @@ export function SheetTable({
 
   useEffect(() => {
     setWidths(loadWidths());
+    try {
+      const saved = localStorage.getItem(SORT_STORAGE_KEY);
+      if (saved === "oldest" || saved === "newest") setDateSort(saved);
+    } catch {
+      /* ignore */
+    }
   }, []);
+
+  function changeDateSort(next: "newest" | "oldest") {
+    setDateSort(next);
+    try {
+      localStorage.setItem(SORT_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  }
 
   useEffect(() => {
     function onBeforeUnload(e: BeforeUnloadEvent) {
@@ -654,7 +697,17 @@ export function SheetTable({
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [partners, rows]);
 
-  const displayRows = useMemo(() => rows, [rows]);
+  const displayRows = useMemo(() => {
+    const filled = rows.filter(rowHasWork);
+    const blanks = rows.filter((row) => !rowHasWork(row));
+    filled.sort((a, b) => {
+      const da = dateSortValue(a);
+      const db = dateSortValue(b);
+      if (da === db) return 0;
+      return dateSort === "newest" ? (da < db ? 1 : -1) : da < db ? -1 : 1;
+    });
+    return [...filled, ...blanks];
+  }, [rows, dateSort]);
 
   return (
     <div>
@@ -668,7 +721,21 @@ export function SheetTable({
           <option key={opt} value={opt} />
         ))}
       </datalist>
-      <div className="sheet-status">{pending ? "Saving…" : status}</div>
+      <div className="sheet-table-bar">
+        <div className="sheet-status">{pending ? "Saving…" : status}</div>
+        <label className="sheet-sort">
+          Date
+          <select
+            value={dateSort}
+            onChange={(e) =>
+              changeDateSort(e.target.value === "oldest" ? "oldest" : "newest")
+            }
+          >
+            <option value="newest">Newest on top</option>
+            <option value="oldest">Oldest on top</option>
+          </select>
+        </label>
+      </div>
       <div className="sheet-wrap">
         <table className="sheet-grid" style={{ width: tableWidth }}>
           <colgroup>
@@ -684,10 +751,32 @@ export function SheetTable({
               <th className="sheet-corner" />
               {COLUMNS.map((col, idx) => (
                 <th key={col.key} style={{ width: widths[col.key] || col.width }}>
-                  <span className="sheet-col-letter">{String.fromCharCode(65 + idx)}</span>
-                  <span className="sheet-col-label">
-                    {col.money ? `$ ${col.label}` : col.label}
-                  </span>
+                  {col.key === "date" ? (
+                    <button
+                      type="button"
+                      className="sheet-sort-head"
+                      onClick={() =>
+                        changeDateSort(dateSort === "newest" ? "oldest" : "newest")
+                      }
+                      title={
+                        dateSort === "newest"
+                          ? "Newest on top — click for oldest"
+                          : "Oldest on top — click for newest"
+                      }
+                    >
+                      <span className="sheet-col-letter">{String.fromCharCode(65 + idx)}</span>
+                      <span className="sheet-col-label">
+                        Date {dateSort === "newest" ? "↓" : "↑"}
+                      </span>
+                    </button>
+                  ) : (
+                    <>
+                      <span className="sheet-col-letter">{String.fromCharCode(65 + idx)}</span>
+                      <span className="sheet-col-label">
+                        {col.money ? `$ ${col.label}` : col.label}
+                      </span>
+                    </>
+                  )}
                   <span
                     className="sheet-col-resize"
                     onMouseDown={(e) => startResize(col.key, e)}
