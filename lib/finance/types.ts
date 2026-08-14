@@ -12,6 +12,8 @@ export type FinanceRow = {
   amountCents: number;
   status: string;
   invoiceUrl: string | null;
+  publicToken: string | null;
+  clientEmail: string;
   description: string;
   paymentType: string;
 };

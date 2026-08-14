@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { updateInvoiceStatusAction } from "@/app/actions/finance";
+import { InvoiceSendButton } from "@/components/bos/InvoiceSendButton";
 import type { FinanceRow } from "@/lib/finance/types";
 
 const PERIODS = [
@@ -247,9 +248,19 @@ export function FinanceBoard({ rows }: { rows: FinanceRow[] }) {
                   )}
                 </td>
                 <td onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
-                  <button type="button" onClick={() => openInvoice(row)}>
-                    Invoice
-                  </button>
+                  <div className="finance-inv-actions">
+                    <button type="button" onClick={() => openInvoice(row)}>
+                      Invoice
+                    </button>
+                    {row.publicToken ? (
+                      <InvoiceSendButton
+                        compact
+                        token={row.publicToken}
+                        defaultEmail={row.clientEmail}
+                        jobNumber={row.jobNumber || "Invoice"}
+                      />
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ))
@@ -271,9 +282,18 @@ export function FinanceBoard({ rows }: { rows: FinanceRow[] }) {
                 {open.clientName}
                 {open.jobNumber ? ` · ${open.jobNumber}` : ""}
               </h3>
-              <button type="button" className="crm-modal__close" onClick={() => setOpen(null)}>
-                ×
-              </button>
+              <div className="finance-invoice-head-actions">
+                {open.publicToken ? (
+                  <InvoiceSendButton
+                    token={open.publicToken}
+                    defaultEmail={open.clientEmail}
+                    jobNumber={open.jobNumber || "Invoice"}
+                  />
+                ) : null}
+                <button type="button" className="crm-modal__close" onClick={() => setOpen(null)}>
+                  ×
+                </button>
+              </div>
             </div>
             <p className="finance-invoice-meta">
               Work date {open.workDateLabel} · {sourceKindLabel(open.sourceKind)} · {open.sourceLabel}

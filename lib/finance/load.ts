@@ -70,6 +70,18 @@ function sourceFromLead(
   return { kind: workSource === "Garage Guys" ? "garage_guys" : "unknown", label: leadSource };
 }
 
+function clientEmail(
+  customer?: { email?: string | null } | Record<string, unknown> | null,
+  lead?: { metadata?: unknown } | Record<string, unknown> | null,
+) {
+  const fromCust =
+    customer && typeof customer === "object" && "email" in customer && typeof customer.email === "string"
+      ? customer.email.trim()
+      : "";
+  if (fromCust) return fromCust;
+  return pick(asMeta(lead && "metadata" in lead ? lead.metadata : null), "email", "clientEmail", "client_email");
+}
+
 async function fetchByIds(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   table: "leads" | "jobs" | "customers",
@@ -146,7 +158,7 @@ export async function loadFinanceRows(): Promise<FinanceRow[]> {
       ...invoiceList.map((i) => i.job_id),
       ...jobInvoiceList.map((j) => j.job_id),
     ]),
-    fetchByIds(supabase, "customers", "id, name, phone", [
+    fetchByIds(supabase, "customers", "id, name, phone, email", [
       ...invoiceList.map((i) => i.customer_id),
       ...jobInvoiceList.map((j) => j.customer_id),
     ]),
@@ -209,6 +221,8 @@ export async function loadFinanceRows(): Promise<FinanceRow[]> {
       amountCents: Number(inv.amount_cents) || Number(jobInv?.total_cents) || 0,
       status: inv.status,
       invoiceUrl: jobInv?.public_token ? `/i/${jobInv.public_token}` : null,
+      publicToken: jobInv?.public_token || null,
+      clientEmail: clientEmail(customer, lead),
       description: inv.description || "",
       paymentType: jobInv?.payment_type || pick(meta, "paymentType", "payment_type"),
     });
@@ -246,6 +260,8 @@ export async function loadFinanceRows(): Promise<FinanceRow[]> {
       amountCents: Number(jobInv.total_cents) || 0,
       status: jobInv.status.replace(/_/g, " "),
       invoiceUrl: jobInv.public_token ? `/i/${jobInv.public_token}` : null,
+      publicToken: jobInv.public_token || null,
+      clientEmail: clientEmail(customer, lead),
       description: "",
       paymentType: jobInv.payment_type || "",
     });
@@ -274,6 +290,8 @@ export async function loadFinanceRows(): Promise<FinanceRow[]> {
       amountCents,
       status: source.kind === "partner" ? "partner" : "completed",
       invoiceUrl: null,
+      publicToken: null,
+      clientEmail: clientEmail(undefined, lead),
       description: source.kind === "partner" ? "Partner job — no Garage Guys invoice" : "",
       paymentType: pick(meta, "paymentType", "payment_type"),
     });

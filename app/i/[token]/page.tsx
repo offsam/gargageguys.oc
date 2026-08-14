@@ -1,5 +1,21 @@
 import { notFound } from "next/navigation";
-import { getJobInvoiceByToken, money, formatJobNumber } from "@/lib/field/job-invoice";
+import { getJobInvoiceByToken } from "@/lib/field/job-invoice";
+import { getSessionUser } from "@/lib/auth/session";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { InvoiceDocument } from "@/components/bos/InvoiceDocument";
+import { formatJobNumber } from "@/lib/field/job-invoice-types";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}): Promise<Metadata> {
+  const { token } = await params;
+  const invoice = await getJobInvoiceByToken(token);
+  const job = invoice ? formatJobNumber(invoice.job_number) : "Invoice";
+  return { title: `${job} · Garage Guys` };
+}
 
 export default async function PublicInvoicePage({
   params,
@@ -10,71 +26,19 @@ export default async function PublicInvoicePage({
   const invoice = await getJobInvoiceByToken(token);
   if (!invoice) notFound();
 
+  const user = await getSessionUser();
+  let defaultEmail = "";
+  if (user && invoice.customer_id) {
+    const admin = getSupabaseAdmin();
+    const { data } = await admin
+      .from("customers")
+      .select("email")
+      .eq("id", invoice.customer_id)
+      .maybeSingle();
+    defaultEmail = data?.email?.trim() || "";
+  }
+
   return (
-    <main className="inv-public">
-      <header>
-        <p className="inv-public-brand">Garage Guys</p>
-        <h1>Service invoice</h1>
-        <p className="inv-public-job">Job # {formatJobNumber(invoice.job_number)}</p>
-        {invoice.completed_at ? (
-          <p>
-            Work date:{" "}
-            <strong>
-              {new Date(invoice.completed_at).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </strong>
-          </p>
-        ) : null}
-        <p>
-          Status: <strong>{invoice.status.replace(/_/g, " ")}</strong>
-        </p>
-      </header>
-
-      <section>
-        <h2>Customer</h2>
-        <p>{invoice.client_name || "—"}</p>
-        <p>{invoice.client_phone || "—"}</p>
-        <p>
-          {[invoice.client_address, invoice.client_zip].filter(Boolean).join(", ") || "—"}
-        </p>
-      </section>
-
-      <section>
-        <h2>Items</h2>
-        <ul>
-          {invoice.lines.map((line) => (
-            <li key={line.id}>
-              <span>
-                {line.qty}× {line.name}
-              </span>
-              <strong>{money(line.totalCents)}</strong>
-            </li>
-          ))}
-        </ul>
-        <p className="inv-public-total">
-          Total <strong>{money(invoice.total_cents)}</strong>
-        </p>
-        {invoice.payment_type ? <p>Payment: {invoice.payment_type}</p> : null}
-      </section>
-
-      {invoice.signature_data ? (
-        <section>
-          <h2>Signature</h2>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={invoice.signature_data} alt="Customer signature" />
-          {invoice.signed_at ? (
-            <p>Signed {new Date(invoice.signed_at).toLocaleString()}</p>
-          ) : null}
-        </section>
-      ) : null}
-
-      <footer>
-        <p>Garage Guys · Orange County · (949) 539-0009</p>
-        <p>Email/SMS delivery coming next — this page is the shareable receipt.</p>
-      </footer>
-    </main>
+    <InvoiceDocument invoice={invoice} canSend={Boolean(user)} defaultEmail={defaultEmail} />
   );
 }
