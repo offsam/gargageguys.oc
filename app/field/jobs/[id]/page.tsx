@@ -11,6 +11,7 @@ import { getFieldAttentionCount } from "@/lib/field/load-attention";
 import { ensureJobInvoice } from "@/lib/field/job-invoice";
 import { listPartnersAction } from "@/app/actions/partners";
 import { pickLeadWorkMeta, resolveJobStockSource } from "@/lib/stock/job-source";
+import { sheetServiceFromLead } from "@/lib/sheet/issue-service";
 
 export default async function FieldJobPage({
   params,
@@ -131,6 +132,7 @@ export default async function FieldJobPage({
           stockSourceLabel={stockSource.label}
           stockFrom={stockSource.from}
           invoice={invoice}
+          defaultServiceName={sheetServiceFromLead(leadMeta)}
         />
       ) : (
         <section className="field-section">

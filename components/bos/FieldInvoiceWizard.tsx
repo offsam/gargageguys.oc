@@ -12,7 +12,7 @@ import {
   saveSignatureAction,
   startPaymentAction,
 } from "@/app/actions/job-invoice";
-import { FIELD_SERVICES } from "@/lib/field/services-catalog";
+import { FIELD_SERVICES, findFieldServiceByName } from "@/lib/field/services-catalog";
 import {
   money,
   formatJobNumber,
@@ -48,6 +48,7 @@ export function FieldInvoiceWizard({
   stockSourceLabel = "Garage Guys",
   stockFrom = "van",
   invoice: initial,
+  defaultServiceName = "",
 }: {
   jobId: string;
   technicianId: string;
@@ -55,6 +56,7 @@ export function FieldInvoiceWizard({
   stockSourceLabel?: string;
   stockFrom?: "van" | "partner";
   invoice: JobInvoice;
+  defaultServiceName?: string;
 }) {
   const router = useRouter();
   const [invoice, setInvoice] = useState(initial);
@@ -62,7 +64,9 @@ export function FieldInvoiceWizard({
   const [error, setError] = useState("");
   const [partId, setPartId] = useState("");
   const [partQty, setPartQty] = useState(1);
-  const [serviceId, setServiceId] = useState("");
+  const [serviceId, setServiceId] = useState(
+    () => findFieldServiceByName(defaultServiceName)?.id || "",
+  );
   const [serviceQty, setServiceQty] = useState(1);
   const [customName, setCustomName] = useState("");
   const [customPrice, setCustomPrice] = useState("");

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveSheetRowAction, deleteSheetRowAction } from "@/app/actions/sheet";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { SHEET_STATUSES, completeBlockedReason } from "@/lib/leads/stage-sync";
+import { FIELD_SERVICE_NAMES } from "@/lib/field/services-catalog";
 import {
   WORK_SOURCES,
   PARTNER_TECH_RATE,
@@ -29,6 +30,7 @@ export type SheetRow = {
   clientAddress: string;
   jobStatus: string;
   jobType: string;
+  service: string;
   parts: string;
   paymentType: string;
   checkNumber: string;
@@ -74,7 +76,7 @@ const COLUMNS: Array<{
   label: string;
   width: number;
   kind?: "text" | "select" | "date" | "combo";
-  options?: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource" | "partner";
+  options?: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource" | "partner" | "service";
   money?: boolean;
 }> = [
   { key: "date", label: "Date", width: 130, kind: "date" },
@@ -85,7 +87,8 @@ const COLUMNS: Array<{
   { key: "clientName", label: "Client name", width: 150 },
   { key: "clientAddress", label: "Address", width: 200 },
   { key: "jobStatus", label: "Status", width: 140, kind: "select", options: "status" },
-  { key: "jobType", label: "Job type", width: 140 },
+  { key: "jobType", label: "Issue", width: 180 },
+  { key: "service", label: "Service", width: 200, kind: "select", options: "service" },
   { key: "parts", label: "Parts", width: 180, kind: "select", options: "parts" },
   { key: "jobCost", label: "Job cost", width: 100, money: true },
   { key: "paymentType", label: "Payment type", width: 140, kind: "select", options: "payment" },
@@ -188,6 +191,7 @@ function emptyRow(index: number): SheetRow {
     clientAddress: "",
     jobStatus: "",
     jobType: "",
+    service: "",
     parts: "",
     paymentType: "",
     checkNumber: "",
@@ -319,6 +323,7 @@ function rowHasWork(row: SheetRow): boolean {
     row.clientAddress,
     row.jobStatus,
     row.jobType,
+    row.service,
     row.parts,
     row.paymentType,
     row.checkNumber,
@@ -524,6 +529,7 @@ export function SheetTable({
       row.clientAddress,
       row.jobStatus,
       row.jobType,
+      row.service,
       row.parts,
       row.paymentType,
       row.checkNumber,
@@ -580,6 +586,7 @@ export function SheetTable({
       row.clientAddress,
       row.jobStatus,
       row.jobType,
+      row.service,
       row.parts,
       row.paymentType,
       row.checkNumber,
@@ -698,13 +705,20 @@ export function SheetTable({
   }
 
   function selectOptions(
-    kind: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource" | "partner" | undefined,
+    kind: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource" | "partner" | "service" | undefined,
   ) {
     if (kind === "workSource") return ["", ...WORK_SOURCES];
     if (kind === "payment") return [...PAYMENT_TYPES];
     if (kind === "status") return [...JOB_STATUSES];
     if (kind === "technician") return techOptions;
     if (kind === "parts") return partNames;
+    if (kind === "service") {
+      const set = new Set<string>(FIELD_SERVICE_NAMES);
+      for (const row of rows) {
+        if (row.service.trim()) set.add(row.service.trim());
+      }
+      return ["", ...[...set].sort((a, b) => a.localeCompare(b))];
+    }
     if (kind === "leadSource") return ["", ...LEAD_SOURCES];
     if (kind === "partner") {
       const set = new Set<string>(partners.map((p) => p.name).filter(Boolean));

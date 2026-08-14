@@ -140,7 +140,9 @@ export default async function FieldReportPage() {
                   <li key={lead.id}>
                     <div>
                       <strong>{lead.name || "Client"}</strong>
-                      <span>{String(meta.jobType || meta.job_type || "Job")}</span>
+                    <span>
+                      {String(meta.service || meta.jobType || meta.job_type || "Job")}
+                    </span>
                     </div>
                     <em>{pay ? formatMoney(pay) : "—"}</em>
                   </li>

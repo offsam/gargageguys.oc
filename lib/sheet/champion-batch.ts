@@ -158,6 +158,7 @@ export async function importChampionBatchRows(rows: ChampionBatchRow[] = CHAMPIO
       clientAddress: row.address,
       jobStatus: "Waiting",
       jobType: "",
+      service: "",
       parts: "",
       paymentType: "",
       checkNumber: "",

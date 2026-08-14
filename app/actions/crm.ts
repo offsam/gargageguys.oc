@@ -44,6 +44,7 @@ function crmSheetInput(formData: FormData, id: string, jobStatus: string): Sheet
     clientAddress: String(formData.get("clientAddress") || "").trim(),
     jobStatus,
     jobType: String(formData.get("jobType") || "").trim(),
+    service: String(formData.get("service") || "").trim(),
     parts: String(formData.get("parts") || "").trim(),
     paymentType: String(formData.get("paymentType") || "").trim(),
     checkNumber: String(formData.get("checkNumber") || "").trim(),

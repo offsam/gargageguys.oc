@@ -28,3 +28,11 @@ export const FIELD_SERVICES: FieldService[] = [
 export function findFieldService(id: string) {
   return FIELD_SERVICES.find((s) => s.id === id) || null;
 }
+
+export function findFieldServiceByName(name: string) {
+  const needle = name.trim().toLowerCase();
+  if (!needle) return null;
+  return FIELD_SERVICES.find((s) => s.name.toLowerCase() === needle) || null;
+}
+
+export const FIELD_SERVICE_NAMES = FIELD_SERVICES.map((s) => s.name);

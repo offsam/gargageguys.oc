@@ -19,6 +19,7 @@ export type SheetSaveInput = {
   clientAddress: string;
   jobStatus: string;
   jobType: string;
+  service: string;
   parts: string;
   paymentType: string;
   checkNumber: string;
@@ -41,6 +42,8 @@ function sheetMeta(input: SheetSaveInput) {
     clientAddress: input.clientAddress,
     jobStatus: input.jobStatus,
     jobType: input.jobType,
+    issue: input.jobType,
+    service: input.service,
     parts: input.parts,
     paymentType: input.paymentType,
     checkNumber: input.checkNumber,
@@ -146,6 +149,7 @@ export async function saveSheetRowAction(
     input.clientAddress,
     input.jobStatus,
     input.jobType,
+    input.service,
     input.parts,
     input.paymentType,
     input.checkNumber,

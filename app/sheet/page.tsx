@@ -8,6 +8,7 @@ import { loadStockState } from "@/lib/stock/store";
 import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
 import { listPartnersAction } from "@/app/actions/partners";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
+import { sheetIssueFromLead, sheetServiceFromLead } from "@/lib/sheet/issue-service";
 
 function asMeta(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -69,12 +70,13 @@ export default async function SheetPage() {
 
   const rows: SheetRow[] = (leads || []).map((lead) => {
     const meta = asMeta(lead.metadata);
-    const jobType =
-      pick(meta, "jobType", "job_type") ||
-      lead.deal_title ||
-      lead.lead_type ||
-      lead.message ||
-      "";
+    const jobType = sheetIssueFromLead({
+      metadata: meta,
+      dealTitle: lead.deal_title,
+      leadType: lead.lead_type,
+      message: lead.message,
+    });
+    const service = sheetServiceFromLead(meta);
     const fromAssignee =
       lead.assigned_to && techById.get(lead.assigned_to)
         ? techById.get(lead.assigned_to)!
@@ -100,6 +102,7 @@ export default async function SheetPage() {
         "",
       jobStatus: sheetStatusFromLead(lead),
       jobType,
+      service,
       parts: pick(meta, "parts"),
       paymentType: pick(meta, "paymentType", "payment_type"),
       checkNumber: pick(meta, "checkNumber", "check_number"),

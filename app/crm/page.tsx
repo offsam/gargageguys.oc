@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { updateInboxStatusAction } from "@/app/actions/crm";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
+import { sheetIssueFromLead, sheetServiceFromLead } from "@/lib/sheet/issue-service";
 import { loadStockState } from "@/lib/stock/store";
 import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
 
@@ -80,8 +81,13 @@ export default async function CrmPage() {
           : lead.source || pick(meta, "leadSource", "lead_source") || "",
       leadCost: pick(meta, "leadCost", "lead_cost"),
       date: pick(meta, "sheetDate", "date") || new Date(lead.created_at).toISOString().slice(0, 10),
-      jobType:
-        pick(meta, "jobType") || lead.deal_title || lead.lead_type || lead.message || "",
+      jobType: sheetIssueFromLead({
+        metadata: meta,
+        dealTitle: lead.deal_title,
+        leadType: lead.lead_type,
+        message: lead.message,
+      }),
+      service: sheetServiceFromLead(meta),
       technician: pick(meta, "technician", "tech_name") || "",
       jobStatus: sheetStatusFromLead({ stage: lead.stage, metadata: lead.metadata }),
       jobCost: pick(meta, "jobCost", "job_cost") || lead.deal_price || "",

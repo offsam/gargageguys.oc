@@ -102,6 +102,8 @@ export async function ingestLead(input: IngestLeadInput) {
     clientAddress: address || (zip ? `ZIP ${zip}` : ""),
     jobStatus,
     jobType,
+    issue: jobType,
+    service: "",
     parts: "",
     paymentType: "",
     checkNumber: "",

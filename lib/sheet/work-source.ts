@@ -18,6 +18,7 @@ export type SheetColumnKey =
   | "clientAddress"
   | "jobStatus"
   | "jobType"
+  | "service"
   | "leadSource"
   | "leadCost"
   | "parts"
@@ -42,6 +43,7 @@ const SHARED: SheetColumnKey[] = [
   "clientAddress",
   "jobStatus",
   "jobType",
+  "service",
   "parts",
   "paymentType",
   "checkNumber",

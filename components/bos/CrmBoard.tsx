@@ -12,6 +12,7 @@ import {
 import { SHEET_STATUSES, completeBlockedReason, type SheetStatus } from "@/lib/leads/stage-sync";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
+import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/ScheduleLeadModal";
 
 export type CrmLeadCard = {
@@ -26,6 +27,7 @@ export type CrmLeadCard = {
   leadCost: string;
   date: string;
   jobType: string;
+  service: string;
   technician: string;
   jobStatus: SheetStatus;
   jobCost: string;
@@ -69,6 +71,7 @@ const EMPTY_FORM = {
   date: todayISO(),
   jobStatus: "Waiting" as SheetStatus,
   jobType: "",
+  service: "",
   parts: "",
   paymentType: "",
   checkNumber: "",
@@ -93,6 +96,7 @@ function formFromLead(lead: CrmLeadCard): typeof EMPTY_FORM {
     date: lead.date || todayISO(),
     jobStatus: lead.jobStatus,
     jobType: lead.jobType,
+    service: lead.service,
     parts: lead.parts,
     paymentType: lead.paymentType,
     checkNumber: lead.checkNumber,
@@ -344,8 +348,9 @@ export function CrmBoard({
                   <span className="kanban-card-note">{lead.description}</span>
                 ) : null}
                 <div className="kanban-card-meta">
-                  {[lead.source, lead.jobType, lead.technician].filter(Boolean).join(" · ") ||
-                    "—"}
+                  {[lead.source, lead.jobType, lead.service, lead.technician]
+                    .filter(Boolean)
+                    .join(" · ") || "—"}
                 </div>
                 <label className="kanban-move" onDoubleClick={(e) => e.stopPropagation()}>
                   <span className="sr-only">Move status</span>
@@ -479,8 +484,29 @@ export function CrmBoard({
                 </select>
               </label>
               <label className="crm-span-2">
-                Job type
-                <input value={form.jobType} onChange={(e) => setField("jobType", e.target.value)} />
+                Issue
+                <input
+                  value={form.jobType}
+                  onChange={(e) => setField("jobType", e.target.value)}
+                  placeholder="What the client said"
+                />
+              </label>
+              <label>
+                Service
+                <select
+                  value={form.service}
+                  onChange={(e) => setField("service", e.target.value)}
+                >
+                  <option value="">—</option>
+                  {FIELD_SERVICES.map((s) => (
+                    <option key={s.id} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))}
+                  {form.service && !FIELD_SERVICES.some((s) => s.name === form.service) ? (
+                    <option value={form.service}>{form.service}</option>
+                  ) : null}
+                </select>
               </label>
               <label>
                 Parts
