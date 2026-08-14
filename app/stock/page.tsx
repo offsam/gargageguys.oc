@@ -5,7 +5,6 @@ import { StockBoard } from "@/components/bos/StockBoard";
 import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { listPartnersAction } from "@/app/actions/partners";
-import { assignCurrentStockToChampionAction } from "@/app/actions/stock";
 import {
   ensureStockSeeded,
   loadStockState,
@@ -72,16 +71,6 @@ export default async function StockPage({
 
   await ensureStockSeeded(seedTechId);
 
-  let moveNotice = "";
-  if (user.role === "owner") {
-    const moved = await assignCurrentStockToChampionAction();
-    if (!moved.ok && moved.error) {
-      moveNotice = moved.error;
-    } else if (moved.movedQty > 0) {
-      moveNotice = `Moved ${moved.movedQty} units (${moved.movedItems} parts) to ${moved.partnerName || "Champion"}. Garage Guys is empty — fill it when you are ready.`;
-    }
-  }
-
   const [partners, state] = await Promise.all([listPartnersAction(), loadStockState()]);
   const showPrices = user.role === "owner";
   const isTechOnly = user.role === "technician";
@@ -144,7 +133,6 @@ export default async function StockPage({
       stockOwners={stockOwners}
       stockOwner={stockOwner}
       partnerWarehouseCount={partnerWarehouses.length}
-      notice={moveNotice}
     />
   );
 
