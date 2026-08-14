@@ -171,7 +171,7 @@ export default async function OwnerPage() {
       user={user}
       active="/owner"
       title="Overview"
-      subtitle="Tile size matches the data — wide only when the numbers fill it"
+      subtitle="Same row, same height — columns line up"
     >
       <div className="ov-dash">
         <Link href="/reviews" className="ov-tile ov-tile--reviews">
@@ -179,7 +179,8 @@ export default async function OwnerPage() {
             <h3>Reviews</h3>
             <span className="ov-tile__link">Open →</span>
           </div>
-          <div className="ov-reviews">
+          <div className="ov-fill">
+            <div className="ov-reviews">
             <div>
               <div className="ov-reviews__label">Thumbtack</div>
               <div className="ov-reviews__score">
@@ -197,6 +198,7 @@ export default async function OwnerPage() {
               </div>
               <div className="ov-reviews__count">{google.count}</div>
             </div>
+          </div>
           </div>
         </Link>
 
@@ -276,8 +278,10 @@ export default async function OwnerPage() {
             <h3>Inbox</h3>
             <span className="ov-tile__link">CRM →</span>
           </div>
-          <div className="ov-big">{inboxNew}</div>
-          <p className="ov-tile__hint">New items to review</p>
+          <div className="ov-fill">
+            <div className="ov-big">{inboxNew}</div>
+            <p className="ov-tile__hint">New items to review</p>
+          </div>
         </Link>
 
         <Link href="/crm" className="ov-tile">
@@ -287,7 +291,7 @@ export default async function OwnerPage() {
           </div>
           <div className="ov-big">{activePipeline}</div>
           <p className="ov-tile__hint">Active now</p>
-          <ul className="ov-mini-list ov-mini-list--compact">
+          <ul className="ov-stat-grid">
             {SHEET_STATUSES.map((status) => (
               <li key={status}>
                 <span>{status}</span>
@@ -372,7 +376,7 @@ export default async function OwnerPage() {
           </ul>
         </Link>
 
-        <Link href="/stock" className="ov-tile ov-tile--stock ov-tile--wide">
+        <Link href="/stock" className="ov-tile ov-tile--stock">
           <div className="ov-tile__head">
             <h3>Stock</h3>
             <span className="ov-tile__link">Open →</span>
@@ -456,7 +460,7 @@ export default async function OwnerPage() {
           </ul>
         </Link>
 
-        <Link href="/serm" className="ov-tile ov-tile--seo ov-tile--span3">
+        <Link href="/serm" className="ov-tile ov-tile--seo ov-tile--full">
           <div className="ov-tile__head">
             <h3>Search</h3>
             <span className="ov-tile__link">Open →</span>
@@ -493,12 +497,7 @@ export default async function OwnerPage() {
                   </div>
                 </div>
               </div>
-              {searchInsight ? (
-                <p className="ov-tile__hint">
-                  {searchInsight.title}
-                  {searchInsight.detail ? ` — ${searchInsight.detail}` : ""}
-                </p>
-              ) : null}
+              {searchInsight ? <p className="ov-tile__hint">{searchInsight.title}</p> : null}
             </>
           ) : (
             <p className="ov-tile__hint">No search snapshot yet — open Search after SEO sync.</p>

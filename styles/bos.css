@@ -184,20 +184,22 @@ textarea {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.75rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .ov-tile {
   grid-column: span 1;
   display: flex;
   flex-direction: column;
-  gap: 0.28rem;
+  gap: 0.35rem;
   padding: 0.85rem 0.95rem;
   border: 1px solid var(--bos-border);
   border-radius: 14px;
   background: var(--bos-panel);
   box-shadow: var(--bos-shadow);
   min-height: 0;
+  min-width: 0;
+  height: 100%;
   transition: border-color 0.15s, transform 0.15s;
 }
 
@@ -210,8 +212,8 @@ textarea {
   grid-column: span 2;
 }
 
-.ov-tile--span3 {
-  grid-column: span 3;
+.ov-tile--full {
+  grid-column: 1 / -1;
 }
 
 .ov-tile--reviews {
@@ -267,11 +269,20 @@ textarea {
   line-height: 1.35;
 }
 
+.ov-fill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+}
+
 .ov-reviews {
   display: flex;
-  align-items: stretch;
-  gap: 1.25rem;
-  margin-top: 0.35rem;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 1rem;
+  flex: 1;
 }
 
 .ov-reviews__divider {
@@ -308,11 +319,12 @@ textarea {
 
 .ov-mini-list {
   list-style: none;
-  margin: 0.4rem 0 0;
+  margin: 0.2rem 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: 0.22rem;
+  flex: 1;
 }
 
 .ov-mini-list li {
@@ -333,11 +345,35 @@ textarea {
   padding-top: 0;
 }
 
+.ov-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.18rem 0.85rem;
+  flex: 1;
+  align-content: start;
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0;
+}
+
+.ov-stat-grid li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--bos-muted);
+}
+
+.ov-stat-grid strong {
+  color: var(--bos-text);
+  font-variant-numeric: tabular-nums;
+}
+
 .ov-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.65rem 1rem;
-  margin-top: 0.35rem;
+  flex: 1;
 }
 
 .ov-split h4 {
@@ -351,12 +387,13 @@ textarea {
 
 .ov-places {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 0.15rem 1rem;
-  margin-top: 0.4rem;
   list-style: none;
   padding: 0;
-  margin-left: 0;
+  margin: 0.2rem 0 0;
+  flex: 1;
+  align-content: start;
 }
 
 .ov-places li {
@@ -401,9 +438,10 @@ textarea {
 
 .ov-seo-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem 1rem;
-  margin-top: 0.35rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.5rem 1rem;
+  flex: 1;
+  align-content: start;
 }
 
 .ov-seo-label {
@@ -434,8 +472,11 @@ textarea {
     grid-column: span 1;
   }
   .ov-tile--wide,
-  .ov-tile--span3 {
+  .ov-tile--full {
     grid-column: span 2;
+  }
+  .ov-seo-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -445,14 +486,13 @@ textarea {
   }
   .ov-tile,
   .ov-tile--wide,
-  .ov-tile--span3 {
+  .ov-tile--full {
     grid-column: span 1;
   }
-  .ov-seo-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  .ov-seo-grid,
   .ov-split,
-  .ov-places {
+  .ov-places,
+  .ov-stat-grid {
     grid-template-columns: 1fr;
   }
   .ov-reviews {
