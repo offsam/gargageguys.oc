@@ -21,6 +21,7 @@ import {
 
 export type SheetRow = {
   id: string;
+  jobNumber: string;
   workSource: string;
   partnerName: string;
   leadSource: string;
@@ -80,6 +81,7 @@ const COLUMNS: Array<{
   money?: boolean;
 }> = [
   { key: "date", label: "Date", width: 130, kind: "date" },
+  { key: "jobNumber", label: "Job #", width: 90 },
   { key: "workSource", label: "Work source", width: 130, kind: "select", options: "workSource" },
   { key: "partnerName", label: "Partner", width: 160, kind: "select", options: "partner" },
   { key: "leadSource", label: "Lead source", width: 140, kind: "combo", options: "leadSource" },
@@ -182,6 +184,7 @@ function partnerTechSalary(gross: string): string {
 function emptyRow(index: number): SheetRow {
   return {
     id: `new-${index}-${Date.now()}`,
+    jobNumber: "",
     workSource: "",
     partnerName: "",
     leadSource: "",

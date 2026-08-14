@@ -7,6 +7,7 @@ import { stageFromSheetStatus, completeBlockedReason } from "@/lib/leads/stage-s
 import { isPartnerWork } from "@/lib/sheet/work-source";
 import { listPartnersAction } from "@/app/actions/partners";
 import { parseSheetStockPull, syncSheetPartStock } from "@/lib/stock/ops";
+import { ensureLeadWorkOrder } from "@/lib/field/job-invoice";
 
 export type SheetSaveInput = {
   id: string;
@@ -225,6 +226,13 @@ export async function saveSheetRowAction(
       } catch {
         /* stock pull is best-effort */
       }
+      if (String(input.clientAddress || "").trim()) {
+        try {
+          await ensureLeadWorkOrder({ leadId: data!.id });
+        } catch {
+          /* numbering is best-effort */
+        }
+      }
       revalidateRelatedSurfaces();
       return { ok: true, id: data!.id };
     }
@@ -276,6 +284,13 @@ export async function saveSheetRowAction(
       });
     } catch {
       /* stock pull is best-effort */
+    }
+    if (String(input.clientAddress || "").trim()) {
+      try {
+        await ensureLeadWorkOrder({ leadId: input.id });
+      } catch {
+        /* numbering is best-effort */
+      }
     }
     revalidateRelatedSurfaces();
     return { ok: true, id: input.id };

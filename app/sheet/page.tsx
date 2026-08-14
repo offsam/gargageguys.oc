@@ -9,6 +9,7 @@ import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
 import { listPartnersAction } from "@/app/actions/partners";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
 import { sheetIssueFromLead, sheetServiceFromLead } from "@/lib/sheet/issue-service";
+import { formatJobNumber } from "@/lib/field/job-invoice-types";
 
 function asMeta(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -30,7 +31,8 @@ export default async function SheetPage() {
   const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();
 
-  const [{ data: leads }, { data: techProfiles }, stockState, partners] = await Promise.all([
+  const [{ data: leads }, { data: techProfiles }, { data: jobsForNumbers }, stockState, partners] =
+    await Promise.all([
     supabase
       .from("leads")
       .select(
@@ -43,9 +45,26 @@ export default async function SheetPage() {
       .select("id, full_name, email")
       .eq("role", "technician")
       .order("created_at", { ascending: true }),
+    admin
+      .from("jobs")
+      .select("id, lead_id, job_number")
+      .not("lead_id", "is", null)
+      .neq("status", "cancelled")
+      .order("created_at", { ascending: false })
+      .limit(500),
     loadStockState().catch(() => null),
     listPartnersAction(),
   ]);
+
+  const jobNumberByLead = new Map<string, string>();
+  for (const job of jobsForNumbers || []) {
+    const leadId = String(job.lead_id || "");
+    if (!leadId || jobNumberByLead.has(leadId)) continue;
+    const label = formatJobNumber(
+      job.job_number == null || job.job_number === "" ? null : Number(job.job_number),
+    );
+    if (label !== "—") jobNumberByLead.set(leadId, label);
+  }
 
   const stockParts = (() => {
     const fromStock = (stockState?.items || [])
@@ -87,6 +106,14 @@ export default async function SheetPage() {
 
     return {
       id: lead.id,
+      jobNumber:
+        jobNumberByLead.get(lead.id) ||
+        (() => {
+          const raw = pick(meta, "jobNumber", "job_number");
+          if (!raw) return "";
+          const n = Number(raw);
+          return Number.isFinite(n) ? formatJobNumber(n) : raw.startsWith("GG-") ? raw : "";
+        })(),
       workSource,
       partnerName: pick(meta, "partnerName", "partner_name", "partner"),
       leadSource:

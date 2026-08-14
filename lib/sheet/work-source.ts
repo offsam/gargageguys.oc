@@ -11,6 +11,7 @@ export type SheetPartner = {
 };
 
 export type SheetColumnKey =
+  | "jobNumber"
   | "workSource"
   | "partnerName"
   | "date"
@@ -35,7 +36,7 @@ export type ColumnOpts = {
   usesOurParts?: boolean;
 };
 
-const ALWAYS: SheetColumnKey[] = ["workSource"];
+const ALWAYS: SheetColumnKey[] = ["workSource", "jobNumber"];
 
 const SHARED: SheetColumnKey[] = [
   "date",
@@ -64,6 +65,9 @@ const PARTNER_ONLY: SheetColumnKey[] = ["partnerName"];
 
 /** Partner tech pay is auto (30% of Gross) — visible but not manually edited. */
 const PARTNER_READONLY: SheetColumnKey[] = ["techSalary"];
+
+/** System fields — never typed by hand. */
+const SYSTEM_READONLY: SheetColumnKey[] = ["jobNumber"];
 
 export function normalizeWorkSource(raw: string | null | undefined): WorkSource {
   const v = String(raw || "").trim();
@@ -131,6 +135,7 @@ export function isColumnEditable(
 ): boolean {
   const src = normalizeWorkSource(workSource);
   if (!isColumnActive(workSource, key, opts)) return false;
+  if (SYSTEM_READONLY.includes(key)) return false;
   if (src === "Partner" && PARTNER_READONLY.includes(key)) return false;
   // Bank fee is auto for card on own jobs — still editable override
   return true;

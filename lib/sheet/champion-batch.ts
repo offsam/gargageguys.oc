@@ -1,4 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { ensureLeadWorkOrder } from "@/lib/field/job-invoice";
+import { formatJobNumber } from "@/lib/field/job-invoice-types";
 
 export type ChampionBatchRow = { address: string; jobCost: string };
 
@@ -94,6 +96,7 @@ export async function importChampionBatchRows(rows: ChampionBatchRow[] = CHAMPIO
   let updated = 0;
   let created = 0;
   let skipped = 0;
+  let numbered = 0;
   const log: string[] = [];
 
   for (const row of rows) {
@@ -108,8 +111,10 @@ export async function importChampionBatchRows(rows: ChampionBatchRow[] = CHAMPIO
 
     const salary = techSalary(row.jobCost);
     const wantCost = moneyKey(row.jobCost);
+    let leadId = "";
 
     if (existing) {
+      leadId = String(existing.lead.id);
       const alreadyCost = moneyKey(
         String(existing.meta.jobCost || existing.lead.deal_price || ""),
       );
@@ -118,78 +123,101 @@ export async function importChampionBatchRows(rows: ChampionBatchRow[] = CHAMPIO
         /champion/i.test(String(existing.meta.partnerName || existing.lead.source || ""));
       if (alreadyPartner && alreadyCost === wantCost) {
         skipped += 1;
-        log.push(`skip ${row.address}`);
-        continue;
+        log.push(`skip-cost ${row.address}`);
+      } else {
+        const nextMeta = {
+          ...existing.meta,
+          workSource: "Partner",
+          partnerName,
+          clientAddress: String(existing.meta.clientAddress || existing.addr || row.address),
+          jobCost: row.jobCost,
+          techSalary: String(existing.meta.techSalary || salary),
+          jobStatus: String(existing.meta.jobStatus || "Waiting"),
+          sheetDate: String(existing.meta.sheetDate || ""),
+        };
+        const { error: upErr } = await admin
+          .from("leads")
+          .update({
+            address: String(existing.lead.address || row.address),
+            source: partnerName,
+            deal_price: row.jobCost,
+            metadata: nextMeta,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", leadId);
+        if (upErr) throw upErr;
+        updated += 1;
+        log.push(`update ${row.address} $${row.jobCost}`);
       }
-
-      const nextMeta = {
-        ...existing.meta,
+    } else {
+      const meta = {
         workSource: "Partner",
         partnerName,
-        clientAddress: String(existing.meta.clientAddress || existing.addr || row.address),
+        leadSource: "",
+        leadCost: "",
+        sheetDate: "",
+        clientName: "",
+        clientAddress: row.address,
+        jobStatus: "Waiting",
+        jobType: "",
+        service: "",
+        parts: "",
+        paymentType: "",
+        checkNumber: "",
         jobCost: row.jobCost,
-        techSalary: String(existing.meta.techSalary || salary),
-        jobStatus: String(existing.meta.jobStatus || "Waiting"),
-        sheetDate: String(existing.meta.sheetDate || ""),
+        bankFee: "",
+        partsCost: "",
+        technician: "",
+        techSalary: salary,
+        description: "",
       };
-      const { error: upErr } = await admin
+      const insertPayload = {
+        name: null as string | null,
+        address: row.address,
+        source: partnerName,
+        lead_type: "sheet_row",
+        message: null as string | null,
+        deal_title: null as string | null,
+        deal_price: row.jobCost,
+        stage: "new",
+        metadata: meta,
+      };
+      let { data: createdLead, error: insErr } = await admin
         .from("leads")
-        .update({
-          address: String(existing.lead.address || row.address),
-          source: partnerName,
-          deal_price: row.jobCost,
-          metadata: nextMeta,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", String(existing.lead.id));
-      if (upErr) throw upErr;
-      updated += 1;
-      log.push(`update ${row.address} $${row.jobCost}`);
-      continue;
+        .insert(insertPayload)
+        .select("id")
+        .single();
+      if (insErr && /address/i.test(insErr.message)) {
+        const { address: _a, ...rest } = insertPayload;
+        const retry = await admin.from("leads").insert(rest).select("id").single();
+        createdLead = retry.data;
+        insErr = retry.error;
+      }
+      if (insErr || !createdLead) throw insErr || new Error("Could not create lead");
+      leadId = createdLead.id;
+      created += 1;
+      log.push(`create ${row.address} $${row.jobCost}`);
     }
 
-    const meta = {
-      workSource: "Partner",
-      partnerName,
-      leadSource: "",
-      leadCost: "",
-      sheetDate: "",
-      clientName: "",
-      clientAddress: row.address,
-      jobStatus: "Waiting",
-      jobType: "",
-      service: "",
-      parts: "",
-      paymentType: "",
-      checkNumber: "",
-      jobCost: row.jobCost,
-      bankFee: "",
-      partsCost: "",
-      technician: "",
-      techSalary: salary,
-      description: "",
-    };
-    const insertPayload = {
-      name: null as string | null,
-      address: row.address,
-      source: partnerName,
-      lead_type: "sheet_row",
-      message: null as string | null,
-      deal_title: null as string | null,
-      deal_price: row.jobCost,
-      stage: "new",
-      metadata: meta,
-    };
-    let { error: insErr } = await admin.from("leads").insert(insertPayload).select("id").single();
-    if (insErr && /address/i.test(insErr.message)) {
-      const { address: _a, ...rest } = insertPayload;
-      const retry = await admin.from("leads").insert(rest).select("id").single();
-      insErr = retry.error;
+    try {
+      const wo = await ensureLeadWorkOrder({ leadId });
+      numbered += 1;
+      log.push(`number ${row.address} ${formatJobNumber(wo.jobNumber)}`);
+    } catch (err) {
+      log.push(
+        `number-fail ${row.address}: ${err instanceof Error ? err.message : "error"}`,
+      );
     }
-    if (insErr) throw insErr;
-    created += 1;
-    log.push(`create ${row.address} $${row.jobCost}`);
   }
 
-  return { ok: true as const, partnerName, created, updated, skipped, total: rows.length, log };
+  return {
+    ok: true as const,
+    partnerName,
+    created,
+    updated,
+    skipped,
+    numbered,
+    total: rows.length,
+    log,
+  };
 }

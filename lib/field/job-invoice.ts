@@ -308,3 +308,78 @@ export async function updateJobInvoiceFields(
   if (error) throw error;
   return mapRow(data);
 }
+
+/** Ensure a lead has a jobs row + draft invoice with GG job number (work order). */
+export async function ensureLeadWorkOrder(input: {
+  leadId: string;
+  createdBy?: string;
+}): Promise<{ jobId: string; jobNumber: number | null; invoiceId: string }> {
+  const admin = getSupabaseAdmin();
+  const { data: lead, error: leadErr } = await admin
+    .from("leads")
+    .select("id, name, phone, zip, address, customer_id, message, deal_title, metadata, source")
+    .eq("id", input.leadId)
+    .maybeSingle();
+  if (leadErr) throw leadErr;
+  if (!lead) throw new Error("Lead not found");
+
+  const meta =
+    lead.metadata && typeof lead.metadata === "object"
+      ? (lead.metadata as Record<string, unknown>)
+      : {};
+  const address =
+    (typeof lead.address === "string" && lead.address) ||
+    (typeof meta.clientAddress === "string" ? meta.clientAddress : "") ||
+    null;
+  const zip =
+    (typeof lead.zip === "string" && lead.zip) ||
+    (typeof meta.zip === "string" ? meta.zip : null);
+  const title =
+    `${lead.name || "Job"}${zip ? ` — ${zip}` : address ? ` — ${String(address).slice(0, 40)}` : ""}`.trim();
+
+  const { data: existingJobs } = await admin
+    .from("jobs")
+    .select("id")
+    .eq("lead_id", input.leadId)
+    .neq("status", "cancelled")
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  let jobId = existingJobs?.[0]?.id || "";
+  if (!jobId) {
+    const { data: created, error: jobErr } = await admin
+      .from("jobs")
+      .insert({
+        lead_id: lead.id,
+        customer_id: lead.customer_id,
+        title,
+        status: "queued",
+        address,
+        zip,
+        notes: lead.message || lead.deal_title || null,
+      })
+      .select("id")
+      .single();
+    if (jobErr || !created) throw jobErr || new Error("Could not create job");
+    jobId = created.id;
+  }
+
+  const invoice = await ensureJobInvoice({ jobId, createdBy: input.createdBy });
+  if (invoice.job_number != null) {
+    const nextMeta = {
+      ...meta,
+      jobNumber: String(invoice.job_number),
+      clientAddress: meta.clientAddress || address || "",
+    };
+    await admin
+      .from("leads")
+      .update({ metadata: nextMeta, updated_at: new Date().toISOString() })
+      .eq("id", lead.id);
+  }
+
+  return {
+    jobId,
+    jobNumber: invoice.job_number,
+    invoiceId: invoice.id,
+  };
+}
