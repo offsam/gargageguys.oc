@@ -19,6 +19,10 @@ Two agents and GitHub all ship **production**. Wiping Ads/Reviews/OAuth happened
 2. `git pull --rebase origin main` then `git push origin main` so the other agent can pull it.
 3. If rebase conflicts: merge both sides. Never `push --force` to `main`. Never throw away the other agent's files.
 
+## Before every push
+
+`tsc --noEmit` is not enough (CSS and Next compile fail on Vercel). Run **`npm run build`**. If it fails, do not commit or push.
+
 ## Deploy
 
 Production is `garageguysoc.com` via Vercel **Git `main`** and `vercel deploy --prod`.
@@ -27,6 +31,14 @@ Production is `garageguysoc.com` via Vercel **Git `main`** and `vercel deploy --
 2. Before CLI deploy: `git pull --rebase origin main` so you upload **their work + yours**.
 3. Do not `vercel deploy --prod` from a tree that is behind `origin/main`.
 4. Do not Vercel **Redeploy** an old git SHA that predates Ads/Reviews.
+
+## After every push — wait until Ready
+
+Pushing is not done. The slice is not finished until production build is **Ready**:
+
+1. `npx vercel ls --limit 5` — latest Production for this commit must be **Ready**, not Error/Building.
+2. If **Error**: `npx vercel inspect <deployment-url> --logs`, fix, commit, push, wait again.
+3. Do not tell the user it shipped while Vercel still shows Error.
 
 ## Check
 
