@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { BosShell } from "@/components/bos/BosShell";
 import { CrmBoard, type CrmLeadCard } from "@/components/bos/CrmBoard";
 import { getSessionUser } from "@/lib/auth/session";
@@ -30,10 +31,9 @@ export default async function CrmPage() {
   const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();
 
-  const [{ data: leads }, { data: customers }, { data: inbox }, { data: techs }, stockState] =
+  const [{ data: leads }, { data: inbox }, { data: techs }, stockState] =
     await Promise.all([
       supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(300),
-      supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("inbox_items").select("*").order("created_at", { ascending: false }).limit(50),
       admin
         .from("profiles")
@@ -112,27 +112,11 @@ export default async function CrmPage() {
       <h2 style={{ marginTop: 0 }}>Lead funnel</h2>
       <CrmBoard leads={cards} technicians={technicians} stockParts={stockParts} />
 
-      <h2>Customers</h2>
-      <table className="bos-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Phone</th>
-            <th>ZIP</th>
-            <th>Created</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(customers || []).map((c) => (
-            <tr key={c.id}>
-              <td>{c.name}</td>
-              <td>{c.phone}</td>
-              <td>{c.zip}</td>
-              <td>{new Date(c.created_at).toLocaleDateString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <h2>Clients</h2>
+      <p>
+        Full history — jobs, dates, and payments — is on{" "}
+        <Link href="/clients">Clients</Link>.
+      </p>
 
       <h2>Inbox</h2>
       <table className="bos-table">

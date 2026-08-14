@@ -122,6 +122,7 @@ async function syncPartnerSheetStock(input: {
 function revalidateSheetSurfaces() {
   revalidatePath("/sheet");
   revalidatePath("/crm");
+  revalidatePath("/clients");
   revalidatePath("/dispatch");
   revalidatePath("/owner");
   revalidatePath("/field");
@@ -130,6 +131,7 @@ function revalidateSheetSurfaces() {
 /** Soft revalidate — skip /sheet so the live grid isn't yanked mid-edit. */
 function revalidateRelatedSurfaces() {
   revalidatePath("/crm");
+  revalidatePath("/clients");
   revalidatePath("/dispatch");
   revalidatePath("/owner");
   revalidatePath("/field");

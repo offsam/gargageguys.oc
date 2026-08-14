@@ -20,6 +20,7 @@ import { ensureJobInvoice } from "@/lib/field/job-invoice";
 
 function revalidateCrmAndSheet() {
   revalidatePath("/crm");
+  revalidatePath("/clients");
   revalidatePath("/sheet");
   revalidatePath("/dispatch");
   revalidatePath("/owner");

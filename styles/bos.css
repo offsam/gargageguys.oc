@@ -1832,6 +1832,57 @@ body.sheet-col-resizing * {
   border-color: var(--bos-accent-2);
 }
 
+.clients-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 0 0 1rem;
+}
+
+.clients-count,
+.clients-empty,
+.clients-back {
+  margin: 0 0 1rem;
+  color: var(--bos-muted);
+}
+
+.clients-table a {
+  font-weight: 650;
+  text-decoration: none;
+  color: inherit;
+}
+
+.clients-table a:hover {
+  color: var(--bos-accent-2);
+}
+
+.client-facts {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0 0 1.25rem;
+}
+
+.client-facts dt {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bos-muted);
+}
+
+.client-facts dd {
+  margin: 0.2rem 0 0;
+}
+
+.client-facts ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.client-facts li + li {
+  margin-top: 0.2rem;
+}
+
 .stock-tech-select {
   border: 1px solid var(--bos-border);
   border-radius: 6px;
