@@ -1,12 +1,10 @@
-import { redirect } from "next/navigation";
 import { BosShell } from "@/components/bos/BosShell";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireRouteAccess } from "@/lib/auth/require";
 import { buildSeoInsights } from "@/lib/seo/insights";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function SermPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
+  const user = await requireRouteAccess("/serm");
 
   const supabase = await createSupabaseServerClient();
   const { data: snapshots } = await supabase

@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { BosShell } from "@/components/bos/BosShell";
 import { listPartnersAction } from "@/app/actions/partners";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireRouteAccess } from "@/lib/auth/require";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { listAdsSnapshots } from "@/lib/ads/snapshots";
@@ -37,8 +36,7 @@ function isOpenStatus(status: string) {
 }
 
 export default async function OwnerPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
+  const user = await requireRouteAccess("/owner");
 
   const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();

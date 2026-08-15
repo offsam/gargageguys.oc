@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { FieldShell } from "@/components/bos/FieldShell";
 import { BosShell } from "@/components/bos/BosShell";
 import { FieldCalendar } from "@/components/bos/FieldCalendar";
 import { FieldDayTimeline } from "@/components/bos/FieldDayTimeline";
 import { FieldScheduleFab } from "@/components/bos/FieldScheduleFab";
-import { getSessionUser } from "@/lib/auth/session";
+import { FieldShell } from "@/components/bos/FieldShell";
+import { requireRouteAccess } from "@/lib/auth/require";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFieldAttentionCount } from "@/lib/field/load-attention";
 import {
@@ -23,8 +22,7 @@ export default async function FieldPage({
 }: {
   searchParams: Promise<{ day?: string }>;
 }) {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
+  const user = await requireRouteAccess("/field");
 
   const params = await searchParams;
   const todayKey = toDayKey(startOfToday());

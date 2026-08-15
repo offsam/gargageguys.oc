@@ -1,15 +1,12 @@
-import { redirect } from "next/navigation";
 import { BosShell } from "@/components/bos/BosShell";
 import { AdsBoard } from "@/components/bos/AdsBoard";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireRouteAccess } from "@/lib/auth/require";
 import { listAdsSnapshots } from "@/lib/ads/snapshots";
 import type { MetaCampaignMetrics } from "@/lib/ads/meta";
 import { getGoogleAdsConfig, type GoogleAdsCampaignMetrics } from "@/lib/ads/google";
 
 export default async function AdsPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
-  if (user.role !== "owner" && user.role !== "office") redirect("/owner");
+  const user = await requireRouteAccess("/ads");
 
   const adsSnapshots = await listAdsSnapshots(12).catch(() => []);
   const metaAds = (adsSnapshots || []).find((r) => r.platform === "meta");

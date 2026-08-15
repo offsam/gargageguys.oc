@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { BosShell } from "@/components/bos/BosShell";
 import { DispatchBoard } from "@/components/bos/DispatchBoard";
 import { FieldCalendar } from "@/components/bos/FieldCalendar";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireRouteAccess } from "@/lib/auth/require";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   formatDayHeading,
@@ -39,8 +38,7 @@ export default async function DispatchPage({
 }: {
   searchParams: Promise<{ day?: string }>;
 }) {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
+  const user = await requireRouteAccess("/dispatch");
 
   const params = await searchParams;
   const todayKey = toDayKey(startOfToday());

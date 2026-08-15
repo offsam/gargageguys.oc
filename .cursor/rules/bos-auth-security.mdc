@@ -1,0 +1,28 @@
+---
+description: BOS auth — session checks, role gates, and RLS conventions
+alwaysApply: true
+---
+
+# BOS auth & access
+
+## Every protected page / server action
+
+1. Call `getSessionUser()` or `requireSession()` / `requireRoles()` / `requireRouteAccess()` from `lib/auth/*` before loading data.
+2. Do not rely on middleware alone — middleware validates the JWT; pages enforce **roles**.
+3. Keep page role checks aligned with `ROUTE_ROLES` in `lib/auth/require.ts` and nav links in `components/bos/BosShell.tsx`.
+
+## API routes
+
+- Public forms (`/api/callback`, `/api/ai-chat`): rate-limit + honeypot; never use service role without validation.
+- Cron / ops routes: authorize only via `isCronAuthorized()` (`CRON_SECRET` Bearer). Never treat `x-vercel-cron` as auth.
+- Webhooks: **fail-closed** — if the shared secret env is missing, return 503 (do not accept unsigned traffic).
+
+## Supabase
+
+- Prefer `getSupabaseAdmin()` only in trusted server code after auth/role checks (or for public webhooks with verified signatures).
+- User-scoped reads/writes via `createSupabaseServerClient()` must respect RLS.
+- New sensitive tables need role-aware RLS (see `partners` and `202608150001_role_aware_rls.sql`), not `using (true)`.
+
+## Redirects after login
+
+Use `safeInternalPath()` — never `next.startsWith("/")` alone (blocks `//evil.com`).

@@ -1,14 +1,12 @@
-import { redirect } from "next/navigation";
 import { BosShell } from "@/components/bos/BosShell";
 import { FinanceBoard } from "@/components/bos/FinanceBoard";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireRouteAccess } from "@/lib/auth/require";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createInvoiceAction } from "@/app/actions/finance";
 import { loadFinanceRows } from "@/lib/finance/load";
 
 export default async function FinancePage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
+  const user = await requireRouteAccess("/finance");
 
   const supabase = await createSupabaseServerClient();
   const [{ data: customers }, rows] = await Promise.all([

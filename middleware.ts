@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { redirectToLogin, updateSession } from "@/lib/supabase/middleware";
 
 const PROTECTED = [
   "/owner",
   "/employees",
+  "/partners",
   "/sheet",
   "/stock",
   "/dispatch",
@@ -15,11 +17,7 @@ const PROTECTED = [
   "/reviews",
 ];
 
-/**
- * Lightweight gate only. Full auth + role routing happens in page loaders.
- * Avoids Edge incompatibilities from Supabase SSR / Node builtins.
- */
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isProtected = PROTECTED.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
@@ -29,22 +27,20 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const hasSession =
-    request.cookies.getAll().some((c) => c.name.includes("auth-token") || c.name.includes("sb-"));
+  const { supabaseResponse, user } = await updateSession(request);
 
-  if (!hasSession) {
-    const login = new URL("/login", request.url);
-    login.searchParams.set("next", pathname);
-    return NextResponse.redirect(login);
+  if (!user) {
+    return redirectToLogin(request, pathname);
   }
 
-  return NextResponse.next();
+  return supabaseResponse;
 }
 
 export const config = {
   matcher: [
     "/owner/:path*",
     "/employees/:path*",
+    "/partners/:path*",
     "/sheet/:path*",
     "/stock/:path*",
     "/dispatch/:path*",

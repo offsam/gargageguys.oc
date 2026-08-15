@@ -1,7 +1,6 @@
-import { redirect } from "next/navigation";
 import { BosShell } from "@/components/bos/BosShell";
 import { CreateEmployeeForm } from "@/components/bos/CreateEmployeeForm";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireRouteAccess } from "@/lib/auth/require";
 import { EMPLOYEE_SECTIONS, ROLE_HOME, ROLE_LABELS } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updateEmployeeRoleAction } from "@/app/actions/employees";
@@ -9,9 +8,7 @@ import type { AppRole } from "@/lib/supabase/types";
 import Link from "next/link";
 
 export default async function EmployeesPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
-  if (user.role !== "owner") redirect(user.homePath);
+  const user = await requireRouteAccess("/employees");
 
   const supabase = await createSupabaseServerClient();
   const { data: profiles } = await supabase

@@ -1,23 +1,19 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { BosShell } from "@/components/bos/BosShell";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireRouteAccess } from "@/lib/auth/require";
 import {
   formatClientDate,
   formatUsd,
   loadClientProfile,
 } from "@/lib/clients/directory";
 
-const ALLOWED = new Set(["owner", "office", "dispatcher", "accountant"]);
-
 export default async function ClientProfilePage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
-  if (!ALLOWED.has(user.role)) redirect(user.homePath);
+  const user = await requireRouteAccess("/clients");
 
   const { id } = await params;
   const client = await loadClientProfile(decodeURIComponent(id));

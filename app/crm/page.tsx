@@ -1,8 +1,7 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { BosShell } from "@/components/bos/BosShell";
 import { CrmBoard, type CrmLeadCard } from "@/components/bos/CrmBoard";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireRouteAccess } from "@/lib/auth/require";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { updateInboxStatusAction } from "@/app/actions/crm";
@@ -25,8 +24,7 @@ function pick(meta: Record<string, unknown>, ...keys: string[]): string {
 }
 
 export default async function CrmPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
+  const user = await requireRouteAccess("/crm");
 
   const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();

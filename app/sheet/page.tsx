@@ -1,7 +1,6 @@
-import { redirect } from "next/navigation";
 import { BosShell } from "@/components/bos/BosShell";
 import { SheetTable, type SheetRow } from "@/components/bos/SheetTable";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireRouteAccess } from "@/lib/auth/require";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { loadStockState, masterQty, partnerMasterQty } from "@/lib/stock/store";
@@ -26,8 +25,7 @@ function pick(meta: Record<string, unknown>, ...keys: string[]): string {
 }
 
 export default async function SheetPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
+  const user = await requireRouteAccess("/sheet");
 
   const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();

@@ -9,6 +9,9 @@ import { buildInvoiceEmail } from "@/lib/email/invoice-html";
 import type { InvoiceStatus } from "@/lib/supabase/types";
 
 export async function createInvoiceAction(formData: FormData) {
+  const session = await getSessionUser();
+  if (!session || (session.role !== "owner" && session.role !== "accountant")) return;
+
   const customerId = String(formData.get("customerId") || "");
   const amount = Number(formData.get("amount") || 0);
   const description = String(formData.get("description") || "Service invoice");
@@ -26,6 +29,9 @@ export async function createInvoiceAction(formData: FormData) {
 }
 
 export async function updateInvoiceStatusAction(formData: FormData) {
+  const session = await getSessionUser();
+  if (!session || (session.role !== "owner" && session.role !== "accountant")) return;
+
   const invoiceId = String(formData.get("invoiceId") || "");
   const status = String(formData.get("status") || "") as InvoiceStatus;
   if (!invoiceId || !status) return;
@@ -50,6 +56,7 @@ export async function sendInvoiceEmailAction(input: {
 }) {
   const session = await getSessionUser();
   if (!session) return { ok: false as const, error: "Not signed in" };
+  // Field techs send job invoices; finance staff send from /finance.
 
   const to = String(input.to || "").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {

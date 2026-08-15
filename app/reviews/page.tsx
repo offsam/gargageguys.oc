@@ -1,12 +1,9 @@
-import { redirect } from "next/navigation";
 import { BosShell } from "@/components/bos/BosShell";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireRouteAccess } from "@/lib/auth/require";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function ReviewsPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
-  if (user.role !== "owner" && user.role !== "office") redirect("/owner");
+  const user = await requireRouteAccess("/reviews");
 
   const supabase = await createSupabaseServerClient();
   const [{ data: reviewSnapshots }, { data: reviews }] = await Promise.all([

@@ -1,13 +1,10 @@
-import { redirect } from "next/navigation";
 import { BosShell } from "@/components/bos/BosShell";
 import { PartnersBoard } from "@/components/bos/PartnersBoard";
 import { listPartnersAction } from "@/app/actions/partners";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireRouteAccess } from "@/lib/auth/require";
 
 export default async function PartnersPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
-  if (user.role !== "owner" && user.role !== "office") redirect(user.homePath);
+  const user = await requireRouteAccess("/partners");
 
   const partners = await listPartnersAction();
 
