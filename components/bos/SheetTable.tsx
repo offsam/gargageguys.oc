@@ -1264,6 +1264,17 @@ export function SheetTable({
         ))}
       </datalist>
       <div className="sheet-top-row">
+        <div className="sheet-top-actions">
+          <button
+            type="button"
+            className="emp-add-btn"
+            onClick={() => void addNewRow()}
+            disabled={pending}
+          >
+            + Add row
+          </button>
+          <div className="sheet-status">{pending ? "Saving…" : status}</div>
+        </div>
         <div className="sheet-totals">
           {sheetTotals.grossEntries.length === 0 ? (
             <div className="sheet-total-card">
@@ -1308,31 +1319,18 @@ export function SheetTable({
             <strong className="sheet-total-value">{formatMoney(sheetTotals.parts)}</strong>
           </div>
         </div>
-        <div className="sheet-table-bar">
-          <div className="sheet-table-bar-left">
-            <button
-              type="button"
-              className="emp-add-btn"
-              onClick={() => void addNewRow()}
-              disabled={pending}
-            >
-              + Add row
-            </button>
-            <div className="sheet-status">{pending ? "Saving…" : status}</div>
-          </div>
-          <label className="sheet-sort">
-            Date
-            <select
-              value={dateSort}
-              onChange={(e) =>
-                changeDateSort(e.target.value === "oldest" ? "oldest" : "newest")
-              }
-            >
-              <option value="newest">Newest on top</option>
-              <option value="oldest">Oldest on top</option>
-            </select>
-          </label>
-        </div>
+        <label className="sheet-sort">
+          Date
+          <select
+            value={dateSort}
+            onChange={(e) =>
+              changeDateSort(e.target.value === "oldest" ? "oldest" : "newest")
+            }
+          >
+            <option value="newest">Newest on top</option>
+            <option value="oldest">Oldest on top</option>
+          </select>
+        </label>
       </div>
       <div className="sheet-wrap">
         <table className="sheet-grid" style={{ width: tableWidth }}>
