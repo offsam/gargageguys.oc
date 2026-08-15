@@ -1319,6 +1319,9 @@ textarea {
   color: var(--bos-muted);
   letter-spacing: 0.01em;
   white-space: nowrap;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sheet-total-value {

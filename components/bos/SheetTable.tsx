@@ -1107,11 +1107,23 @@ export function SheetTable({
     let parts = 0;
     let clear = 0;
     const techPay = new Map<string, number>();
+    const grossBySource = new Map<string, number>();
 
     for (const row of periodRows) {
-      gross += money(row.jobCost);
+      const jobGross = money(row.jobCost);
+      gross += jobGross;
       parts += money(row.partsCost);
       clear += money(clearProfitFor(row, partners));
+
+      if (jobGross) {
+        let sourceLabel = "Garage Guys";
+        if (isPartnerWork(row.workSource)) {
+          sourceLabel = row.partnerName.trim() || "Partner";
+        } else if (!isOwnWork(row.workSource)) {
+          sourceLabel = "Other";
+        }
+        grossBySource.set(sourceLabel, (grossBySource.get(sourceLabel) || 0) + jobGross);
+      }
 
       const techName = row.technician.trim();
       let pay = money(row.techSalary);
@@ -1125,8 +1137,13 @@ export function SheetTable({
 
     const techEntries = [...techPay.entries()].sort((a, b) => a[0].localeCompare(b[0]));
     const techTotal = techEntries.reduce((sum, [, v]) => sum + v, 0);
+    const grossEntries = [...grossBySource.entries()].sort((a, b) => {
+      if (a[0] === "Garage Guys") return -1;
+      if (b[0] === "Garage Guys") return 1;
+      return a[0].localeCompare(b[0]);
+    });
 
-    return { gross, parts, clear, techEntries, techTotal };
+    return { gross, parts, clear, techEntries, techTotal, grossEntries };
   }, [periodRows, partners]);
 
   const sortedRows = useMemo(() => {
@@ -1244,10 +1261,19 @@ export function SheetTable({
           ) : null}
         </div>
         <div className="sheet-totals">
-          <div className="sheet-total-card">
-            <span className="sheet-total-label">Gross</span>
-            <strong className="sheet-total-value">{formatMoney(sheetTotals.gross)}</strong>
-          </div>
+          {sheetTotals.grossEntries.length === 0 ? (
+            <div className="sheet-total-card">
+              <span className="sheet-total-label">Gross</span>
+              <strong className="sheet-total-value">{formatMoney(0)}</strong>
+            </div>
+          ) : (
+            sheetTotals.grossEntries.map(([label, amount]) => (
+              <div className="sheet-total-card" key={`gross-${label}`}>
+                <span className="sheet-total-label">Gross · {label}</span>
+                <strong className="sheet-total-value">{formatMoney(amount)}</strong>
+              </div>
+            ))
+          )}
           <div className="sheet-total-card">
             <span className="sheet-total-label">
               {sheetTotals.techEntries.length === 1
