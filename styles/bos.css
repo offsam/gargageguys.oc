@@ -1245,13 +1245,27 @@ textarea {
   margin-bottom: 0.75rem;
 }
 
-.sheet-summary--header {
-  flex-direction: row;
+.sheet-period-bar--header {
+  margin: 0;
+}
+
+.sheet-top-row {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.45rem 0.65rem;
+  justify-content: space-between;
+  gap: 0.55rem 1rem;
+  margin-bottom: 0.65rem;
+}
+
+.sheet-top-row .sheet-totals {
   margin: 0;
-  width: 100%;
+}
+
+.sheet-top-row .sheet-table-bar {
+  margin: 0;
+  min-height: 0;
+  flex: 0 0 auto;
 }
 
 .sheet-period-bar {

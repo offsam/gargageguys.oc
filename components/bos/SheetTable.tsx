@@ -1218,37 +1218,52 @@ export function SheetTable({
     setFreezeOrder(false);
   }
 
-  const summaryBlock = (
-      <div className="sheet-summary sheet-summary--header">
-        <div className="sheet-period-bar">
-          {PERIOD_OPTIONS.map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              className={`sheet-period-btn${period === opt.id ? " is-active" : ""}`}
-              onClick={() => changePeriod(opt.id)}
-            >
-              {opt.label}
-            </button>
-          ))}
-          {period === "custom" ? (
-            <div className="sheet-period-custom">
-              <input
-                type="date"
-                value={customFrom}
-                onChange={(e) => changeCustomRange(e.target.value, customTo)}
-                aria-label="From date"
-              />
-              <span>—</span>
-              <input
-                type="date"
-                value={customTo}
-                onChange={(e) => changeCustomRange(customFrom, e.target.value)}
-                aria-label="To date"
-              />
-            </div>
-          ) : null}
+  const periodBlock = (
+    <div className="sheet-period-bar sheet-period-bar--header">
+      {PERIOD_OPTIONS.map((opt) => (
+        <button
+          key={opt.id}
+          type="button"
+          className={`sheet-period-btn${period === opt.id ? " is-active" : ""}`}
+          onClick={() => changePeriod(opt.id)}
+        >
+          {opt.label}
+        </button>
+      ))}
+      {period === "custom" ? (
+        <div className="sheet-period-custom">
+          <input
+            type="date"
+            value={customFrom}
+            onChange={(e) => changeCustomRange(e.target.value, customTo)}
+            aria-label="From date"
+          />
+          <span>—</span>
+          <input
+            type="date"
+            value={customTo}
+            onChange={(e) => changeCustomRange(customFrom, e.target.value)}
+            aria-label="To date"
+          />
         </div>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <div>
+      {headerAside ? createPortal(periodBlock, headerAside) : null}
+      <datalist id={LEAD_SOURCE_LIST_ID}>
+        {leadSourceSuggestions.map((opt) => (
+          <option key={opt} value={opt} />
+        ))}
+      </datalist>
+      <datalist id={PARTNER_LIST_ID}>
+        {partnerSuggestions.map((opt) => (
+          <option key={opt} value={opt} />
+        ))}
+      </datalist>
+      <div className="sheet-top-row">
         <div className="sheet-totals">
           {sheetTotals.grossEntries.length === 0 ? (
             <div className="sheet-total-card">
@@ -1293,46 +1308,31 @@ export function SheetTable({
             <strong className="sheet-total-value">{formatMoney(sheetTotals.parts)}</strong>
           </div>
         </div>
-      </div>
-  );
-
-  return (
-    <div>
-      {headerAside ? createPortal(summaryBlock, headerAside) : null}
-      <datalist id={LEAD_SOURCE_LIST_ID}>
-        {leadSourceSuggestions.map((opt) => (
-          <option key={opt} value={opt} />
-        ))}
-      </datalist>
-      <datalist id={PARTNER_LIST_ID}>
-        {partnerSuggestions.map((opt) => (
-          <option key={opt} value={opt} />
-        ))}
-      </datalist>
-      <div className="sheet-table-bar">
-        <div className="sheet-table-bar-left">
-          <button
-            type="button"
-            className="emp-add-btn"
-            onClick={() => void addNewRow()}
-            disabled={pending}
-          >
-            + Add row
-          </button>
-          <div className="sheet-status">{pending ? "Saving…" : status}</div>
+        <div className="sheet-table-bar">
+          <div className="sheet-table-bar-left">
+            <button
+              type="button"
+              className="emp-add-btn"
+              onClick={() => void addNewRow()}
+              disabled={pending}
+            >
+              + Add row
+            </button>
+            <div className="sheet-status">{pending ? "Saving…" : status}</div>
+          </div>
+          <label className="sheet-sort">
+            Date
+            <select
+              value={dateSort}
+              onChange={(e) =>
+                changeDateSort(e.target.value === "oldest" ? "oldest" : "newest")
+              }
+            >
+              <option value="newest">Newest on top</option>
+              <option value="oldest">Oldest on top</option>
+            </select>
+          </label>
         </div>
-        <label className="sheet-sort">
-          Date
-          <select
-            value={dateSort}
-            onChange={(e) =>
-              changeDateSort(e.target.value === "oldest" ? "oldest" : "newest")
-            }
-          >
-            <option value="newest">Newest on top</option>
-            <option value="oldest">Oldest on top</option>
-          </select>
-        </label>
       </div>
       <div className="sheet-wrap">
         <table className="sheet-grid" style={{ width: tableWidth }}>
