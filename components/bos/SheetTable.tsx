@@ -19,7 +19,6 @@ import {
 } from "@/lib/sheet/parts-lines";
 import {
   WORK_SOURCES,
-  PARTNER_TECH_RATE,
   isColumnEditable,
   isOwnWork,
   isPartnerWork,
@@ -29,6 +28,14 @@ import {
   type SheetColumnKey,
   type SheetPartner,
 } from "@/lib/sheet/work-source";
+import {
+  bankFeeFor,
+  clearProfitFor,
+  effectiveTechPay,
+  formatMoneyUsd as formatMoney,
+  parseMoney as money,
+  partnerTechSalary,
+} from "@/lib/sheet/money";
 
 export type SheetRow = {
   id: string;
@@ -73,7 +80,6 @@ const LEAD_SOURCES = [
   "Thumbtack",
   "Yelp",
 ] as const;
-const BANK_FEE_RATE = 0.035;
 const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths-v2";
 const SORT_STORAGE_KEY = "bos-sheet-date-sort";
 const PERIOD_STORAGE_KEY = "bos-sheet-period-v1";
@@ -146,23 +152,6 @@ const COLUMNS: Array<{
 const PROFIT_DEFAULT_WIDTH = 110;
 const ROW_NUM_WIDTH = 42;
 const MIN_COL_WIDTH = 64;
-
-function money(value: string): number {
-  const n = Number(String(value).replace(/[^0-9.-]/g, ""));
-  return Number.isFinite(n) ? n : 0;
-}
-
-function formatMoney(n: number): string {
-  return n.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
-}
-
-function formatFee(n: number): string {
-  if (!n) return "0.00";
-  return n.toFixed(2);
-}
 
 function todayISO(): string {
   const d = new Date();
@@ -267,16 +256,6 @@ function isCheckPayment(paymentType: string) {
   return paymentType === "Check";
 }
 
-function bankFeeFor(jobCost: string): string {
-  return formatFee(money(jobCost) * BANK_FEE_RATE);
-}
-
-function partnerTechSalary(gross: string): string {
-  const n = money(gross) * PARTNER_TECH_RATE;
-  if (!n) return "";
-  return formatFee(n);
-}
-
 function emptyRow(index: number): SheetRow {
   const id = `new-${index}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   return {
@@ -303,34 +282,6 @@ function emptyRow(index: number): SheetRow {
     techSalary: "",
     description: "",
   };
-}
-
-function clearProfitFor(row: SheetRow, partners: SheetPartner[]): string {
-  if (isPartnerWork(row.workSource)) {
-    const has = money(row.jobCost) || money(row.techSalary) || money(row.partsCost);
-    if (!has) return "";
-    if (partnerHasOwnStock(row.partnerName, partners)) {
-      return formatMoney(0);
-    }
-    return formatMoney(money(row.jobCost) - money(row.techSalary) - money(row.partsCost));
-  }
-
-  if (!isOwnWork(row.workSource)) return "";
-
-  const hasMoney =
-    money(row.jobCost) ||
-    money(row.leadCost) ||
-    money(row.bankFee) ||
-    money(row.partsCost) ||
-    money(row.techSalary);
-  if (!hasMoney) return "";
-  return formatMoney(
-    money(row.jobCost) -
-      money(row.leadCost) -
-      money(row.bankFee) -
-      money(row.partsCost) -
-      money(row.techSalary),
-  );
 }
 
 function applyRowRules(row: SheetRow, patch: Partial<SheetRow>, partners: SheetPartner[]): SheetRow {
@@ -1198,10 +1149,7 @@ export function SheetTable({
       }
 
       const techName = row.technician.trim();
-      let pay = money(row.techSalary);
-      if (!pay && isPartnerWork(row.workSource) && money(row.jobCost)) {
-        pay = money(partnerTechSalary(row.jobCost));
-      }
+      const pay = effectiveTechPay(row);
       if (!pay) continue;
       const key = techName || "Unassigned";
       techPay.set(key, (techPay.get(key) || 0) + pay);

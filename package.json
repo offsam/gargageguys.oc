@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "smoke": "node scripts/smoke_bos_independence.mjs"
+    "test": "tsx --test lib/finance/summary.test.ts lib/sheet/money.test.ts lib/security/safe-redirect.test.ts",
+    "smoke": "node scripts/smoke_bos_independence.mjs",
+    "ci": "npm run smoke && npm test && npm run typecheck && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
@@ -22,6 +24,7 @@
     "@types/node": "^22.15.32",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "tsx": "^4.23.12",
     "typescript": "^5.8.3"
   }
 }

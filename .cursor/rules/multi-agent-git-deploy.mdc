@@ -21,7 +21,9 @@ Two agents and GitHub all ship **production**. Wiping Ads/Reviews/OAuth happened
 
 ## Before every push
 
-`tsc --noEmit` is not enough (CSS and Next compile fail on Vercel). Run **`npm run build`**. If it fails, do not commit or push.
+Prefer **`npm run ci`** (smoke + unit tests + typecheck + build). At minimum run **`npm run build`** — `tsc --noEmit` alone is not enough (CSS/Next can still fail on Vercel). If CI fails, do not commit or push.
+
+GitHub Actions (`.github/workflows/ci.yml`) also runs this on every push/PR to `main`.
 
 ## Deploy
 
