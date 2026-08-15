@@ -110,6 +110,12 @@ export default async function SheetPage() {
     (techProfiles || []).map((t) => [t.id, t.full_name || t.email || t.id]),
   );
   const technicianNames = (techProfiles || []).map((t) => t.full_name || t.email).filter(Boolean);
+  const scheduleTechnicians = (techProfiles || [])
+    .map((t) => ({
+      id: t.id,
+      name: (t.full_name || t.email || "").trim(),
+    }))
+    .filter((t) => t.name);
 
   const rows: SheetRow[] = (leads || []).map((lead) => {
     const meta = asMeta(lead.metadata);
@@ -184,6 +190,7 @@ export default async function SheetPage() {
       <SheetTable
         rows={rows}
         technicians={technicianNames}
+        scheduleTechnicians={scheduleTechnicians}
         stockParts={stockParts}
         partnerStockParts={partnerStockParts}
         partners={partnerOpts}

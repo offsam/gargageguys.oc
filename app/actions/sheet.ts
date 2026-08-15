@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { stageFromSheetStatus, completeBlockedReason, normalizeSheetStatus } from "@/lib/leads/stage-sync";
+import { stageFromSheetStatus, completeBlockedReason, normalizeSheetStatus, sheetStatusFromLead } from "@/lib/leads/stage-sync";
 import { isOwnWork, isPartnerWork } from "@/lib/sheet/work-source";
 import { listPartnersAction } from "@/app/actions/partners";
 import { parseSheetStockPulls, syncSheetPartStock } from "@/lib/stock/ops";
@@ -247,6 +247,15 @@ export async function saveSheetRowAction(
   const blocked = completeBlockedReason(input.jobStatus, input.jobCost);
   if (blocked) return { ok: false, error: blocked };
 
+  const requestedStatus = normalizeSheetStatus(input.jobStatus);
+  if (requestedStatus === "Scheduled" && isTempId(input.id)) {
+    return {
+      ok: false,
+      error: "Pick time and technician to schedule",
+      jobStatus: "Waiting",
+    };
+  }
+
   try {
     const admin = getSupabaseAdmin();
     const meta = sheetMeta(input);
@@ -320,11 +329,23 @@ export async function saveSheetRowAction(
 
     const { data: existing } = await admin
       .from("leads")
-      .select("id, metadata")
+      .select("id, metadata, stage")
       .eq("id", input.id)
       .maybeSingle();
 
     if (!existing) return { ok: false, error: "Row not found" };
+
+    const prevStatus = sheetStatusFromLead({
+      stage: existing.stage,
+      metadata: existing.metadata,
+    });
+    if (requestedStatus === "Scheduled" && prevStatus !== "Scheduled") {
+      return {
+        ok: false,
+        error: "Pick time and technician to schedule",
+        jobStatus: prevStatus,
+      };
+    }
 
     const prev =
       existing.metadata && typeof existing.metadata === "object"

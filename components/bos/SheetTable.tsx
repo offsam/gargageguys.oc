@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
 import { SheetPartsPicker } from "@/components/bos/SheetPartsPicker";
+import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/ScheduleLeadModal";
+import { scheduleCrmLeadAction } from "@/app/actions/crm";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
 import { SHEET_STATUSES, completeBlockedReason } from "@/lib/leads/stage-sync";
 import { FIELD_SERVICE_NAMES } from "@/lib/field/services-catalog";
@@ -542,18 +545,23 @@ function cellMutedClass(
 export function SheetTable({
   rows: initialRows,
   technicians,
+  scheduleTechnicians = [],
   stockParts = [],
   partnerStockParts = {},
   partners = [],
 }: {
   rows: SheetRow[];
   technicians: string[];
+  /** Profiles with ids — required to schedule onto a tech calendar. */
+  scheduleTechnicians?: CrmTechnician[];
   stockParts?: StockPartOption[];
   /** Parts + on-hand qty keyed by partner display name (own-stock partners). */
   partnerStockParts?: Record<string, StockPartOption[]>;
   partners?: SheetPartner[];
 }) {
   useBosLiveRefresh(["leads", "jobs"]);
+  const router = useRouter();
+  const [schedulePending, startScheduleTransition] = useTransition();
   const [rows, setRows] = useState<SheetRow[]>(() => seedRows(initialRows));
   const [status, setStatus] = useState<string>("");
   const [pending, setPending] = useState(false);
@@ -562,6 +570,8 @@ export function SheetTable({
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [partsPickerRowId, setPartsPickerRowId] = useState<string | null>(null);
+  const [scheduleRow, setScheduleRow] = useState<SheetRow | null>(null);
+  const [scheduleError, setScheduleError] = useState("");
   const [headerAside, setHeaderAside] = useState<HTMLElement | null>(null);
   const [freezeOrder, setFreezeOrder] = useState(false);
   const frozenIdsRef = useRef<string[] | null>(null);
@@ -819,6 +829,68 @@ export function SheetTable({
       row.techSalary,
       row.description,
     ].some((v) => String(v || "").trim());
+  }
+
+  function requestSchedule(row: SheetRow) {
+    if (!scheduleTechnicians.length) {
+      setStatus("Add a technician in Employees before scheduling");
+      return;
+    }
+    setScheduleError("");
+    setScheduleRow(row);
+  }
+
+  function submitSchedule(input: { technicianId: string; startAt: string; endAt: string }) {
+    if (!scheduleRow) return;
+    const rowSnapshot = scheduleRow;
+    const techName =
+      scheduleTechnicians.find((t) => t.id === input.technicianId)?.name || "";
+    setScheduleError("");
+    startScheduleTransition(async () => {
+      let leadId = rowSnapshot.id;
+      if (leadId.startsWith("new-")) {
+        const saved = await writeRow({ ...rowSnapshot, jobStatus: "Waiting" });
+        if (!saved.ok || !saved.id || saved.id.startsWith("new-")) {
+          setScheduleError(saved.ok === false ? saved.error : "Save the row before scheduling");
+          return;
+        }
+        leadId = saved.id;
+      }
+
+      const fd = new FormData();
+      fd.set("leadId", leadId);
+      fd.set("technicianId", input.technicianId);
+      fd.set("startAt", input.startAt);
+      fd.set("endAt", input.endAt);
+      const result = await scheduleCrmLeadAction(fd);
+      if (!result.ok) {
+        setScheduleError(result.error || "Could not schedule");
+        return;
+      }
+
+      const sheetDate = input.startAt.slice(0, 10);
+      setRows((prev) => {
+        const next = prev.map((r) => {
+          if (rowKey(r) !== rowKey(rowSnapshot) && r.id !== rowSnapshot.id && r.id !== leadId) {
+            return r;
+          }
+          return {
+            ...r,
+            id: leadId,
+            jobStatus: "Scheduled",
+            technician: techName || r.technician,
+            date: sheetDate || r.date,
+          };
+        });
+        rowsRef.current = next;
+        rememberRows(next);
+        return next;
+      });
+      setScheduleRow(null);
+      setStatus("Scheduled");
+      window.setTimeout(() => setStatus(""), 1200);
+      router.refresh();
+    });
   }
 
   async function writeRow(row: SheetRow) {
@@ -1493,7 +1565,13 @@ export function SheetTable({
                             onChange={(e) => {
                               if (!editable && !isWorkSource) return;
                               if (col.key === "jobStatus") {
-                                const blocked = completeBlockedReason(e.target.value, row.jobCost);
+                                const nextStatus = e.target.value;
+                                if (nextStatus === "Scheduled") {
+                                  e.target.value = row.jobStatus;
+                                  requestSchedule(row);
+                                  return;
+                                }
+                                const blocked = completeBlockedReason(nextStatus, row.jobCost);
                                 if (blocked) {
                                   setStatus(blocked);
                                   e.target.value = row.jobStatus;
@@ -1707,6 +1785,21 @@ export function SheetTable({
             applyPartsLines(partsPickerRow.id, lines, partsPickerRow);
             setPartsPickerRowId(null);
           }}
+        />
+      ) : null}
+      {scheduleRow ? (
+        <ScheduleLeadModal
+          leadName={scheduleRow.clientName || scheduleRow.clientAddress || "this job"}
+          technicians={scheduleTechnicians}
+          dayKey={scheduleRow.date || undefined}
+          pending={schedulePending}
+          error={scheduleError}
+          onClose={() => {
+            if (schedulePending) return;
+            setScheduleRow(null);
+            setScheduleError("");
+          }}
+          onSubmit={submitSchedule}
         />
       ) : null}
     </div>

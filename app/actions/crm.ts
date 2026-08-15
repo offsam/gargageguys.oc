@@ -311,7 +311,12 @@ export async function scheduleCrmLeadAction(formData: FormData) {
   }
 
   revalidateCrmAndSheet();
-  return { ok: true as const, jobStatus: "Scheduled" as const };
+  return {
+    ok: true as const,
+    jobStatus: "Scheduled" as const,
+    technician: techName,
+    date: start.toISOString().slice(0, 10),
+  };
 }
 
 export async function deleteCrmLeadAction(leadId: string) {
