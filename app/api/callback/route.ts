@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestLead } from "@/lib/leads/ingest";
 import { escapeHtml, sendTelegram, sendTwilioSms } from "@/lib/notify/channels";
+import { clientIp, rateLimit } from "@/lib/security/rate-limit";
 import { isSupabaseConfigured } from "@/lib/supabase/admin";
 
 const ALLOWED_ORIGINS = new Set([
@@ -44,6 +45,20 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = rateLimit(`callback:${clientIp(request)}`, {
+    limit: 5,
+    windowMs: 60_000,
+  });
+  if (!limited.ok) {
+    return setCors(
+      request,
+      NextResponse.json(
+        { error: "Too many requests. Please wait a moment." },
+        { status: 429, headers: { "Retry-After": String(limited.retryAfterSec) } },
+      ),
+    );
+  }
+
   const hasTelegram = Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
   const hasTwilio = Boolean(
     process.env.TWILIO_ACCOUNT_SID &&

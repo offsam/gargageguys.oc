@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/security/cron-auth";
 import { isSupabaseConfigured } from "@/lib/supabase/admin";
 import { listReviewSnapshots, listReviews } from "@/lib/reviews/store";
 
-function isAuthorized(request: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET?.trim();
-  if (cronSecret) {
-    const auth = request.headers.get("authorization") || "";
-    if (auth === `Bearer ${cronSecret}`) return true;
-  }
-  return request.headers.get("x-vercel-cron") === "1";
-}
-
 /** Read-only: last Google/Thumbtack review sync timestamps. */
 export async function GET(request: NextRequest) {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!isSupabaseConfigured() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {

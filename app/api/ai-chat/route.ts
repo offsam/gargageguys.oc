@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AlexError, runAlexTurn } from "@/lib/alex/run-turn";
 import type { AlexChatMessage } from "@/lib/alex/types";
+import { clientIp, rateLimit } from "@/lib/security/rate-limit";
 import { isSupabaseConfigured } from "@/lib/supabase/admin";
 
 const ALLOWED_ORIGINS = new Set([
@@ -47,6 +48,20 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = rateLimit(`ai-chat:${clientIp(request)}`, {
+    limit: 20,
+    windowMs: 60_000,
+  });
+  if (!limited.ok) {
+    return cors(
+      request,
+      NextResponse.json(
+        { error: "Too many messages. Please wait a moment." },
+        { status: 429, headers: { "Retry-After": String(limited.retryAfterSec) } },
+      ),
+    );
+  }
+
   if (!isSupabaseConfigured() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return cors(request, NextResponse.json({ error: "CRM database is not configured" }, { status: 503 }));
   }

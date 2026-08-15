@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { homeForRole } from "@/lib/auth/roles";
+import { safeInternalPath } from "@/lib/security/safe-redirect";
 import type { AppRole } from "@/lib/supabase/types";
 
 export async function signInAction(formData: FormData) {
@@ -28,7 +29,7 @@ export async function signInAction(formData: FormData) {
     role = (profile?.role as AppRole) || "office";
   }
 
-  redirect(next && next.startsWith("/") ? next : homeForRole(role));
+  redirect(safeInternalPath(next, homeForRole(role)));
 }
 
 export async function signOutAction() {

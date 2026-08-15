@@ -8,11 +8,15 @@ export async function POST(request: NextRequest) {
   }
 
   const secret = process.env.SEO_INGEST_SECRET?.trim() || process.env.CRON_SECRET?.trim();
-  if (secret) {
-    const auth = request.headers.get("authorization") || "";
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    return NextResponse.json(
+      { error: "SEO_INGEST_SECRET / CRON_SECRET is not configured" },
+      { status: 503 },
+    );
+  }
+  const auth = request.headers.get("authorization") || "";
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: SeoMetricsPayload;

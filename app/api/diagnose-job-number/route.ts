@@ -2,17 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase/admin";
 import { ensureLeadWorkOrder } from "@/lib/field/job-invoice";
 import { formatJobNumber } from "@/lib/field/job-number";
-
-function isAuthorized(request: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET?.trim();
-  if (!cronSecret) return false;
-  const auth = request.headers.get("authorization") || "";
-  return auth === `Bearer ${cronSecret}`;
-}
+import { isCronAuthorized } from "@/lib/security/cron-auth";
+import { sanitizeIlikeFragment } from "@/lib/security/sanitize";
 
 /** Diagnose / optionally issue Job # for a sheet/CRM client by name fragment. */
 export async function POST(request: NextRequest) {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!isSupabaseConfigured() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -23,7 +18,7 @@ export async function POST(request: NextRequest) {
     q?: string;
     fix?: boolean;
   };
-  const q = String(body.q || "").trim();
+  const q = sanitizeIlikeFragment(String(body.q || ""));
   if (q.length < 2) {
     return NextResponse.json({ error: "q required" }, { status: 400 });
   }

@@ -59,7 +59,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (cfg.webhookKey && body.google_key !== cfg.webhookKey) {
+  if (!cfg.webhookKey) {
+    return NextResponse.json(
+      { error: "GOOGLE_ADS_LEAD_WEBHOOK_KEY is not configured" },
+      { status: 503 },
+    );
+  }
+  if (body.google_key !== cfg.webhookKey) {
     return NextResponse.json({ error: "Invalid google_key" }, { status: 401 });
   }
 
