@@ -177,19 +177,8 @@ export default async function SheetPage() {
       user={user}
       active="/sheet"
       title="Sheet"
-      subtitle="Primary work ledger. Synced with CRM funnel — same clients and statuses."
+      subtitle="Work ledger"
     >
-      <div className="sheet-toolbar bos-card">
-        <div>
-          <strong>Garage Guys Sheet</strong>
-          <p>
-            Pick Work source first (Garage Guys or Partner) — only the needed columns unlock.
-            Partner with own stock: parts come from their warehouse, profit $0. Partner using
-            ours: parts cost fills from Garage Guys stock. Tech gets 30% of Gross.
-          </p>
-        </div>
-        <span className="bos-badge scheduled">Synced with CRM</span>
-      </div>
       <SheetTable
         rows={rows}
         technicians={technicianNames}
