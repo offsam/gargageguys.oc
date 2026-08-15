@@ -75,6 +75,7 @@ export default async function SheetPage() {
         name: item.name,
         unitCost: (item.unitCostCents / 100).toFixed(2),
         qty: stockState ? masterQty(stockState, item.id) : undefined,
+        category: item.category || "Misc",
       }));
     if (fromStock.length) {
       return fromStock.sort((a, b) => a.name.localeCompare(b.name));
@@ -82,6 +83,7 @@ export default async function SheetPage() {
     return SEED_STOCK_ITEMS.map((item) => ({
       name: item.name,
       unitCost: "",
+      category: item.category || "Misc",
     })).sort((a, b) => a.name.localeCompare(b.name));
   })();
 
@@ -97,6 +99,7 @@ export default async function SheetPage() {
           name: item.name,
           unitCost: (item.unitCostCents / 100).toFixed(2),
           qty: partnerMasterQty(stockState, item.id, partner.id),
+          category: item.category || "Misc",
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
     }

@@ -392,57 +392,92 @@ export function parseSheetStockPull(raw: unknown): SheetStockPull | null {
   return { itemId, itemName, qty, owner, legs: legs.length ? legs : undefined };
 }
 
-/** Sheet Completed rows pull from GG / partner stock (warehouse, then vans). */
+export function parseSheetStockPulls(raw: unknown): SheetStockPull[] {
+  if (Array.isArray(raw)) {
+    return raw.map((row) => parseSheetStockPull(row)).filter((p): p is SheetStockPull => Boolean(p));
+  }
+  const one = parseSheetStockPull(raw);
+  return one ? [one] : [];
+}
+
+function pullsEqual(a: SheetStockPull[], b: SheetStockPull[]): boolean {
+  if (a.length !== b.length) return false;
+  const key = (p: SheetStockPull) => `${p.itemId}|${p.owner}|${p.qty}`;
+  const aa = [...a].map(key).sort();
+  const bb = [...b].map(key).sort();
+  return aa.every((v, i) => v === bb[i]);
+}
+
+/** Sheet Completed rows pull from GG / partner stock (warehouse, then vans). Supports multi-part + qty. */
 export async function syncSheetPartStock(input: {
-  parts: string;
+  /** @deprecated use lines — kept for callers that still pass a single name */
+  parts?: string;
+  lines?: Array<{ name: string; qty: number }>;
   owner: "none" | "gg" | string;
-  prevPull: SheetStockPull | null;
+  prevPull?: SheetStockPull | null;
+  prevPulls?: SheetStockPull[];
   leadId?: string;
   createdBy?: string;
   technicianId?: string;
-}): Promise<{ pull: SheetStockPull | null; error?: string }> {
+}): Promise<{ pull: SheetStockPull | null; pulls: SheetStockPull[]; error?: string }> {
   const state = await loadStockState();
-  const prev = input.prevPull;
-  const desiredName = input.parts.trim();
-  const desiredItem =
-    input.owner !== "none" && desiredName ? findItemByName(state, desiredName) : null;
+  const prev =
+    input.prevPulls && input.prevPulls.length
+      ? input.prevPulls
+      : input.prevPull
+        ? [input.prevPull]
+        : [];
 
-  if (input.owner !== "none" && desiredName && !desiredItem) {
-    return {
-      pull: prev,
-      error: `Part “${desiredName}” not found in stock`,
-    };
+  const desiredLines: Array<{ name: string; qty: number }> = [];
+  if (input.lines?.length) {
+    for (const line of input.lines) {
+      const name = String(line.name || "").trim();
+      const qty = Math.max(0, Math.floor(Number(line.qty) || 0));
+      if (name && qty > 0) desiredLines.push({ name, qty });
+    }
+  } else if (input.parts?.trim() && input.owner !== "none") {
+    desiredLines.push({ name: input.parts.trim(), qty: 1 });
   }
 
-  const nextPull: SheetStockPull | null =
-    desiredItem && input.owner !== "none"
-      ? {
-          itemId: desiredItem.id,
-          itemName: desiredItem.name,
-          qty: 1,
-          owner: input.owner,
-        }
-      : null;
-
-  const same =
-    prev &&
-    nextPull &&
-    prev.itemId === nextPull.itemId &&
-    prev.owner === nextPull.owner &&
-    prev.qty === nextPull.qty;
-  if (same) return { pull: prev };
-
-  if (prev) {
-    const restockErr = restockPull(state, prev);
-    if (restockErr) return { pull: prev, error: restockErr };
+  const nextPulls: SheetStockPull[] = [];
+  if (input.owner !== "none") {
+    for (const line of desiredLines) {
+      const item = findItemByName(state, line.name);
+      if (!item) {
+        return {
+          pull: prev[0] || null,
+          pulls: prev,
+          error: `Part “${line.name}” not found in stock`,
+        };
+      }
+      nextPulls.push({
+        itemId: item.id,
+        itemName: item.name,
+        qty: line.qty,
+        owner: input.owner,
+      });
+    }
   }
-  if (nextPull) {
+
+  if (pullsEqual(prev, nextPulls)) {
+    return { pull: prev[0] || null, pulls: prev };
+  }
+
+  for (const p of prev) {
+    const restockErr = restockPull(state, p);
+    if (restockErr) return { pull: prev[0] || null, pulls: prev, error: restockErr };
+  }
+
+  const applied: SheetStockPull[] = [];
+  for (const nextPull of nextPulls) {
     const err = consumePull(state, nextPull, input.technicianId);
     if (err) {
-      if (prev) consumePull(state, prev);
+      for (const done of applied) restockPull(state, done);
+      for (const p of prev) consumePull(state, p);
       await saveStockState(state);
-      return { pull: prev, error: err };
+      return { pull: prev[0] || null, pulls: prev, error: err };
     }
+    applied.push(nextPull);
     const fromLeg = nextPull.legs?.[0];
     pushMovement(state, {
       itemId: nextPull.itemId,
@@ -453,12 +488,12 @@ export async function syncSheetPartStock(input: {
       partnerId: nextPull.owner === "gg" ? undefined : nextPull.owner,
       jobId: input.leadId,
       createdBy: input.createdBy,
-      note: `Sheet part: ${nextPull.itemName}`,
+      note: `Sheet part: ${nextPull.itemName} ×${nextPull.qty}`,
     });
   }
 
   await saveStockState(state);
-  return { pull: nextPull };
+  return { pull: nextPulls[0] || null, pulls: nextPulls };
 }
 
 /** Move warehouse + van qty onto a partner warehouse. Garage Guys locations go to 0. */

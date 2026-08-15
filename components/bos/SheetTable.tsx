@@ -3,9 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
+import { SheetPartsPicker } from "@/components/bos/SheetPartsPicker";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
 import { SHEET_STATUSES, completeBlockedReason } from "@/lib/leads/stage-sync";
 import { FIELD_SERVICE_NAMES } from "@/lib/field/services-catalog";
+import {
+  formatPartsLines,
+  parsePartsLines,
+  partsCostForLines,
+  type SheetPartLine,
+} from "@/lib/sheet/parts-lines";
 import {
   WORK_SOURCES,
   PARTNER_TECH_RATE,
@@ -49,6 +56,7 @@ export type StockPartOption = {
   unitCost: string;
   /** On-hand qty for this catalog (GG or a partner warehouse). */
   qty?: number;
+  category?: string;
 };
 
 const PAYMENT_TYPES = ["", "Credit Card", "Venmo", "Zelle", "Cash", "Check"] as const;
@@ -114,7 +122,7 @@ const COLUMNS: Array<{
   { key: "jobStatus", label: "Status", width: 140, kind: "select", options: "status" },
   { key: "jobType", label: "Issue", width: 180 },
   { key: "service", label: "Service", width: 200, kind: "select", options: "service" },
-  { key: "parts", label: "Parts", width: 180, kind: "select", options: "parts" },
+  { key: "parts", label: "Parts", width: 220 },
   { key: "jobCost", label: "Job cost", width: 100, money: true },
   { key: "paymentType", label: "Payment type", width: 140, kind: "select", options: "payment" },
   { key: "checkNumber", label: "Check #", width: 110 },
@@ -552,6 +560,7 @@ export function SheetTable({
   const [period, setPeriod] = useState<SheetPeriod>("all");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [partsPickerRowId, setPartsPickerRowId] = useState<string | null>(null);
   const [freezeOrder, setFreezeOrder] = useState(false);
   const frozenIdsRef = useRef<string[] | null>(null);
   const focusGenRef = useRef(0);
@@ -666,35 +675,6 @@ export function SheetTable({
     }
     return map;
   }, [partnerStockParts]);
-
-  function partLabel(name: string, qty: number | undefined): string {
-    if (!name) return "—";
-    if (qty == null || !Number.isFinite(qty)) return name;
-    return `${name} (${qty})`;
-  }
-
-  function partsOptionsForRow(row: SheetRow): Array<{ value: string; label: string }> {
-    const ownStock =
-      isPartnerWork(row.workSource) && partnerHasOwnStock(row.partnerName, partners);
-    const catalog = ownStock
-      ? partnerPartsByName.get(row.partnerName.trim().toLowerCase()) || []
-      : stockParts;
-    const byName = new Map<string, StockPartOption>();
-    for (const part of catalog) {
-      if (part.name) byName.set(part.name, part);
-    }
-    if (row.parts.trim() && !byName.has(row.parts.trim())) {
-      byName.set(row.parts.trim(), { name: row.parts.trim(), unitCost: "" });
-    }
-    const names = [...byName.keys()].sort((a, b) => a.localeCompare(b));
-    return [
-      { value: "", label: "—" },
-      ...names.map((name) => ({
-        value: name,
-        label: partLabel(name, byName.get(name)?.qty),
-      })),
-    ];
-  }
 
   const profitColIndex = COLUMNS.length;
   const deleteColWidth = 44;
@@ -956,8 +936,10 @@ export function SheetTable({
             Object.prototype.hasOwnProperty.call(patch, "workSource") ||
             Object.prototype.hasOwnProperty.call(patch, "partnerName"))
         ) {
-          const cost = partCostByName.get(next.parts);
-          if (cost != null && cost !== "") next.partsCost = cost;
+          if (!Object.prototype.hasOwnProperty.call(patch, "partsCost")) {
+            const cost = partsCostForLines(parsePartsLines(undefined, next.parts), partCostByName);
+            if (cost !== "") next.partsCost = cost;
+          }
         }
         return next;
       });
@@ -970,18 +952,30 @@ export function SheetTable({
     if (save) queuePersist(key);
   }
 
-  function onPartsChange(rowId: string, value: string, row: SheetRow) {
+  function applyPartsLines(rowId: string, lines: SheetPartLine[], row: SheetRow) {
+    const value = formatPartsLines(lines);
     const patch: Partial<SheetRow> = { parts: value };
     if (usesOurParts(row.workSource, row.partnerName, partners)) {
-      const cost = partCostByName.get(value);
-      if (cost != null && cost !== "") {
-        patch.partsCost = cost;
-      }
+      const cost = partsCostForLines(lines, partCostByName);
+      if (cost !== "") patch.partsCost = cost;
     } else if (isPartnerWork(row.workSource)) {
       patch.partsCost = "";
     }
     patchRow(rowId, patch, true);
   }
+
+  function catalogForRow(row: SheetRow): StockPartOption[] {
+    const ownStock =
+      isPartnerWork(row.workSource) && partnerHasOwnStock(row.partnerName, partners);
+    if (ownStock) {
+      return partnerPartsByName.get(row.partnerName.trim().toLowerCase()) || [];
+    }
+    return stockParts;
+  }
+
+  const partsPickerRow = partsPickerRowId
+    ? rows.find((r) => r.id === partsPickerRowId || rowKey(r) === partsPickerRowId) || null
+    : null;
 
   async function addNewRow() {
     if (pending) return;
@@ -1451,6 +1445,26 @@ export function SheetTable({
                       colOpts,
                     );
 
+                    if (col.key === "parts") {
+                      return (
+                        <td key={col.key} className={cellClass}>
+                          <button
+                            type="button"
+                            className="sheet-cell sheet-parts-trigger"
+                            disabled={!editable}
+                            tabIndex={editable ? 0 : -1}
+                            title={row.parts || "Pick parts"}
+                            onClick={() => {
+                              if (!editable) return;
+                              setPartsPickerRowId(rowKey(row));
+                            }}
+                          >
+                            {row.parts.trim() || "Pick parts…"}
+                          </button>
+                        </td>
+                      );
+                    }
+
                     if (col.kind === "select") {
                       const isWorkSource = col.key === "workSource";
                       return (
@@ -1470,10 +1484,6 @@ export function SheetTable({
                             }}
                             onChange={(e) => {
                               if (!editable && !isWorkSource) return;
-                              if (col.key === "parts") {
-                                onPartsChange(row.id, e.target.value, row);
-                                return;
-                              }
                               if (col.key === "jobStatus") {
                                 const blocked = completeBlockedReason(e.target.value, row.jobCost);
                                 if (blocked) {
@@ -1485,17 +1495,11 @@ export function SheetTable({
                               patchRow(row.id, { [col.key]: e.target.value }, true);
                             }}
                           >
-                            {col.key === "parts"
-                              ? partsOptionsForRow(row).map((opt) => (
-                                  <option key={opt.value || `${col.key}-empty`} value={opt.value}>
-                                    {opt.label}
-                                  </option>
-                                ))
-                              : selectOptions(col.options).map((opt) => (
-                                  <option key={opt || `${col.key}-empty`} value={opt}>
-                                    {opt || "—"}
-                                  </option>
-                                ))}
+                            {selectOptions(col.options).map((opt) => (
+                              <option key={opt || `${col.key}-empty`} value={opt}>
+                                {opt || "—"}
+                              </option>
+                            ))}
                           </select>
                         </td>
                       );
@@ -1684,6 +1688,19 @@ export function SheetTable({
           </tbody>
         </table>
       </div>
+      {partsPickerRow ? (
+        <SheetPartsPicker
+          open
+          title="Parts"
+          catalog={catalogForRow(partsPickerRow)}
+          initialLines={parsePartsLines(undefined, partsPickerRow.parts)}
+          onClose={() => setPartsPickerRowId(null)}
+          onApply={(lines) => {
+            applyPartsLines(partsPickerRow.id, lines, partsPickerRow);
+            setPartsPickerRowId(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

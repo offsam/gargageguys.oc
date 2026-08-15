@@ -6,8 +6,9 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { stageFromSheetStatus, completeBlockedReason, normalizeSheetStatus } from "@/lib/leads/stage-sync";
 import { isOwnWork, isPartnerWork } from "@/lib/sheet/work-source";
 import { listPartnersAction } from "@/app/actions/partners";
-import { parseSheetStockPull, syncSheetPartStock } from "@/lib/stock/ops";
+import { parseSheetStockPulls, syncSheetPartStock } from "@/lib/stock/ops";
 import { parseInvoiceLines } from "@/lib/field/job-invoice-types";
+import { parsePartsLines } from "@/lib/sheet/parts-lines";
 import { ensureLeadWorkOrder } from "@/lib/field/job-invoice";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
 
@@ -35,6 +36,7 @@ export type SheetSaveInput = {
 };
 
 function sheetMeta(input: SheetSaveInput) {
+  const partsLines = parsePartsLines(undefined, input.parts);
   return {
     workSource: input.workSource,
     partnerName: input.partnerName,
@@ -48,6 +50,7 @@ function sheetMeta(input: SheetSaveInput) {
     issue: input.jobType,
     service: input.service,
     parts: input.parts,
+    partsLines,
     paymentType: input.paymentType,
     checkNumber: input.checkNumber,
     jobCost: input.jobCost,
@@ -120,9 +123,10 @@ async function syncPartnerSheetStock(input: {
   prevMeta: Record<string, unknown>;
   createdBy: string;
 }): Promise<{ ok: true; deducted: boolean } | { ok: false; error: string }> {
+  const lines = parsePartsLines(undefined, input.parts);
   let owner: "none" | "gg" | string = "none";
   const completed = normalizeSheetStatus(input.jobStatus) === "Completed";
-  if (completed && input.parts.trim()) {
+  if (completed && lines.length) {
     const fieldDidParts = await fieldInvoiceAlreadyHasParts(input.leadId);
     if (!fieldDidParts) {
       if (isPartnerWork(input.workSource) && input.partnerName.trim()) {
@@ -139,10 +143,13 @@ async function syncPartnerSheetStock(input: {
   }
 
   const technicianId = await resolveTechnicianId(input.technician);
-  const { pull, error } = await syncSheetPartStock({
-    parts: completed ? input.parts : "",
+  const prevPulls = parseSheetStockPulls(
+    input.prevMeta.stockPulls ?? input.prevMeta.stockPull,
+  );
+  const { pull, pulls, error } = await syncSheetPartStock({
+    lines: completed ? lines : [],
     owner: completed ? owner : "none",
-    prevPull: parseSheetStockPull(input.prevMeta.stockPull),
+    prevPulls,
     leadId: input.leadId,
     createdBy: input.createdBy,
     technicianId,
@@ -162,12 +169,12 @@ async function syncPartnerSheetStock(input: {
   await admin
     .from("leads")
     .update({
-      metadata: { ...meta, stockPull: pull },
+      metadata: { ...meta, stockPull: pull, stockPulls: pulls },
       updated_at: new Date().toISOString(),
     })
     .eq("id", input.leadId);
 
-  return { ok: true, deducted: Boolean(pull) && completed && Boolean(input.parts.trim()) };
+  return { ok: true, deducted: pulls.length > 0 && completed };
 }
 
 function revalidateSheetSurfaces() {
@@ -419,9 +426,9 @@ export async function deleteSheetRowAction(
           ? (lead.metadata as Record<string, unknown>)
           : {};
       await syncSheetPartStock({
-        parts: "",
+        lines: [],
         owner: "none",
-        prevPull: parseSheetStockPull(prevMeta.stockPull),
+        prevPulls: parseSheetStockPulls(prevMeta.stockPulls ?? prevMeta.stockPull),
         leadId: id,
         createdBy: session.id,
       });
