@@ -101,6 +101,7 @@ export function BosShell({
               {subtitle ? <p>{subtitle}</p> : null}
             </div>
           </div>
+          <div id="bos-header-aside" className="bos-header-aside" />
           <Link href="/">← Website</Link>
         </header>
         {children}

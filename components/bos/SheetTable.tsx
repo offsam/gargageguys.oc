@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
 import { SheetPartsPicker } from "@/components/bos/SheetPartsPicker";
@@ -561,6 +562,7 @@ export function SheetTable({
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [partsPickerRowId, setPartsPickerRowId] = useState<string | null>(null);
+  const [headerAside, setHeaderAside] = useState<HTMLElement | null>(null);
   const [freezeOrder, setFreezeOrder] = useState(false);
   const frozenIdsRef = useRef<string[] | null>(null);
   const focusGenRef = useRef(0);
@@ -592,6 +594,10 @@ export function SheetTable({
       return next;
     });
   }, [initialRows]);
+
+  useEffect(() => {
+    setHeaderAside(document.getElementById("bos-header-aside"));
+  }, []);
 
   useEffect(() => {
     setWidths(loadWidths());
@@ -1212,19 +1218,8 @@ export function SheetTable({
     setFreezeOrder(false);
   }
 
-  return (
-    <div>
-      <datalist id={LEAD_SOURCE_LIST_ID}>
-        {leadSourceSuggestions.map((opt) => (
-          <option key={opt} value={opt} />
-        ))}
-      </datalist>
-      <datalist id={PARTNER_LIST_ID}>
-        {partnerSuggestions.map((opt) => (
-          <option key={opt} value={opt} />
-        ))}
-      </datalist>
-      <div className="sheet-summary">
+  const summaryBlock = (
+      <div className="sheet-summary sheet-summary--header">
         <div className="sheet-period-bar">
           {PERIOD_OPTIONS.map((opt) => (
             <button
@@ -1299,6 +1294,21 @@ export function SheetTable({
           </div>
         </div>
       </div>
+  );
+
+  return (
+    <div>
+      {headerAside ? createPortal(summaryBlock, headerAside) : null}
+      <datalist id={LEAD_SOURCE_LIST_ID}>
+        {leadSourceSuggestions.map((opt) => (
+          <option key={opt} value={opt} />
+        ))}
+      </datalist>
+      <datalist id={PARTNER_LIST_ID}>
+        {partnerSuggestions.map((opt) => (
+          <option key={opt} value={opt} />
+        ))}
+      </datalist>
       <div className="sheet-table-bar">
         <div className="sheet-table-bar-left">
           <button

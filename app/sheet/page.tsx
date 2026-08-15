@@ -180,7 +180,6 @@ export default async function SheetPage() {
       user={user}
       active="/sheet"
       title="Sheet"
-      subtitle="Work ledger"
     >
       <SheetTable
         rows={rows}

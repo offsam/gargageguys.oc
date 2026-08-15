@@ -115,9 +115,10 @@ textarea {
 .bos-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 
 .bos-header-title {
@@ -125,6 +126,15 @@ textarea {
   align-items: flex-start;
   gap: 0.75rem;
   min-width: 0;
+  flex: 0 0 auto;
+}
+
+.bos-header-aside {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
 }
 
 .bos-nav-toggle {
@@ -165,6 +175,8 @@ textarea {
 }
 
 .bos-header > a {
+  flex: 0 0 auto;
+  white-space: nowrap;
   color: var(--bos-accent-2);
   font-size: 0.9rem;
 }
@@ -1231,6 +1243,15 @@ textarea {
   flex-direction: column;
   gap: 0.55rem;
   margin-bottom: 0.75rem;
+}
+
+.sheet-summary--header {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  margin: 0;
+  width: 100%;
 }
 
 .sheet-period-bar {
