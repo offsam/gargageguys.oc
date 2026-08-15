@@ -64,8 +64,28 @@ const LEAD_SOURCES = [
 const BANK_FEE_RATE = 0.035;
 const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths-v2";
 const SORT_STORAGE_KEY = "bos-sheet-date-sort";
+const PERIOD_STORAGE_KEY = "bos-sheet-period-v1";
 const LEAD_SOURCE_LIST_ID = "sheet-lead-source-list";
 const PARTNER_LIST_ID = "sheet-partner-list";
+
+type SheetPeriod =
+  | "week"
+  | "month"
+  | "last_month"
+  | "d60"
+  | "d90"
+  | "all"
+  | "custom";
+
+const PERIOD_OPTIONS: Array<{ id: SheetPeriod; label: string }> = [
+  { id: "week", label: "Неделя" },
+  { id: "month", label: "Месяц" },
+  { id: "last_month", label: "Прошлый месяц" },
+  { id: "d60", label: "60 дней" },
+  { id: "d90", label: "90 дней" },
+  { id: "all", label: "Всё" },
+  { id: "custom", label: "Период" },
+];
 
 const MONEY_KEYS = new Set<SheetColumnKey>([
   "leadCost",
@@ -164,6 +184,67 @@ function toDateInputValue(raw: string): string {
     return `${y}-${m}-${day}`;
   }
   return todayISO();
+}
+
+function ymdLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function startOfToday(): Date {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** Week starts Monday. */
+function startOfWeekMonday(d: Date): Date {
+  const day = d.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - diff);
+}
+
+function periodRange(
+  period: SheetPeriod,
+  customFrom: string,
+  customTo: string,
+): { from: string | null; to: string | null } {
+  const today = startOfToday();
+  if (period === "all") return { from: null, to: null };
+  if (period === "week") {
+    const from = startOfWeekMonday(today);
+    return { from: ymdLocal(from), to: ymdLocal(today) };
+  }
+  if (period === "month") {
+    const from = new Date(today.getFullYear(), today.getMonth(), 1);
+    return { from: ymdLocal(from), to: ymdLocal(today) };
+  }
+  if (period === "last_month") {
+    const from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const to = new Date(today.getFullYear(), today.getMonth(), 0);
+    return { from: ymdLocal(from), to: ymdLocal(to) };
+  }
+  if (period === "d60") {
+    const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 59);
+    return { from: ymdLocal(from), to: ymdLocal(today) };
+  }
+  if (period === "d90") {
+    const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 89);
+    return { from: ymdLocal(from), to: ymdLocal(today) };
+  }
+  const from = customFrom.trim() || null;
+  const to = customTo.trim() || null;
+  return { from, to };
+}
+
+function rowInPeriod(row: SheetRow, from: string | null, to: string | null): boolean {
+  if (!from && !to) return true;
+  const date = toDateInputValue(row.date);
+  if (!date) return false;
+  if (from && date < from) return false;
+  if (to && date > to) return false;
+  return true;
 }
 
 function isCardPayment(paymentType: string) {
@@ -461,6 +542,9 @@ export function SheetTable({
   const [status, setStatus] = useState<string>("");
   const [pending, setPending] = useState(false);
   const [dateSort, setDateSort] = useState<"newest" | "oldest">("newest");
+  const [period, setPeriod] = useState<SheetPeriod>("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [freezeOrder, setFreezeOrder] = useState(false);
   const frozenIdsRef = useRef<string[] | null>(null);
   const focusGenRef = useRef(0);
@@ -498,6 +582,19 @@ export function SheetTable({
     try {
       const saved = localStorage.getItem(SORT_STORAGE_KEY);
       if (saved === "oldest" || saved === "newest") setDateSort(saved);
+      const savedPeriod = localStorage.getItem(PERIOD_STORAGE_KEY);
+      if (savedPeriod) {
+        const parsed = JSON.parse(savedPeriod) as {
+          period?: SheetPeriod;
+          from?: string;
+          to?: string;
+        };
+        if (PERIOD_OPTIONS.some((p) => p.id === parsed.period)) {
+          setPeriod(parsed.period as SheetPeriod);
+        }
+        if (typeof parsed.from === "string") setCustomFrom(parsed.from);
+        if (typeof parsed.to === "string") setCustomTo(parsed.to);
+      }
     } catch {
       /* ignore */
     }
@@ -971,13 +1068,27 @@ export function SheetTable({
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [partners, rows]);
 
+  const activeRange = useMemo(
+    () => periodRange(period, customFrom, customTo),
+    [period, customFrom, customTo],
+  );
+
+  const periodRows = useMemo(
+    () =>
+      rows.filter(
+        (row) =>
+          row.id.startsWith("new-") || rowInPeriod(row, activeRange.from, activeRange.to),
+      ),
+    [rows, activeRange],
+  );
+
   const sheetTotals = useMemo(() => {
     let gross = 0;
     let parts = 0;
     let clear = 0;
     const techPay = new Map<string, number>();
 
-    for (const row of rows) {
+    for (const row of periodRows) {
       gross += money(row.jobCost);
       parts += money(row.partsCost);
       clear += money(clearProfitFor(row, partners));
@@ -996,10 +1107,10 @@ export function SheetTable({
     const techTotal = techEntries.reduce((sum, [, v]) => sum + v, 0);
 
     return { gross, parts, clear, techEntries, techTotal };
-  }, [rows, partners]);
+  }, [periodRows, partners]);
 
   const sortedRows = useMemo(() => {
-    const next = [...rows];
+    const next = [...periodRows];
     next.sort((a, b) => {
       const da = dateSortValue(a);
       const db = dateSortValue(b);
@@ -1007,7 +1118,37 @@ export function SheetTable({
       return dateSort === "newest" ? (da < db ? 1 : -1) : da < db ? -1 : 1;
     });
     return next;
-  }, [rows, dateSort]);
+  }, [periodRows, dateSort]);
+
+  function changePeriod(next: SheetPeriod) {
+    setPeriod(next);
+    try {
+      localStorage.setItem(
+        PERIOD_STORAGE_KEY,
+        JSON.stringify({
+          period: next,
+          from: customFrom,
+          to: customTo,
+        }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function changeCustomRange(from: string, to: string) {
+    setCustomFrom(from);
+    setCustomTo(to);
+    setPeriod("custom");
+    try {
+      localStorage.setItem(
+        PERIOD_STORAGE_KEY,
+        JSON.stringify({ period: "custom", from, to }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }
 
   const displayRows = useMemo(() => {
     const ids = freezeOrder ? frozenIdsRef.current : null;
@@ -1052,39 +1193,70 @@ export function SheetTable({
           <option key={opt} value={opt} />
         ))}
       </datalist>
-      <div className="sheet-toolbar bos-card sheet-totals">
-        <div className="sheet-total">
-          <span className="sheet-total-label">Gross</span>
-          <strong className="sheet-total-value">{formatMoney(sheetTotals.gross)}</strong>
-        </div>
-        <div className="sheet-total">
-          <span className="sheet-total-label">
-            {sheetTotals.techEntries.length === 1
-              ? `Tech · ${sheetTotals.techEntries[0][0]}`
-              : "Tech salary"}
-          </span>
-          <strong className="sheet-total-value">
-            {sheetTotals.techEntries.length === 1
-              ? formatMoney(sheetTotals.techEntries[0][1])
-              : sheetTotals.techEntries.length === 0
-                ? formatMoney(0)
-                : formatMoney(sheetTotals.techTotal)}
-          </strong>
-          {sheetTotals.techEntries.length > 1 ? (
-            <span className="sheet-total-sub">
-              {sheetTotals.techEntries
-                .map(([name, amount]) => `${name} ${formatMoney(amount)}`)
-                .join(" · ")}
-            </span>
+      <div className="sheet-summary">
+        <div className="sheet-period-bar">
+          {PERIOD_OPTIONS.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              className={`sheet-period-btn${period === opt.id ? " is-active" : ""}`}
+              onClick={() => changePeriod(opt.id)}
+            >
+              {opt.label}
+            </button>
+          ))}
+          {period === "custom" ? (
+            <div className="sheet-period-custom">
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => changeCustomRange(e.target.value, customTo)}
+                aria-label="From date"
+              />
+              <span>—</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => changeCustomRange(customFrom, e.target.value)}
+                aria-label="To date"
+              />
+            </div>
           ) : null}
         </div>
-        <div className="sheet-total">
-          <span className="sheet-total-label">Clear</span>
-          <strong className="sheet-total-value">{formatMoney(sheetTotals.clear)}</strong>
-        </div>
-        <div className="sheet-total">
-          <span className="sheet-total-label">Parts</span>
-          <strong className="sheet-total-value">{formatMoney(sheetTotals.parts)}</strong>
+        <div className="sheet-totals">
+          <div className="sheet-total-card">
+            <span className="sheet-total-label">Gross</span>
+            <strong className="sheet-total-value">{formatMoney(sheetTotals.gross)}</strong>
+          </div>
+          <div className="sheet-total-card">
+            <span className="sheet-total-label">
+              {sheetTotals.techEntries.length === 1
+                ? `Tech · ${sheetTotals.techEntries[0][0]}`
+                : "Tech salary"}
+            </span>
+            <strong className="sheet-total-value">
+              {sheetTotals.techEntries.length === 1
+                ? formatMoney(sheetTotals.techEntries[0][1])
+                : sheetTotals.techEntries.length === 0
+                  ? formatMoney(0)
+                  : formatMoney(sheetTotals.techTotal)}
+            </strong>
+            {sheetTotals.techEntries.length > 1 ? (
+              <span className="sheet-total-sub">
+                {sheetTotals.techEntries
+                  .map(([name, amount]) => `${name} ${formatMoney(amount)}`)
+                  .join(" · ")}
+              </span>
+            ) : null}
+          </div>
+          <div className="sheet-total-card">
+            <span className="sheet-total-label">Clear</span>
+            <strong className="sheet-total-value">{formatMoney(sheetTotals.clear)}</strong>
+          </div>
+          <div className="sheet-total-card">
+            <span className="sheet-total-label">Parts</span>
+            <strong className="sheet-total-value">{formatMoney(sheetTotals.parts)}</strong>
+          </div>
         </div>
       </div>
       <div className="sheet-table-bar">
