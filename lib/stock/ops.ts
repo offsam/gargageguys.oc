@@ -2,8 +2,12 @@ import { randomUUID } from "crypto";
 import {
   getBalanceQty,
   loadStockState,
+  partnerQty,
   saveStockState,
   setBalanceQty,
+  techQty,
+  warehouseQty,
+  type StockLocationType,
   type StockMovementKind,
   type StockState,
 } from "@/lib/stock/store";
@@ -215,11 +219,19 @@ export async function receivePartnerStock(input: {
   return { ok: true, state: await loadStockState() };
 }
 
+export type SheetStockPullLeg = {
+  locationType: StockLocationType;
+  technicianId?: string;
+  qty: number;
+};
+
 export type SheetStockPull = {
   itemId: string;
   itemName: string;
   qty: number;
   owner: "gg" | string;
+  /** Where qty was taken from — used to restock the same places. */
+  legs?: SheetStockPullLeg[];
 };
 
 function findItemByName(state: StockState, name: string) {
@@ -231,17 +243,128 @@ function findItemByName(state: StockState, name: string) {
 }
 
 function restockPull(state: StockState, pull: SheetStockPull): string | null {
+  if (pull.legs?.length) {
+    for (const leg of pull.legs) {
+      const partnerId = pull.owner === "gg" ? undefined : pull.owner;
+      const err = applyDelta(
+        state,
+        pull.itemId,
+        leg.locationType,
+        leg.qty,
+        leg.technicianId,
+        leg.locationType === "partner" || (leg.locationType === "tech" && partnerId)
+          ? partnerId
+          : undefined,
+      );
+      if (err) return err;
+    }
+    return null;
+  }
   if (pull.owner === "gg") {
     return applyDelta(state, pull.itemId, "warehouse", pull.qty);
   }
   return applyDelta(state, pull.itemId, "partner", pull.qty, undefined, pull.owner);
 }
 
-function consumePull(state: StockState, pull: SheetStockPull): string | null {
-  if (pull.owner === "gg") {
-    return applyDelta(state, pull.itemId, "warehouse", -pull.qty);
+function planConsumeLegs(
+  state: StockState,
+  owner: "gg" | string,
+  itemId: string,
+  qty: number,
+  preferredTechId?: string,
+): SheetStockPullLeg[] | null {
+  let left = qty;
+  const legs: SheetStockPullLeg[] = [];
+
+  const take = (
+    locationType: StockLocationType,
+    available: number,
+    technicianId?: string,
+  ) => {
+    if (left <= 0 || available <= 0) return;
+    const n = Math.min(available, left);
+    legs.push({ locationType, technicianId, qty: n });
+    left -= n;
+  };
+
+  if (owner === "gg") {
+    take("warehouse", warehouseQty(state, itemId));
+    if (preferredTechId) {
+      take("tech", techQty(state, itemId, preferredTechId), preferredTechId);
+    }
+    for (const balance of state.balances) {
+      if (left <= 0) break;
+      if (balance.itemId !== itemId || balance.locationType !== "tech" || balance.partnerId) {
+        continue;
+      }
+      if (preferredTechId && balance.technicianId === preferredTechId) continue;
+      take("tech", Number(balance.qty) || 0, balance.technicianId);
+    }
+  } else {
+    take("partner", partnerQty(state, itemId, owner));
+    if (preferredTechId) {
+      take("tech", techQty(state, itemId, preferredTechId, owner), preferredTechId);
+    }
+    for (const balance of state.balances) {
+      if (left <= 0) break;
+      if (
+        balance.itemId !== itemId ||
+        balance.locationType !== "tech" ||
+        balance.partnerId !== owner
+      ) {
+        continue;
+      }
+      if (preferredTechId && balance.technicianId === preferredTechId) continue;
+      take("tech", Number(balance.qty) || 0, balance.technicianId);
+    }
   }
-  return applyDelta(state, pull.itemId, "partner", -pull.qty, undefined, pull.owner);
+
+  return left > 0 ? null : legs;
+}
+
+function consumePull(
+  state: StockState,
+  pull: SheetStockPull,
+  preferredTechId?: string,
+): string | null {
+  const legs =
+    pull.legs ||
+    planConsumeLegs(state, pull.owner, pull.itemId, pull.qty, preferredTechId);
+  if (!legs) {
+    return `Not enough stock for “${pull.itemName}” (need ${pull.qty})`;
+  }
+  pull.legs = legs;
+  const applied: SheetStockPullLeg[] = [];
+  for (const leg of legs) {
+    const partnerId = pull.owner === "gg" ? undefined : pull.owner;
+    const err = applyDelta(
+      state,
+      pull.itemId,
+      leg.locationType,
+      -leg.qty,
+      leg.technicianId,
+      leg.locationType === "partner" || (leg.locationType === "tech" && partnerId)
+        ? partnerId
+        : undefined,
+    );
+    if (err) {
+      for (const done of applied) {
+        applyDelta(
+          state,
+          pull.itemId,
+          done.locationType,
+          done.qty,
+          done.technicianId,
+          done.locationType === "partner" || (done.locationType === "tech" && partnerId)
+            ? partnerId
+            : undefined,
+        );
+      }
+      return err;
+    }
+    applied.push(leg);
+  }
+  return null;
 }
 
 export function parseSheetStockPull(raw: unknown): SheetStockPull | null {
@@ -252,22 +375,45 @@ export function parseSheetStockPull(raw: unknown): SheetStockPull | null {
   const qty = Number(row.qty) || 0;
   const owner = String(row.owner || "");
   if (!itemId || qty <= 0 || !owner) return null;
-  return { itemId, itemName, qty, owner };
+  const legsRaw = Array.isArray(row.legs) ? row.legs : [];
+  const legs: SheetStockPullLeg[] = [];
+  for (const leg of legsRaw) {
+    if (!leg || typeof leg !== "object") continue;
+    const r = leg as Record<string, unknown>;
+    const locationType = String(r.locationType || "") as StockLocationType;
+    const legQty = Number(r.qty) || 0;
+    if (!["warehouse", "tech", "partner"].includes(locationType) || legQty <= 0) continue;
+    legs.push({
+      locationType,
+      technicianId: typeof r.technicianId === "string" ? r.technicianId : undefined,
+      qty: legQty,
+    });
+  }
+  return { itemId, itemName, qty, owner, legs: legs.length ? legs : undefined };
 }
 
-/** Partner Sheet jobs consume GG warehouse or that partner's warehouse. Own GG jobs stay on Field vans. */
+/** Sheet Completed rows pull from GG / partner stock (warehouse, then vans). */
 export async function syncSheetPartStock(input: {
   parts: string;
   owner: "none" | "gg" | string;
   prevPull: SheetStockPull | null;
   leadId?: string;
   createdBy?: string;
-}): Promise<{ pull: SheetStockPull | null }> {
+  technicianId?: string;
+}): Promise<{ pull: SheetStockPull | null; error?: string }> {
   const state = await loadStockState();
   const prev = input.prevPull;
   const desiredName = input.parts.trim();
   const desiredItem =
     input.owner !== "none" && desiredName ? findItemByName(state, desiredName) : null;
+
+  if (input.owner !== "none" && desiredName && !desiredItem) {
+    return {
+      pull: prev,
+      error: `Part “${desiredName}” not found in stock`,
+    };
+  }
+
   const nextPull: SheetStockPull | null =
     desiredItem && input.owner !== "none"
       ? {
@@ -286,18 +432,24 @@ export async function syncSheetPartStock(input: {
     prev.qty === nextPull.qty;
   if (same) return { pull: prev };
 
-  if (prev) restockPull(state, prev);
+  if (prev) {
+    const restockErr = restockPull(state, prev);
+    if (restockErr) return { pull: prev, error: restockErr };
+  }
   if (nextPull) {
-    const err = consumePull(state, nextPull);
+    const err = consumePull(state, nextPull, input.technicianId);
     if (err) {
       if (prev) consumePull(state, prev);
-      return { pull: prev };
+      await saveStockState(state);
+      return { pull: prev, error: err };
     }
+    const fromLeg = nextPull.legs?.[0];
     pushMovement(state, {
       itemId: nextPull.itemId,
       qty: nextPull.qty,
       kind: nextPull.owner === "gg" ? "install_gg_for_partner" : "install_partner",
-      fromLocationType: nextPull.owner === "gg" ? "warehouse" : "partner",
+      fromLocationType: fromLeg?.locationType || (nextPull.owner === "gg" ? "warehouse" : "partner"),
+      fromTechnicianId: fromLeg?.technicianId,
       partnerId: nextPull.owner === "gg" ? undefined : nextPull.owner,
       jobId: input.leadId,
       createdBy: input.createdBy,

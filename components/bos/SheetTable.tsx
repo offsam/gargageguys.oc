@@ -433,7 +433,9 @@ function rowKey(row: Pick<SheetRow, "id" | "clientKey">): string {
   return row.clientKey || row.id;
 }
 
-type SheetSaveResult = { ok: true; id?: string; jobNumber?: string } | { ok: false; error: string };
+type SheetSaveResult =
+  | { ok: true; id?: string; jobNumber?: string }
+  | { ok: false; error: string; jobStatus?: string };
 
 async function postSheetRow(row: SheetRow): Promise<SheetSaveResult> {
   const res = await fetch("/api/sheet/row", {
@@ -446,9 +448,14 @@ async function postSheetRow(row: SheetRow): Promise<SheetSaveResult> {
     id?: string;
     error?: string;
     jobNumber?: string;
+    jobStatus?: string;
   } | null;
   if (!res.ok || !data?.ok) {
-    return { ok: false, error: data?.error || `Save failed (${res.status})` };
+    return {
+      ok: false,
+      error: data?.error || `Save failed (${res.status})`,
+      jobStatus: data?.jobStatus,
+    };
   }
   return { ok: true, id: data.id, jobNumber: data.jobNumber || "" };
 }
@@ -836,6 +843,18 @@ export function SheetTable({
       const result = await postSheetRow(row);
       if (!result.ok) {
         setStatus(result.error || "Save failed");
+        if (result.jobStatus != null) {
+          setRows((prev) => {
+            const next = prev.map((r) =>
+              rowKey(r) === rowKey(row) || r.id === row.id
+                ? { ...r, jobStatus: result.jobStatus || r.jobStatus }
+                : r,
+            );
+            rowsRef.current = next;
+            rememberRows(next);
+            return next;
+          });
+        }
         return result;
       }
       const nextId = result.id || row.id;
@@ -856,7 +875,8 @@ export function SheetTable({
           );
         }
       }
-      setStatus("Saved");
+      const completed = row.jobStatus.trim() === "Completed" && Boolean(row.parts.trim());
+      setStatus(completed ? "Saved · stock updated" : "Saved");
       window.setTimeout(() => setStatus(""), 1200);
       return { ok: true as const, id: nextId, jobNumber: nextJob };
     } catch (err) {

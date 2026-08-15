@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { stageFromSheetStatus, completeBlockedReason } from "@/lib/leads/stage-sync";
-import { isPartnerWork } from "@/lib/sheet/work-source";
+import { stageFromSheetStatus, completeBlockedReason, normalizeSheetStatus } from "@/lib/leads/stage-sync";
+import { isOwnWork, isPartnerWork } from "@/lib/sheet/work-source";
 import { listPartnersAction } from "@/app/actions/partners";
 import { parseSheetStockPull, syncSheetPartStock } from "@/lib/stock/ops";
+import { parseInvoiceLines } from "@/lib/field/job-invoice-types";
 import { ensureLeadWorkOrder } from "@/lib/field/job-invoice";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
 
@@ -69,37 +70,85 @@ function isTempId(id: string) {
   return id.startsWith("new-");
 }
 
+async function fieldInvoiceAlreadyHasParts(leadId: string): Promise<boolean> {
+  const admin = getSupabaseAdmin();
+  const { data: jobs } = await admin.from("jobs").select("id").eq("lead_id", leadId);
+  if (!jobs?.length) return false;
+  const { data: invoices } = await admin
+    .from("job_invoices")
+    .select("lines")
+    .in(
+      "job_id",
+      jobs.map((j) => j.id),
+    );
+  for (const inv of invoices || []) {
+    if (parseInvoiceLines(inv.lines).some((line) => line.kind === "part" && line.qty > 0)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function resolveTechnicianId(technicianName: string): Promise<string | undefined> {
+  const needle = technicianName.trim().toLowerCase();
+  if (!needle) return undefined;
+  const admin = getSupabaseAdmin();
+  const { data: techs } = await admin
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("role", "technician");
+  const match = (techs || []).find(
+    (t) =>
+      (t.full_name || "").trim().toLowerCase() === needle ||
+      (t.email || "").trim().toLowerCase() === needle,
+  );
+  return match?.id;
+}
+
+/**
+ * Deduct stock only when the Sheet row is Completed.
+ * Skip if Field already added parts on the invoice (avoid double pull).
+ * GG → our warehouse/vans; partner with own stock → their warehouse/vans; else GG stock.
+ */
 async function syncPartnerSheetStock(input: {
   leadId: string;
   workSource: string;
   partnerName: string;
   parts: string;
+  jobStatus: string;
+  technician: string;
   prevMeta: Record<string, unknown>;
   createdBy: string;
-}) {
+}): Promise<{ ok: true; deducted: boolean } | { ok: false; error: string }> {
   let owner: "none" | "gg" | string = "none";
-  const adminForJobs = getSupabaseAdmin();
-  const { data: fieldJobs } = await adminForJobs
-    .from("jobs")
-    .select("id")
-    .eq("lead_id", input.leadId)
-    .limit(1);
-  const fieldWillDeduct = Boolean(fieldJobs?.length);
-  if (!fieldWillDeduct && isPartnerWork(input.workSource) && input.partnerName.trim()) {
-    const partners = await listPartnersAction();
-    const match = partners.find(
-      (p) => p.name.trim().toLowerCase() === input.partnerName.trim().toLowerCase(),
-    );
-    owner =
-      match?.has_own_stock && !match.id.startsWith("seed-") ? match.id : "gg";
+  const completed = normalizeSheetStatus(input.jobStatus) === "Completed";
+  if (completed && input.parts.trim()) {
+    const fieldDidParts = await fieldInvoiceAlreadyHasParts(input.leadId);
+    if (!fieldDidParts) {
+      if (isPartnerWork(input.workSource) && input.partnerName.trim()) {
+        const partners = await listPartnersAction();
+        const match = partners.find(
+          (p) => p.name.trim().toLowerCase() === input.partnerName.trim().toLowerCase(),
+        );
+        owner =
+          match?.has_own_stock && !match.id.startsWith("seed-") ? match.id : "gg";
+      } else if (isOwnWork(input.workSource)) {
+        owner = "gg";
+      }
+    }
   }
-  const { pull } = await syncSheetPartStock({
-    parts: input.parts,
-    owner,
+
+  const technicianId = await resolveTechnicianId(input.technician);
+  const { pull, error } = await syncSheetPartStock({
+    parts: completed ? input.parts : "",
+    owner: completed ? owner : "none",
     prevPull: parseSheetStockPull(input.prevMeta.stockPull),
     leadId: input.leadId,
     createdBy: input.createdBy,
+    technicianId,
   });
+  if (error) return { ok: false, error };
+
   const admin = getSupabaseAdmin();
   const { data: lead } = await admin
     .from("leads")
@@ -117,6 +166,8 @@ async function syncPartnerSheetStock(input: {
       updated_at: new Date().toISOString(),
     })
     .eq("id", input.leadId);
+
+  return { ok: true, deducted: Boolean(pull) && completed && Boolean(input.parts.trim()) };
 }
 
 function revalidateSheetSurfaces() {
@@ -151,7 +202,13 @@ async function workOrderNumber(leadId: string): Promise<string> {
 export async function saveSheetRowAction(
   input: SheetSaveInput,
   opts?: { silent?: boolean },
-): Promise<{ ok: boolean; id?: string; error?: string; jobNumber?: string }> {
+): Promise<{
+  ok: boolean;
+  id?: string;
+  error?: string;
+  jobNumber?: string;
+  jobStatus?: string;
+}> {
   const session = await getSessionUser();
   if (!session) return { ok: false, error: "Not signed in" };
 
@@ -229,16 +286,25 @@ export async function saveSheetRowAction(
 
       if (error) return { ok: false, error: error.message };
       try {
-        await syncPartnerSheetStock({
+        const stock = await syncPartnerSheetStock({
           leadId: data!.id,
           workSource: input.workSource,
           partnerName: input.partnerName,
           parts: input.parts,
+          jobStatus: input.jobStatus,
+          technician: input.technician,
           prevMeta: {},
           createdBy: session.id,
         });
-      } catch {
-        /* stock pull is best-effort */
+        if (!stock.ok) {
+          return { ok: false, error: stock.error, id: data!.id };
+        }
+      } catch (err) {
+        return {
+          ok: false,
+          id: data!.id,
+          error: err instanceof Error ? err.message : "Stock update failed",
+        };
       }
       const jobNumber = await workOrderNumber(data!.id);
       if (!opts?.silent) revalidateRelatedSurfaces();
@@ -282,16 +348,41 @@ export async function saveSheetRowAction(
 
     if (error) return { ok: false, error: error.message };
     try {
-      await syncPartnerSheetStock({
+      const stock = await syncPartnerSheetStock({
         leadId: input.id,
         workSource: input.workSource,
         partnerName: input.partnerName,
         parts: input.parts,
+        jobStatus: input.jobStatus,
+        technician: input.technician,
         prevMeta: prev,
         createdBy: session.id,
       });
-    } catch {
-      /* stock pull is best-effort */
+      if (!stock.ok) {
+        // Keep row data, but roll status back so Completed isn't stuck without stock pull.
+        const rollbackStatus = String(prev.jobStatus || "Waiting");
+        const rollbackStage = stageFromSheetStatus(rollbackStatus);
+        await admin
+          .from("leads")
+          .update({
+            metadata: {
+              ...prev,
+              ...meta,
+              jobStatus: rollbackStatus,
+              stockPull: prev.stockPull ?? null,
+            },
+            ...(rollbackStage ? { stage: rollbackStage } : {}),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", input.id);
+        return { ok: false, error: stock.error, id: input.id, jobStatus: rollbackStatus };
+      }
+    } catch (err) {
+      return {
+        ok: false,
+        id: input.id,
+        error: err instanceof Error ? err.message : "Stock update failed",
+      };
     }
     const jobNumber = await workOrderNumber(input.id);
     if (!opts?.silent) revalidateRelatedSurfaces();
