@@ -12,7 +12,7 @@ import {
   sectionIdFromPath,
   unifiedCityHero,
 } from './city-unified.mjs';
-import { localBusinessFields, faqLdJsonScript, breadcrumbLdJsonScript } from './seo-business.mjs';
+import { localBusinessFields, faqLdJsonScript, faqSectionHtml, breadcrumbLdJsonScript } from './seo-business.mjs';
 import { navActiveFromPath, pageTail, siteNav, ctaBlock } from './shared-layout.mjs';
 
 function schemaJson(page) {
@@ -110,6 +110,12 @@ ${siteNav({ logoAlt: `${alt} — home`, active: navActive })}
 ${heroSection}
 
 ${sectionsHtml}
+
+<section class="service-main">
+  <div class="service-main__inner">
+${faqSectionHtml(page)}
+  </div>
+</section>
 
 ${ctaBlock({ title: page.ctaTitle ?? `${cityName} Service Today?`, text: page.ctaText ?? `Call now for same-day garage door service in ${cityName}.` })}
 

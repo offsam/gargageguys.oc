@@ -137,6 +137,29 @@ export const guidePages = [
     ctaTitle: 'Still stuck after these checks?',
     ctaText: 'Call with the brand on the opener rail. We stock common gear kits and sensors.',
     datePublished,
+    howTo: {
+      name: 'Troubleshoot a garage door opener',
+      description:
+        'Safe checks for a garage door opener that will not run, reverses at the floor, or grinds — before you buy a new unit.',
+      steps: [
+        {
+          name: 'Check the springs if the motor runs',
+          text: 'Pull the red release and lift the door by hand. If it feels like a sack of concrete, the springs failed. Stop using the opener until the springs are replaced.',
+        },
+        {
+          name: 'Clean and aim the photo-eye sensors',
+          text: 'If the door goes down a few inches and comes back up, wipe both sensor lenses near the floor. The LEDs should be steady and face each other. Shade a west-facing eye if afternoon sun trips it.',
+        },
+        {
+          name: 'Replace the remote battery',
+          text: 'If the wall button still works, the motor is fine. Put a new battery in the remote. If nothing works, check power to the opener and that the wall-console lock switch is off.',
+        },
+        {
+          name: 'Listen for a grind at the opener head',
+          text: 'A grinding chain-drive opener that still lifts the door often needs a gear kit, not a new machine, if the rail and motor are sound.',
+        },
+      ],
+    },
     faqItems: [
       {
         name: 'Why does my garage door opener click but not move?',
@@ -185,6 +208,29 @@ export const guidePages = [
     ctaTitle: 'Checklist turned up a problem?',
     ctaText: 'Send a photo of the spring or cable. We will tell you if it can wait or needs a same-day stop.',
     datePublished,
+    howTo: {
+      name: 'Seasonal garage door maintenance',
+      description:
+        'Twice-a-year garage door checks: balance, photo eyes, reverse test, lubrication, weather seal, and cables.',
+      steps: [
+        {
+          name: 'Do the balance test',
+          text: 'Open the door, pull the emergency release, and lift by hand. It should stay halfway without slamming. If it drops, the springs are tired.',
+        },
+        {
+          name: 'Wipe photo eyes and test reverse',
+          text: 'Clean the sensor lenses. Put a 2x4 on the floor. The door should hit the board and go back up. If it tries to crush the board, stop using the opener until force and sensors are set.',
+        },
+        {
+          name: 'Lubricate metal rollers and hinges',
+          text: 'Use garage-door lube, not WD-40. Skip nylon rollers. Wipe old grease out of the tracks instead of packing more in.',
+        },
+        {
+          name: 'Check the bottom seal and cables',
+          text: 'Replace the bottom rubber if daylight shows under the door. A few broken cable strands means replace the cable, not tape it.',
+        },
+      ],
+    },
     faqItems: [
       {
         name: 'How often should I lubricate a garage door?',

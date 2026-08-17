@@ -28,10 +28,11 @@ Run migration `202608130003_reviews.sql` in Supabase SQL editor (or CLI).
 3. Add authorized redirect URI: `https://garageguysoc.com/api/auth/google-gbp/callback`.
 4. Visit `/api/auth/google-gbp` while logged in as GBP owner → copy refresh token → `GOOGLE_GBP_REFRESH_TOKEN`.
 5. Set `GOOGLE_GBP_ACCOUNT_ID` and `GOOGLE_GBP_LOCATION_ID` from GBP API account/location list.
-6. Re-run `/api/google-reviews-sync` (Next/BOS deployment uses GBP first, then Places).
+6. Re-run `/api/google-reviews-sync` (GBP first, then Places). The same call pushes hours **7:00–20:00, 7 days** and the service list from `scripts/seo-business.mjs` when a refresh token is present. Profile errors do not fail the review import.
 
 ## Notes
 
-- Service account used for GSC/GA4 does **not** replace GBP OAuth for reviews.
+- Service account used for GSC/GA4 does **not** replace GBP OAuth for reviews or profile writes.
+- Also enable **My Business Business Information API** for hours/services PATCH.
 - Marketing site falls back to hardcoded 74 / 7 if Supabase is empty.
 - New Google reviews create `inbox_items` with `item_type = review` for the office inbox.

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAllPages } from './generate-seo-landing-pages.mjs';
-import { localBusinessFields, faqLdJsonScript, breadcrumbLdJsonScript } from './seo-business.mjs';
+import { localBusinessFields, faqLdJsonScript, faqSectionHtml, breadcrumbLdJsonScript } from './seo-business.mjs';
 import { writeStaticHtml } from './write-static-html.mjs';
 import { OC_CITIES_SERVICE } from './oc-city-content.mjs';
 import { renderPilotServiceAreaPage } from './city-pilot-render.mjs';
@@ -126,6 +126,7 @@ ${heroActionsBlock()}
     <div class="areas-grid">
 ${cards}
     </div>
+${faqSectionHtml({ path: 'service-areas', areaServed: { type: 'AdministrativeArea', name: 'Orange County, California' } })}
     <p class="service-home-link"><a href="/">← Back to Garage Guys home</a></p>
   </div>
 </main>

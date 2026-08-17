@@ -41,6 +41,12 @@ function starRatingToNumber(value: unknown): number | null {
   return null;
 }
 
+function gbpIds() {
+  const accountId = (process.env.GOOGLE_GBP_ACCOUNT_ID?.trim() || "").replace(/^accounts\//, "");
+  const locationId = (process.env.GOOGLE_GBP_LOCATION_ID?.trim() || "").replace(/^locations\//, "");
+  return { accountId, locationId };
+}
+
 async function getGbpAccessToken(): Promise<string> {
   const refreshToken = process.env.GOOGLE_GBP_REFRESH_TOKEN?.trim();
   const { clientId, clientSecret } = gbpOAuthClient();
@@ -70,8 +76,7 @@ async function getGbpAccessToken(): Promise<string> {
 
 /** Google Business Profile reviews.list — full texts + owner replies. */
 export async function fetchGbpReviews(): Promise<GbpAggregate | null> {
-  const accountId = process.env.GOOGLE_GBP_ACCOUNT_ID?.trim();
-  const locationId = process.env.GOOGLE_GBP_LOCATION_ID?.trim();
+  const { accountId, locationId } = gbpIds();
   if (!accountId || !locationId) return null;
   if (
     !process.env.GOOGLE_GBP_REFRESH_TOKEN?.trim() &&
@@ -167,4 +172,146 @@ export async function exchangeGbpOAuthCode(code: string, redirectUri: string) {
     expires_in?: number;
     scope?: string;
   }>;
+}
+
+/** Keep in sync with BUSINESS_HOURS / BUSINESS_SERVICES in scripts/seo-business.mjs */
+const GBP_WEEKDAYS = [
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
+  "SUNDAY",
+] as const;
+
+const GBP_SERVICE_NAMES = [
+  "Garage Door Repair",
+  "Garage Door Spring Repair",
+  "Garage Door Opener Repair",
+  "Garage Door Installation",
+  "Emergency Garage Door Repair",
+  "Same-Day Garage Door Repair",
+];
+
+export type GbpProfilePushResult = {
+  skipped?: boolean;
+  reason?: string;
+  hoursUpdated?: boolean;
+  servicesUpdated?: boolean;
+  error?: string;
+};
+
+type GbpCategory = {
+  name?: string;
+  displayName?: string;
+  serviceTypes?: Array<{ serviceTypeId?: string; displayName?: string }>;
+};
+
+function gbpRegularHours() {
+  return {
+    periods: GBP_WEEKDAYS.map((day) => ({
+      openDay: day,
+      openTime: { hours: 7, minutes: 0 },
+      closeDay: day,
+      closeTime: { hours: 20, minutes: 0 },
+    })),
+  };
+}
+
+function gbpServiceItems(primary?: GbpCategory) {
+  const types = primary?.serviceTypes || [];
+  const categoryId = primary?.name || "";
+  return GBP_SERVICE_NAMES.map((displayName) => {
+    const match = types.find(
+      (type) => type.displayName?.toLowerCase() === displayName.toLowerCase(),
+    );
+    if (match?.serviceTypeId) {
+      return { structuredServiceItem: { serviceTypeId: match.serviceTypeId } };
+    }
+    return {
+      freeFormServiceItem: {
+        ...(categoryId ? { category: categoryId } : {}),
+        label: { displayName, languageCode: "en" },
+      },
+    };
+  });
+}
+
+async function patchGbpLocation(
+  token: string,
+  locationId: string,
+  body: Record<string, unknown>,
+  updateMask: string,
+) {
+  const url = `https://mybusinessbusinessinformation.googleapis.com/v1/locations/${locationId}?updateMask=${encodeURIComponent(updateMask)}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`GBP location PATCH ${updateMask} HTTP ${res.status}: ${(await res.text()).slice(0, 400)}`);
+  }
+}
+
+/**
+ * Push site hours (7:00–20:00, 7 days) and service list to Google Business Profile.
+ * No-ops without owner OAuth. Fail-open: caller should not abort reviews on error.
+ */
+export async function pushGbpHoursAndServices(): Promise<GbpProfilePushResult> {
+  const refreshToken = process.env.GOOGLE_GBP_REFRESH_TOKEN?.trim();
+  const { locationId } = gbpIds();
+  if (!refreshToken || !locationId) {
+    return {
+      skipped: true,
+      reason: "missing GOOGLE_GBP_REFRESH_TOKEN or GOOGLE_GBP_LOCATION_ID",
+    };
+  }
+
+  try {
+    const token = await getGbpAccessToken();
+    const readUrl = `https://mybusinessbusinessinformation.googleapis.com/v1/locations/${locationId}?readMask=${encodeURIComponent("name,regularHours,serviceItems,categories")}`;
+    const readRes = await fetch(readUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    let primary: GbpCategory | undefined;
+    if (readRes.ok) {
+      const loc = (await readRes.json()) as {
+        categories?: { primaryCategory?: GbpCategory };
+      };
+      primary = loc.categories?.primaryCategory;
+    }
+
+    await patchGbpLocation(token, locationId, { regularHours: gbpRegularHours() }, "regularHours");
+
+    let servicesUpdated = false;
+    try {
+      await patchGbpLocation(
+        token,
+        locationId,
+        { serviceItems: gbpServiceItems(primary) },
+        "serviceItems",
+      );
+      servicesUpdated = true;
+    } catch (serviceError) {
+      return {
+        hoursUpdated: true,
+        servicesUpdated: false,
+        error: serviceError instanceof Error ? serviceError.message : String(serviceError),
+      };
+    }
+
+    return { hoursUpdated: true, servicesUpdated };
+  } catch (error) {
+    return {
+      hoursUpdated: false,
+      servicesUpdated: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }

@@ -75,7 +75,9 @@ const homepage = readFileSync(join(root, "public/index.html"), "utf8");
 ok(homepage.includes('"@type": "FAQPage"'), "homepage JSON-LD must include FAQPage");
 ok(homepage.includes('"@type": "HomeRepairService"'), "homepage JSON-LD must include HomeRepairService");
 ok(homepage.includes('"addressLocality": "Newport Beach"'), "homepage schema address must be Newport Beach");
+ok(homepage.includes('"streetAddress": "3848 Campus Dr"'), "homepage JSON-LD must include GBP street");
 ok(homepage.includes("Newport Beach, CA 92660"), "homepage footer NAP must be Newport Beach, CA 92660");
+ok(!/footer-copy">[^<]*Campus/.test(homepage), "homepage footer must not show the street address");
 ok(!homepage.includes("92780"), "homepage must not use the old Tustin ZIP");
 
 const company = readFileSync(join(root, "lib/finance/company.ts"), "utf8");
@@ -86,6 +88,9 @@ const cityLanding = join(root, "public/service-areas/irvine-ca/index.html");
 mustExist("public/service-areas/irvine-ca/index.html");
 const cityHtml = readFileSync(cityLanding, "utf8");
 ok(cityHtml.includes('"@type": "FAQPage"'), "service-areas landing must include FAQPage JSON-LD");
+ok(cityHtml.includes('id="faq"'), "service-areas landing must include visible FAQ HTML");
+ok(cityHtml.includes('"streetAddress": "3848 Campus Dr"'), "landing JSON-LD must include GBP street");
+ok(!/footer-copy">[^<]*Campus/.test(cityHtml), "landing footer must not show the street address");
 ok(cityHtml.includes('rel="canonical"'), "service-areas landing must include a canonical tag");
 ok(
   cityHtml.includes("https://garageguysoc.com/service-areas/irvine-ca/"),
@@ -96,6 +101,7 @@ ok(cityHtml.includes('"@type": "BreadcrumbList"'), "service-areas landing must i
 const problemHtml = readFileSync(join(root, "public/garage-door-wont-open/index.html"), "utf8");
 ok(problemHtml.includes('rel="canonical"'), "problem landing must include a canonical tag");
 ok(problemHtml.includes('"@type": "BreadcrumbList"'), "problem landing must include BreadcrumbList JSON-LD");
+ok(problemHtml.includes('id="faq"'), "problem landing must include visible FAQ HTML");
 
 mustExist("public/garage-door-spring-lifespan/index.html");
 mustExist("public/repair-vs-replace-garage-door/index.html");
@@ -104,7 +110,17 @@ mustExist("public/garage-door-maintenance-checklist/index.html");
 const guideHtml = readFileSync(join(root, "public/garage-door-spring-lifespan/index.html"), "utf8");
 ok(guideHtml.includes('"@type": "Article"'), "guide page must include Article JSON-LD");
 ok(guideHtml.includes('"@type": "FAQPage"'), "guide page must include FAQPage JSON-LD");
+ok(guideHtml.includes('id="faq"'), "guide page must include visible FAQ HTML");
 ok(guideHtml.includes('rel="canonical"'), "guide page must include a canonical tag");
+
+const howtoHtml = readFileSync(join(root, "public/garage-door-maintenance-checklist/index.html"), "utf8");
+ok(howtoHtml.includes('"@type": "HowTo"'), "maintenance checklist must include HowTo JSON-LD");
+ok(howtoHtml.includes("2x4"), "maintenance HowTo must mention the reverse-test board");
+const openerHtml = readFileSync(join(root, "public/garage-door-opener-troubleshooting/index.html"), "utf8");
+ok(openerHtml.includes('"@type": "HowTo"'), "opener troubleshooting must include HowTo JSON-LD");
+
+const gbpLib = readFileSync(join(root, "lib/reviews/gbp.ts"), "utf8");
+ok(gbpLib.includes("pushGbpHoursAndServices"), "GBP lib must push hours and services after OAuth");
 
 const sitemap = readFileSync(join(root, "public/sitemap.xml"), "utf8");
 ok(sitemap.includes("/garage-door-spring-lifespan/"), "sitemap must list spring lifespan guide");
@@ -130,6 +146,8 @@ parseLdJsonBlocks(homepage, "public/index.html");
 parseLdJsonBlocks(cityHtml, "public/service-areas/irvine-ca/index.html");
 parseLdJsonBlocks(problemHtml, "public/garage-door-wont-open/index.html");
 parseLdJsonBlocks(guideHtml, "public/garage-door-spring-lifespan/index.html");
+parseLdJsonBlocks(howtoHtml, "public/garage-door-maintenance-checklist/index.html");
+parseLdJsonBlocks(openerHtml, "public/garage-door-opener-troubleshooting/index.html");
 
 if (fails.length) {
   console.error("SMOKE FAILED:");

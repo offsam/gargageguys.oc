@@ -5,7 +5,7 @@ import {
   type ReviewRow,
 } from "@/lib/reviews/store";
 import { fetchGooglePlaceReviews } from "@/lib/reviews/places";
-import { fetchGbpReviews } from "@/lib/reviews/gbp";
+import { fetchGbpReviews, pushGbpHoursAndServices, type GbpProfilePushResult } from "@/lib/reviews/gbp";
 
 export type SyncResult = {
   ok: boolean;
@@ -15,9 +15,11 @@ export type SyncResult = {
   upserted: number;
   inboxCreated: number;
   error?: string;
+  profile?: GbpProfilePushResult;
 };
 
 export async function syncGoogleReviews(): Promise<SyncResult> {
+  const profile = await pushGbpHoursAndServices();
   try {
     const gbp = await fetchGbpReviews();
     if (gbp) {
@@ -48,6 +50,7 @@ export async function syncGoogleReviews(): Promise<SyncResult> {
         rating: gbp.rating,
         upserted,
         inboxCreated,
+        profile,
       };
     }
 
@@ -80,6 +83,7 @@ export async function syncGoogleReviews(): Promise<SyncResult> {
         rating: places.rating,
         upserted,
         inboxCreated,
+        profile,
       };
     }
 
@@ -92,6 +96,7 @@ export async function syncGoogleReviews(): Promise<SyncResult> {
       inboxCreated: 0,
       error:
         "No Google credentials configured (set GOOGLE_GBP_* for full sync or GOOGLE_PLACES_API_KEY + GOOGLE_PLACE_ID)",
+      profile,
     };
   } catch (error) {
     return {
@@ -102,6 +107,7 @@ export async function syncGoogleReviews(): Promise<SyncResult> {
       upserted: 0,
       inboxCreated: 0,
       error: error instanceof Error ? error.message : String(error),
+      profile,
     };
   }
 }

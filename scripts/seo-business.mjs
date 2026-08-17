@@ -6,16 +6,30 @@ export const BUSINESS_NAME = 'Garage Guys';
 export const BUSINESS_PHONE_E164 = '+19495390009';
 export const BUSINESS_PHONE_DISPLAY = '(949) 539-0009';
 
+/** GBP / schema.org street. Visible footer stays city + ZIP only. */
+export const BUSINESS_STREET = '3848 Campus Dr';
+
 /** Shared LocalBusiness fields for Garage Guys schema.org markup. */
 export const BUSINESS_ADDRESS = {
   '@type': 'PostalAddress',
+  streetAddress: BUSINESS_STREET,
   addressLocality: 'Newport Beach',
   addressRegion: 'CA',
   postalCode: '92660',
   addressCountry: 'US',
 };
 
+/** Visible NAP (footer, invoices, FAQ copy) — no street, by design. */
 export const BUSINESS_LOCATION_DISPLAY = `${BUSINESS_ADDRESS.addressLocality}, ${BUSINESS_ADDRESS.addressRegion} ${BUSINESS_ADDRESS.postalCode}`;
+
+export const BUSINESS_SERVICES = [
+  'Garage Door Repair',
+  'Garage Door Spring Repair',
+  'Garage Door Opener Repair',
+  'Garage Door Installation',
+  'Emergency Garage Door Repair',
+  'Same-Day Garage Door Repair',
+];
 
 export const BUSINESS_GEO = {
   '@type': 'GeoCoordinates',
@@ -72,6 +86,7 @@ export function localBusinessFields(overrides = {}) {
     image: `${SITE_ORIGIN}/favicon-192x192.png`,
     priceRange: '$$',
     address: BUSINESS_ADDRESS,
+    serviceType: BUSINESS_SERVICES,
     geo: BUSINESS_GEO,
     openingHoursSpecification: BUSINESS_HOURS,
     aggregateRating: BUSINESS_RATING,
@@ -152,6 +167,56 @@ export function faqPageJsonLd(page) {
 
 export function faqLdJsonScript(page) {
   return ldJsonScript(faqPageJsonLd(page));
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Visible FAQ matching FAQPage JSON-LD — Google and answer engines read the HTML body. */
+export function faqSectionHtml(page = {}) {
+  const items = Array.isArray(page?.faqItems) && page.faqItems.length ? page.faqItems : landingFaqItems(page);
+  if (!items.length) return '';
+  const rows = items
+    .map(
+      (item) => `    <details class="service-faq__item">
+      <summary>${escapeHtml(item.name)}</summary>
+      <p class="service-faq__answer">${escapeHtml(item.text)}</p>
+    </details>`,
+    )
+    .join('\n');
+  return `    <section class="service-faq" id="faq" aria-label="Frequently asked questions">
+      <h2>Common questions</h2>
+      <div class="service-faq__list">
+${rows}
+      </div>
+    </section>`;
+}
+
+export function howToJsonLd(page) {
+  const howTo = page?.howTo;
+  if (!howTo?.steps?.length) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: howTo.name,
+    description: howTo.description || '',
+    step: howTo.steps.map((step, index) => ({
+      '@type': 'HowToStep',
+      position: index + 1,
+      name: step.name,
+      text: step.text,
+    })),
+  };
+}
+
+export function howToLdJsonScript(page) {
+  const data = howToJsonLd(page);
+  return data ? ldJsonScript(data) : '';
 }
 
 const PATH_CRUMB_LABELS = {

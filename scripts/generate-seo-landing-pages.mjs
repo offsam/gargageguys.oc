@@ -12,7 +12,7 @@ import {
 } from './city-unified.mjs';
 import { renderUnifiedCityPage } from './city-pilot-render.mjs';
 import { loadCityMaps } from './city-maps.mjs';
-import { localBusinessFields, faqLdJsonScript, breadcrumbLdJsonScript, articleLdJsonScript } from './seo-business.mjs';
+import { localBusinessFields, faqLdJsonScript, faqSectionHtml, breadcrumbLdJsonScript, articleLdJsonScript, howToLdJsonScript } from './seo-business.mjs';
 import {
   ctaBlock,
   heroActionsBlock,
@@ -211,6 +211,7 @@ ${heroSection}
     <h2>${page.sectionTitle}</h2>
 ${paragraphs}
 ${trust}${featuresBlock}${related}
+${faqSectionHtml(page)}
     <p class="service-home-link"><a href="/">← Back to Garage Guys home</a></p>
   </div>
 </main>
@@ -256,6 +257,7 @@ ${page.related.map((r) => `        <a href="${r.href}">${r.label}</a>`).join('\n
 <meta name="twitter:description" content="${page.description}">
 ${articleLdJsonScript(page)}
 ${faqLdJsonScript(page)}
+${howToLdJsonScript(page)}
 ${breadcrumbLdJsonScript(page)}
 <meta name="theme-color" content="#0f2340">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -287,6 +289,7 @@ ${heroActionsBlock()}
     <h2>${page.sectionTitle}</h2>
 ${paragraphs}
 ${featuresBlock}${related}
+${faqSectionHtml(page)}
     <p class="service-home-link"><a href="/">← Back to Garage Guys home</a></p>
   </div>
 </main>
