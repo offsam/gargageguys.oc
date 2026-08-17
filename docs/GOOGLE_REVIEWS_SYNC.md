@@ -24,11 +24,10 @@ Run migration `202608130003_reviews.sql` in Supabase SQL editor (or CLI).
 
 ### C. Business Profile API (full reviews + replies → CRM inbox)
 1. Google Cloud OAuth client (Web) — same client as Ads is fine (`GOOGLE_ADS_CLIENT_ID` / `SECRET`). Optional dedicated `GOOGLE_GBP_CLIENT_*`.
-2. Enable **Google Business Profile API**.
+2. Enable **Google Business Profile API**, **My Business Account Management API**, and **My Business Business Information API**.
 3. Add authorized redirect URI: `https://garageguysoc.com/api/auth/google-gbp/callback`.
-4. Visit `/api/auth/google-gbp` while logged in as GBP owner → copy refresh token → `GOOGLE_GBP_REFRESH_TOKEN`.
-5. Set `GOOGLE_GBP_ACCOUNT_ID` and `GOOGLE_GBP_LOCATION_ID` from GBP API account/location list.
-6. Re-run `/api/google-reviews-sync` (GBP first, then Places). The same call pushes hours **7:00–20:00, 7 days** and the service list from `scripts/seo-business.mjs` when a refresh token is present. Profile errors do not fail the review import.
+4. Visit `/api/auth/google-gbp` while logged in as GBP owner. The callback page prints `GOOGLE_GBP_REFRESH_TOKEN`, `GOOGLE_GBP_ACCOUNT_ID`, and `GOOGLE_GBP_LOCATION_ID` — pick the Garage Guys Newport Beach location (3848 Campus Dr).
+5. Paste those three into Vercel Production env, redeploy, then run `/api/google-reviews-sync`. The same call pushes hours **7:00–20:00, 7 days** and the service list from `scripts/seo-business.mjs`. Profile errors do not fail the review import.
 
 ## Notes
 

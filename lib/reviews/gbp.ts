@@ -174,6 +174,146 @@ export async function exchangeGbpOAuthCode(code: string, redirectUri: string) {
   }>;
 }
 
+export type GbpListedLocation = {
+  accountId: string;
+  locationId: string;
+  accountName: string;
+  title: string;
+  address: string;
+};
+
+function stripResource(value: string, prefix: string) {
+  const trimmed = value.trim();
+  return trimmed.startsWith(prefix) ? trimmed.slice(prefix.length) : trimmed;
+}
+
+function formatGbpAddress(address?: {
+  addressLines?: string[];
+  locality?: string;
+  administrativeArea?: string;
+  postalCode?: string;
+}) {
+  if (!address) return "";
+  return [
+    ...(address.addressLines || []),
+    [address.locality, address.administrativeArea, address.postalCode].filter(Boolean).join(", "),
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+async function gbpJson<T>(url: string, accessToken: string): Promise<T | null> {
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) return null;
+  return (await res.json()) as T;
+}
+
+/** After OAuth: list Business Profile accounts/locations so the owner can copy env IDs. */
+export async function listGbpAccountsAndLocations(accessToken: string): Promise<{
+  locations: GbpListedLocation[];
+  error?: string;
+}> {
+  const accountsV1 = await gbpJson<{ accounts?: Array<{ name?: string; accountName?: string }> }>(
+    "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
+    accessToken,
+  );
+  const accountsV4 = accountsV1
+    ? null
+    : await gbpJson<{ accounts?: Array<{ name?: string; accountName?: string }> }>(
+        "https://mybusiness.googleapis.com/v4/accounts",
+        accessToken,
+      );
+  const accounts = accountsV1?.accounts || accountsV4?.accounts || [];
+  if (!accounts.length) {
+    return {
+      locations: [],
+      error:
+        "No Business Profile accounts returned. Enable My Business Account Management API and Google Business Profile API, then retry Allow.",
+    };
+  }
+
+  const locations: GbpListedLocation[] = [];
+  const errors: string[] = [];
+
+  for (const account of accounts) {
+    const accountName = account.name || "";
+    const accountId = stripResource(accountName, "accounts/");
+    if (!accountId) continue;
+
+    const v1 = await gbpJson<{
+      locations?: Array<{
+        name?: string;
+        title?: string;
+        locationName?: string;
+        storefrontAddress?: {
+          addressLines?: string[];
+          locality?: string;
+          administrativeArea?: string;
+          postalCode?: string;
+        };
+        address?: {
+          addressLines?: string[];
+          locality?: string;
+          administrativeArea?: string;
+          postalCode?: string;
+        };
+      }>;
+    }>(
+      `https://mybusinessbusinessinformation.googleapis.com/v1/accounts/${accountId}/locations?readMask=name,title,storefrontAddress&pageSize=100`,
+      accessToken,
+    );
+    const v4 = v1
+      ? null
+      : await gbpJson<{
+          locations?: Array<{
+            name?: string;
+            title?: string;
+            locationName?: string;
+            storefrontAddress?: {
+              addressLines?: string[];
+              locality?: string;
+              administrativeArea?: string;
+              postalCode?: string;
+            };
+            address?: {
+              addressLines?: string[];
+              locality?: string;
+              administrativeArea?: string;
+              postalCode?: string;
+            };
+          }>;
+        }>(`https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations`, accessToken);
+
+    const rows = v1?.locations || v4?.locations || [];
+    if (!rows.length && !v1 && !v4) {
+      errors.push(`Could not list locations for account ${accountId}`);
+      continue;
+    }
+
+    for (const loc of rows) {
+      const rawName = loc.name || "";
+      const locationId = stripResource(rawName.split("/locations/").pop() || rawName, "locations/");
+      if (!locationId) continue;
+      locations.push({
+        accountId,
+        locationId,
+        accountName: account.accountName || accountName,
+        title: loc.title || loc.locationName || "Untitled location",
+        address: formatGbpAddress(loc.storefrontAddress || loc.address),
+      });
+    }
+  }
+
+  if (!locations.length) {
+    return {
+      locations: [],
+      error: errors[0] || "Accounts found, but no locations. Confirm this Google login owns the Garage Guys profile.",
+    };
+  }
+
+  return { locations, error: errors[0] };
+}
+
 /** Keep in sync with BUSINESS_HOURS / BUSINESS_SERVICES in scripts/seo-business.mjs */
 const GBP_WEEKDAYS = [
   "MONDAY",

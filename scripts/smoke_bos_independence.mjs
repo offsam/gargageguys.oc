@@ -121,6 +121,7 @@ ok(openerHtml.includes('"@type": "HowTo"'), "opener troubleshooting must include
 
 const gbpLib = readFileSync(join(root, "lib/reviews/gbp.ts"), "utf8");
 ok(gbpLib.includes("pushGbpHoursAndServices"), "GBP lib must push hours and services after OAuth");
+ok(gbpLib.includes("listGbpAccountsAndLocations"), "GBP OAuth callback must be able to list account/location IDs");
 
 const sitemap = readFileSync(join(root, "public/sitemap.xml"), "utf8");
 ok(sitemap.includes("/garage-door-spring-lifespan/"), "sitemap must list spring lifespan guide");
