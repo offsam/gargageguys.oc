@@ -23,9 +23,9 @@ Run migration `202608130003_reviews.sql` in Supabase SQL editor (or CLI).
    `curl -H "Authorization: Bearer $CRON_SECRET" https://garageguysoc.com/api/google-reviews-sync`
 
 ### C. Business Profile API (full reviews + replies → CRM inbox)
-1. Google Cloud OAuth client (Web) → `GOOGLE_GBP_CLIENT_ID` / `GOOGLE_GBP_CLIENT_SECRET`.
+1. Google Cloud OAuth client (Web) — same client as Ads is fine (`GOOGLE_ADS_CLIENT_ID` / `SECRET`). Optional dedicated `GOOGLE_GBP_CLIENT_*`.
 2. Enable **Google Business Profile API**.
-3. Set redirect URI: `https://garageguysoc.com/api/auth/google-gbp/callback`.
+3. Add authorized redirect URI: `https://garageguysoc.com/api/auth/google-gbp/callback`.
 4. Visit `/api/auth/google-gbp` while logged in as GBP owner → copy refresh token → `GOOGLE_GBP_REFRESH_TOKEN`.
 5. Set `GOOGLE_GBP_ACCOUNT_ID` and `GOOGLE_GBP_LOCATION_ID` from GBP API account/location list.
 6. Re-run `/api/google-reviews-sync` (Next/BOS deployment uses GBP first, then Places).

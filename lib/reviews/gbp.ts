@@ -2,6 +2,15 @@ import { getGoogleAccessToken } from "@/lib/google-auth";
 
 const GBP_SCOPE = "https://www.googleapis.com/auth/business.manage";
 
+/** Dedicated GBP OAuth client, or the Ads web client already on Vercel. */
+function gbpOAuthClient() {
+  const clientId =
+    process.env.GOOGLE_GBP_CLIENT_ID?.trim() || process.env.GOOGLE_ADS_CLIENT_ID?.trim() || "";
+  const clientSecret =
+    process.env.GOOGLE_GBP_CLIENT_SECRET?.trim() || process.env.GOOGLE_ADS_CLIENT_SECRET?.trim() || "";
+  return { clientId, clientSecret };
+}
+
 export type GbpReview = {
   external_id: string;
   author_name: string | null;
@@ -34,8 +43,7 @@ function starRatingToNumber(value: unknown): number | null {
 
 async function getGbpAccessToken(): Promise<string> {
   const refreshToken = process.env.GOOGLE_GBP_REFRESH_TOKEN?.trim();
-  const clientId = process.env.GOOGLE_GBP_CLIENT_ID?.trim();
-  const clientSecret = process.env.GOOGLE_GBP_CLIENT_SECRET?.trim();
+  const { clientId, clientSecret } = gbpOAuthClient();
 
   if (refreshToken && clientId && clientSecret) {
     const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -119,8 +127,10 @@ export async function fetchGbpReviews(): Promise<GbpAggregate | null> {
 }
 
 export function getGbpOAuthAuthUrl(redirectUri: string, state: string) {
-  const clientId = process.env.GOOGLE_GBP_CLIENT_ID?.trim();
-  if (!clientId) throw new Error("GOOGLE_GBP_CLIENT_ID is not configured");
+  const { clientId } = gbpOAuthClient();
+  if (!clientId) {
+    throw new Error("GOOGLE_GBP_CLIENT_ID is not configured (or GOOGLE_ADS_CLIENT_ID as fallback)");
+  }
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -134,10 +144,9 @@ export function getGbpOAuthAuthUrl(redirectUri: string, state: string) {
 }
 
 export async function exchangeGbpOAuthCode(code: string, redirectUri: string) {
-  const clientId = process.env.GOOGLE_GBP_CLIENT_ID?.trim();
-  const clientSecret = process.env.GOOGLE_GBP_CLIENT_SECRET?.trim();
+  const { clientId, clientSecret } = gbpOAuthClient();
   if (!clientId || !clientSecret) {
-    throw new Error("GOOGLE_GBP_CLIENT_ID / GOOGLE_GBP_CLIENT_SECRET missing");
+    throw new Error("GOOGLE_GBP_CLIENT_ID / SECRET missing (or GOOGLE_ADS_CLIENT_ID / SECRET)");
   }
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
