@@ -87,7 +87,7 @@ export async function fetchSearchConsoleMetrics(siteUrl: string, period: SeoPeri
 
   const [totalsRaw, queriesRaw, pagesRaw] = await Promise.all([
     querySearchConsole(siteUrl, baseBody, accessToken),
-    querySearchConsole(siteUrl, { ...baseBody, dimensions: ["query"] }, accessToken),
+    querySearchConsole(siteUrl, { ...baseBody, dimensions: ["query"], rowLimit: 100 }, accessToken),
     querySearchConsole(siteUrl, { ...baseBody, dimensions: ["page"] }, accessToken),
   ]);
 

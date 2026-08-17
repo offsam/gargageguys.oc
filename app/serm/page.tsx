@@ -1,6 +1,6 @@
 import { BosShell } from "@/components/bos/BosShell";
 import { requireRouteAccess } from "@/lib/auth/require";
-import { buildSeoInsights } from "@/lib/seo/insights";
+import { buildSeoInsights, quickWinQueries } from "@/lib/seo/insights";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function SermPage() {
@@ -31,6 +31,7 @@ export default async function SermPage() {
         hasPrevious: Boolean(previous),
       })
     : [];
+  const wins = quickWinQueries(sc.topQueries);
   const ga = (latest?.ga4 || {}) as {
     totals?: { sessions?: number; screenPageViews?: number; users?: number };
     topPages?: Array<{ path: string; sessions: number; screenPageViews: number }>;
@@ -95,6 +96,39 @@ export default async function SermPage() {
               <div className="value">{ga.totals?.users ?? "—"}</div>
             </div>
           </div>
+
+          <h2>Quick wins (positions 11–20)</h2>
+          <p className="seo-insights__lead">
+            These queries already show Garage Guys on page 2. Sorted by impressions. This list does
+            not change ads or pages by itself.
+          </p>
+          {wins.length ? (
+            <table className="bos-table">
+              <thead>
+                <tr>
+                  <th>Query</th>
+                  <th>Clicks</th>
+                  <th>Impressions</th>
+                  <th>Position</th>
+                </tr>
+              </thead>
+              <tbody>
+                {wins.map((row) => (
+                  <tr key={row.key}>
+                    <td>{row.key}</td>
+                    <td>{row.clicks}</td>
+                    <td>{row.impressions}</td>
+                    <td>{row.position?.toFixed?.(1) ?? row.position}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="bos-card">
+              No queries in this snapshot sit at positions 11–20. After the next Search Console
+              sync, anything that lands on page 2 will show here, highest impressions first.
+            </div>
+          )}
 
           <h2>Top queries</h2>
           <table className="bos-table">

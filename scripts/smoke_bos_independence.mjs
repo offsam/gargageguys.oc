@@ -62,6 +62,7 @@ ok(
 
 mustExist("public/llms.txt");
 mustExist("docs/AEO_CITATIONS_CHECKLIST.md");
+mustExist("docs/BACKLINK_OUTREACH_CHECKLIST.md");
 mustExist("scripts/indexnow-ping.mjs");
 mustExist("scripts/indexnow-key.mjs");
 mustExist(`public/${INDEXNOW_KEY}.txt`);
@@ -96,6 +97,24 @@ const problemHtml = readFileSync(join(root, "public/garage-door-wont-open/index.
 ok(problemHtml.includes('rel="canonical"'), "problem landing must include a canonical tag");
 ok(problemHtml.includes('"@type": "BreadcrumbList"'), "problem landing must include BreadcrumbList JSON-LD");
 
+mustExist("public/garage-door-spring-lifespan/index.html");
+mustExist("public/repair-vs-replace-garage-door/index.html");
+mustExist("public/garage-door-opener-troubleshooting/index.html");
+mustExist("public/garage-door-maintenance-checklist/index.html");
+const guideHtml = readFileSync(join(root, "public/garage-door-spring-lifespan/index.html"), "utf8");
+ok(guideHtml.includes('"@type": "Article"'), "guide page must include Article JSON-LD");
+ok(guideHtml.includes('"@type": "FAQPage"'), "guide page must include FAQPage JSON-LD");
+ok(guideHtml.includes('rel="canonical"'), "guide page must include a canonical tag");
+
+const sitemap = readFileSync(join(root, "public/sitemap.xml"), "utf8");
+ok(sitemap.includes("/garage-door-spring-lifespan/"), "sitemap must list spring lifespan guide");
+
+const sermPage = readFileSync(join(root, "app/serm/page.tsx"), "utf8");
+ok(sermPage.includes("quickWinQueries"), "SERM page must show GSC quick-win queries");
+
+const llms = readFileSync(join(root, "public/llms.txt"), "utf8");
+ok(llms.includes("garage-door-spring-lifespan"), "llms.txt must link the spring lifespan guide");
+
 function parseLdJsonBlocks(html, label) {
   const blocks = [...html.matchAll(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/g)];
   ok(blocks.length > 0, `${label} must contain ld+json`);
@@ -110,6 +129,7 @@ function parseLdJsonBlocks(html, label) {
 parseLdJsonBlocks(homepage, "public/index.html");
 parseLdJsonBlocks(cityHtml, "public/service-areas/irvine-ca/index.html");
 parseLdJsonBlocks(problemHtml, "public/garage-door-wont-open/index.html");
+parseLdJsonBlocks(guideHtml, "public/garage-door-spring-lifespan/index.html");
 
 if (fails.length) {
   console.error("SMOKE FAILED:");

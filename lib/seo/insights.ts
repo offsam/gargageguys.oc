@@ -145,3 +145,13 @@ export function buildSeoInsights(input: {
   const rest = insights.filter((row) => row.kind !== "do");
   return [...doFirst, ...rest].slice(0, 5);
 }
+
+/** Queries on page 2 (positions 11–20), highest impressions first. Report only. */
+export function quickWinQueries(queries: SeoQueryRow[] = []): SeoQueryRow[] {
+  return [...queries]
+    .filter((row) => {
+      const pos = n(row.position);
+      return pos >= 11 && pos <= 20;
+    })
+    .sort((a, b) => n(b.impressions) - n(a.impressions));
+}

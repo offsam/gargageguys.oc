@@ -135,10 +135,11 @@ export function landingFaqItems(page = {}) {
 }
 
 export function faqPageJsonLd(page) {
+  const items = Array.isArray(page?.faqItems) && page.faqItems.length ? page.faqItems : landingFaqItems(page);
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: landingFaqItems(page).map((item) => ({
+    mainEntity: items.map((item) => ({
       '@type': 'Question',
       name: item.name,
       acceptedAnswer: {
@@ -165,6 +166,10 @@ const PATH_CRUMB_LABELS = {
   'garage-door-cable-repair': 'Garage Door Cable Repair',
   'garage-door-torsion-spring-repair': 'Garage Door Torsion Spring Repair',
   'garage-door-spring-repair-cost': 'Garage Door Spring Repair Cost',
+  'garage-door-spring-lifespan': 'How Long Garage Door Springs Last',
+  'repair-vs-replace-garage-door': 'Repair vs Replace a Garage Door',
+  'garage-door-opener-troubleshooting': 'Garage Door Opener Troubleshooting',
+  'garage-door-maintenance-checklist': 'Garage Door Maintenance Checklist',
   'service-areas': 'Service Areas',
 };
 
@@ -237,4 +242,35 @@ export function breadcrumbJsonLd(page) {
 
 export function breadcrumbLdJsonScript(page) {
   return ldJsonScript(breadcrumbJsonLd(page));
+}
+
+export function articleJsonLd(page) {
+  const url = pathUrl(page.path);
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: page.h1,
+    description: String(page.schemaDescription || page.description || '').replace(/&amp;/g, '&'),
+    datePublished: page.datePublished || '2026-08-17',
+    dateModified: page.dateModified || page.datePublished || '2026-08-17',
+    author: {
+      '@type': 'Organization',
+      name: BUSINESS_NAME,
+      url: `${SITE_ORIGIN}/`,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: BUSINESS_NAME,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_ORIGIN}/Pictures/Logo.png`,
+      },
+    },
+    mainEntityOfPage: url,
+    url,
+  };
+}
+
+export function articleLdJsonScript(page) {
+  return ldJsonScript(articleJsonLd(page));
 }

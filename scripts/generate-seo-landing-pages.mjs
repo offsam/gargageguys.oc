@@ -5,13 +5,14 @@ import { fileURLToPath } from 'node:url';
 import { buildAllOcCityPages } from './build-city-pages.mjs';
 import { OC_CITY_SLUGS } from './oc-city-content.mjs';
 import { problemPages } from './seo-problem-pages.mjs';
+import { guidePages } from './seo-guide-pages.mjs';
 import { cityHeroBlock, cityNameFromPage, cityStripServiceItems, isCityLandingPage } from './city-hero.mjs';
 import {
   isCityPilotUnifiedPath,
 } from './city-unified.mjs';
 import { renderUnifiedCityPage } from './city-pilot-render.mjs';
 import { loadCityMaps } from './city-maps.mjs';
-import { localBusinessFields, faqLdJsonScript, breadcrumbLdJsonScript } from './seo-business.mjs';
+import { localBusinessFields, faqLdJsonScript, breadcrumbLdJsonScript, articleLdJsonScript } from './seo-business.mjs';
 import {
   ctaBlock,
   heroActionsBlock,
@@ -219,6 +220,82 @@ ${ctaBlock({ title: page.ctaTitle, text: page.ctaText })}
 ${pageTail(alt)}`;
 }
 
+function renderGuidePage(page) {
+  const canonical = `https://garageguysoc.com/${page.path}/`;
+  const paragraphs = page.paragraphs.map((p) => `    <p>${p}</p>`).join('\n');
+  const alt = 'Garage Guys garage door repair Orange County CA';
+  const related = page.related
+    ? `    <div class="service-related">
+      <h3>Related Pages</h3>
+      <div class="service-related__links">
+${page.related.map((r) => `        <a href="${r.href}">${r.label}</a>`).join('\n')}
+      </div>
+    </div>`
+    : '';
+  const featuresBlock = page.features
+    ? `    <ul class="service-features">\n${page.features.map((f) => `      <li>${f}</li>`).join('\n')}\n    </ul>\n`
+    : '';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="format-detection" content="telephone=no">
+<title>${page.title}</title>
+<meta name="description" content="${page.description}">
+<link rel="canonical" href="${canonical}">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Garage Guys">
+<meta property="og:url" content="${canonical}">
+<meta property="og:title" content="${page.ogTitle}">
+<meta property="og:description" content="${page.description}">
+<meta property="og:image" content="https://garageguysoc.com/favicon-192x192.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="${page.ogTitle}">
+<meta name="twitter:description" content="${page.description}">
+${articleLdJsonScript(page)}
+${faqLdJsonScript(page)}
+${breadcrumbLdJsonScript(page)}
+<meta name="theme-color" content="#0f2340">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/service-page.css">
+<script src="/api/analytics.js" defer></script>
+</head>
+<body>
+
+<div class="site-van-bg" aria-hidden="true"></div>
+
+${siteNav({ logoAlt: `${alt} — home`, active: navActiveFromPath(page.path) })}
+
+<header class="service-hero">
+  <div class="service-hero__inner">
+    <div class="service-hero__eyebrow">${page.eyebrow}</div>
+    <h1 class="service-hero__title">${page.h1}</h1>
+    <p class="service-hero__lead">${page.lead}</p>
+${heroActionsBlock()}
+  </div>
+</header>
+
+<main class="service-main">
+  <div class="service-main__inner">
+    <h2>${page.sectionTitle}</h2>
+${paragraphs}
+${featuresBlock}${related}
+    <p class="service-home-link"><a href="/">← Back to Garage Guys home</a></p>
+  </div>
+</main>
+
+${ctaBlock({ title: page.ctaTitle, text: page.ctaText })}
+
+${pageTail(alt)}`;
+}
+
 const pages = [
   {
     path: 'garage-door-repair/orange-county',
@@ -249,7 +326,7 @@ const pages = [
     related: [
       { href: '/garage-door-repair/irvine-ca/', label: 'Garage Door Repair Irvine' },
       { href: '/garage-door-repair/newport-beach-ca/', label: 'Garage Door Repair Newport Beach' },
-      { href: '/', label: 'Garage Guys Home' },
+      { href: '/repair-vs-replace-garage-door/', label: 'Repair vs replace a garage door' },
     ],
     ctaTitle: 'Need Repair in Orange County?',
     ctaText: 'Call now for a free estimate — same-day service available across OC.',
@@ -283,7 +360,7 @@ const pages = [
     ],
     related: [
       { href: '/garage-door-repair/orange-county/', label: 'Garage Door Repair Orange County' },
-      { href: '/garage-door-opener-repair/orange-county/', label: 'Opener Repair Orange County' },
+      { href: '/garage-door-spring-lifespan/', label: 'How long springs last' },
       { href: '/', label: 'Garage Guys Home' },
     ],
     ctaTitle: 'Broken Spring in OC?',
@@ -318,7 +395,7 @@ const pages = [
     ],
     related: [
       { href: '/garage-door-repair/orange-county/', label: 'Garage Door Repair Orange County' },
-      { href: '/garage-door-spring-repair/orange-county/', label: 'Spring Repair Orange County' },
+      { href: '/garage-door-opener-troubleshooting/', label: 'Opener troubleshooting' },
       { href: '/', label: 'Garage Guys Home' },
     ],
     ctaTitle: 'Opener Not Working?',
@@ -1250,9 +1327,15 @@ for (const page of allPages) {
   console.log('wrote', page.path);
 }
 
+for (const page of guidePages) {
+  await writeStaticHtml(page.path, renderGuidePage(page));
+  console.log('wrote', page.path);
+}
+
 const sitemapPaths = ['/', '/garage-door-repair/', '/garage-door-spring-repair/', '/garage-door-opener-repair/', '/deals/', '/book/'];
 for (const oc of OC_LANDING_PATHS) sitemapPaths.push(`/${oc}/`);
 for (const p of PROBLEM_PATHS) sitemapPaths.push(`/${p}/`);
+for (const g of guidePages) sitemapPaths.push(`/${g.path}/`);
 sitemapPaths.push('/service-areas/');
 for (const city of SERVICE_AREA_CITIES) sitemapPaths.push(`/service-areas/${city}/`);
 

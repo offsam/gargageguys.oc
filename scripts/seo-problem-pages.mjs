@@ -40,7 +40,7 @@ export const problemPages = [
     ],
     related: [
       { href: '/broken-garage-door-spring/', label: 'Broken Garage Door Spring' },
-      { href: '/garage-door-off-track/', label: 'Garage Door Off Track' },
+      { href: '/garage-door-opener-troubleshooting/', label: 'Opener troubleshooting' },
       { href: '/', label: 'Garage Guys Home' },
     ],
     ctaTitle: 'Door Won\'t Open?',
@@ -114,7 +114,7 @@ export const problemPages = [
     ],
     related: [
       { href: '/garage-door-torsion-spring-repair/', label: 'Torsion Spring Repair' },
-      { href: '/garage-door-spring-repair-cost/', label: 'Spring Repair Cost' },
+      { href: '/garage-door-spring-lifespan/', label: 'How long springs last' },
       { href: '/', label: 'Garage Guys Home' },
     ],
     ctaTitle: 'Broken Spring?',

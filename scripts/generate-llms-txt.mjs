@@ -32,9 +32,16 @@ export function buildLlmsTxt() {
     ['Garage Door Opener Repair', 'garage-door-opener-repair'],
   ];
   const problemCandidates = problemPages.map((page) => [page.h1.replace(/\?$/, ''), page.path]);
+  const guideCandidates = [
+    ['How long garage door springs last', 'garage-door-spring-lifespan'],
+    ['Repair vs replace a garage door', 'repair-vs-replace-garage-door'],
+    ['Garage door opener troubleshooting', 'garage-door-opener-troubleshooting'],
+    ['Garage door maintenance checklist', 'garage-door-maintenance-checklist'],
+  ];
   const services = [...serviceCandidates, ...problemCandidates]
     .filter(([, dir]) => publicIndex(dir))
     .filter((row, index, list) => list.findIndex((other) => other[1] === row[1]) === index);
+  const guides = guideCandidates.filter(([, dir]) => publicIndex(dir));
 
   const serviceAreaHub = publicIndex('service-areas') ? mdLink('Full city list', 'service-areas') : '';
 
@@ -55,6 +62,10 @@ ${services.map(([label, dir]) => mdLink(label, dir)).join('\n')}
 ## Service areas
 
 ${serviceAreaHub}
+
+## Guides
+
+${guides.map(([label, dir]) => mdLink(label, dir)).join('\n')}
 
 ## Optional
 
