@@ -14,9 +14,12 @@ export function siteNav({ logoAlt = 'Garage Guys — home', active = '' } = {}) 
     <li><a href="/deals/"${cur('deals')}>Deals</a></li>
     <li><a href="/service-areas/"${cur('areas')}>Service Areas</a></li>
   </ul>
-  <a href="/" class="nav-logo">
-    <img src="/Pictures/Logo.png" alt="${logoAlt}">
-  </a>
+  <div class="nav-brand">
+    <a href="/" class="nav-logo">
+      <img src="/Pictures/Logo.png" alt="${logoAlt}">
+    </a>
+    <a href="/login" class="nav-staff" aria-label="Staff"></a>
+  </div>
 </nav>`;
 }
 

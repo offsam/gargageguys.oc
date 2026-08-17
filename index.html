@@ -302,6 +302,24 @@ nav {
   object-fit: contain;
 }
 
+/* Quiet staff entry — looks like a nav fleck, not a button */
+.nav-staff {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+  text-decoration: none;
+  cursor: default;
+  opacity: 0.55;
+}
+.nav-staff:hover,
+.nav-staff:focus-visible {
+  background: rgba(255, 255, 255, 0.38);
+  opacity: 0.9;
+  outline: none;
+}
+
 .nav-brand {
   display: flex;
   align-items: center;
@@ -2912,7 +2930,6 @@ footer {
     <li class="nav-anchor"><a href="#service-area">Areas</a></li>
     <li class="nav-anchor"><a href="#why">Why Us</a></li>
     <li class="nav-anchor"><a href="#contact">Contact</a></li>
-    <li><a href="/login">Login</a></li>
   </ul>
   <div class="nav-brand">
     <a href="/deals/" class="nav-deals-btn">
@@ -2925,6 +2942,7 @@ footer {
     <a href="/" class="nav-logo">
       <img src="Pictures/Logo.png" alt="Garage Guys garage door repair Orange County CA — home">
     </a>
+    <a href="/login" class="nav-staff" aria-label="Staff"></a>
   </div>
 </nav>
 

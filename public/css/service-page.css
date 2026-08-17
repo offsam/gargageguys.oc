@@ -96,6 +96,30 @@ nav {
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
 }
 
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.nav-staff {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+  text-decoration: none;
+  cursor: default;
+  opacity: 0.55;
+}
+.nav-staff:hover,
+.nav-staff:focus-visible {
+  background: rgba(255, 255, 255, 0.38);
+  opacity: 0.9;
+  outline: none;
+}
+
 .nav-logo img {
   height: 52px;
   width: auto;
