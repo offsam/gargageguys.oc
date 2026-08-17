@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev -p 3010",
     "build": "next build",
+    "postbuild": "node scripts/indexnow-ping.mjs",
+    "indexnow": "INDEXNOW_FORCE=1 node scripts/indexnow-ping.mjs",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",

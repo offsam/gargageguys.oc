@@ -12,7 +12,7 @@ import {
   sectionIdFromPath,
   unifiedCityHero,
 } from './city-unified.mjs';
-import { localBusinessFields, faqLdJsonScript } from './seo-business.mjs';
+import { localBusinessFields, faqLdJsonScript, breadcrumbLdJsonScript } from './seo-business.mjs';
 import { navActiveFromPath, pageTail, siteNav, ctaBlock } from './shared-layout.mjs';
 
 function schemaJson(page) {
@@ -88,6 +88,7 @@ export function renderUnifiedCityPage(page, pagesByPath, cityMaps, problemPages 
 ${schemaJson(page)}
 </script>
 ${faqLdJsonScript(page)}
+${breadcrumbLdJsonScript(page)}
 <meta name="theme-color" content="#0f2340">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">

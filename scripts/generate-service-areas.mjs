@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAllPages } from './generate-seo-landing-pages.mjs';
-import { localBusinessFields, faqLdJsonScript } from './seo-business.mjs';
+import { localBusinessFields, faqLdJsonScript, breadcrumbLdJsonScript } from './seo-business.mjs';
 import { writeStaticHtml } from './write-static-html.mjs';
 import { OC_CITIES_SERVICE } from './oc-city-content.mjs';
 import { renderPilotServiceAreaPage } from './city-pilot-render.mjs';
@@ -52,6 +52,7 @@ function headBlock({ title, description, canonical, ogTitle, schema }) {
 ${schema}
 </script>
 ${faqLdJsonScript({ path: 'service-areas', areaServed: { type: 'AdministrativeArea', name: 'Orange County, California' } })}
+${breadcrumbLdJsonScript({ path: 'service-areas', areaServed: { type: 'AdministrativeArea', name: 'Orange County, California' } })}
 </head>
 <body>
 <div class="site-van-bg" data-tone="hero" aria-hidden="true"></div>`;

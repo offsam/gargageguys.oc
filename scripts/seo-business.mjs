@@ -152,3 +152,89 @@ export function faqPageJsonLd(page) {
 export function faqLdJsonScript(page) {
   return ldJsonScript(faqPageJsonLd(page));
 }
+
+const PATH_CRUMB_LABELS = {
+  'garage-door-repair': 'Garage Door Repair',
+  'garage-door-spring-repair': 'Garage Door Spring Repair',
+  'garage-door-opener-repair': 'Garage Door Opener Repair',
+  'emergency-garage-door-repair': 'Emergency Garage Door Repair',
+  'garage-door-wont-open': "Garage Door Won't Open",
+  'garage-door-wont-close': "Garage Door Won't Close",
+  'garage-door-off-track': 'Garage Door Off Track',
+  'broken-garage-door-spring': 'Broken Garage Door Spring',
+  'garage-door-cable-repair': 'Garage Door Cable Repair',
+  'garage-door-torsion-spring-repair': 'Garage Door Torsion Spring Repair',
+  'garage-door-spring-repair-cost': 'Garage Door Spring Repair Cost',
+  'service-areas': 'Service Areas',
+};
+
+function pathUrl(pagePath = '') {
+  const p = String(pagePath).replace(/^\/+|\/+$/g, '');
+  return p ? `${SITE_ORIGIN}/${p}/` : `${SITE_ORIGIN}/`;
+}
+
+function crumbLabel(segment, fallback = '') {
+  return PATH_CRUMB_LABELS[segment] || fallback || segment.replace(/-/g, ' ');
+}
+
+/** Home → Service Areas → Irvine (or problem/county equivalent). */
+export function breadcrumbTrail(page = {}) {
+  const home = { name: 'Home', url: `${SITE_ORIGIN}/` };
+  const path = String(page.path || '').replace(/^\/+|\/+$/g, '');
+  const cityName = page.areaServed?.type === 'City' ? page.areaServed.name : '';
+
+  if (!path) return [home];
+
+  if (path === 'service-areas') {
+    return [home, { name: 'Service Areas', url: pathUrl('service-areas') }];
+  }
+
+  const cityHub = path.match(/^service-areas\/([a-z0-9-]+-ca)$/);
+  if (cityHub) {
+    return [
+      home,
+      { name: 'Service Areas', url: pathUrl('service-areas') },
+      { name: cityName || crumbLabel(cityHub[1]), url: pathUrl(path) },
+    ];
+  }
+
+  const cityService = path.match(/^(garage-door-[a-z0-9-]+)\/([a-z0-9-]+-ca)$/);
+  if (cityService) {
+    return [
+      home,
+      { name: 'Service Areas', url: pathUrl('service-areas') },
+      {
+        name: cityName || crumbLabel(cityService[2]),
+        url: pathUrl(`service-areas/${cityService[2]}`),
+      },
+    ];
+  }
+
+  const county = path.match(/^(garage-door-[a-z0-9-]+|emergency-garage-door-repair)\/orange-county$/);
+  if (county) {
+    return [
+      home,
+      { name: crumbLabel(county[1]), url: pathUrl(county[1]) },
+      { name: 'Orange County', url: pathUrl(path) },
+    ];
+  }
+
+  return [home, { name: crumbLabel(path, page.h1), url: pathUrl(path) }];
+}
+
+export function breadcrumbJsonLd(page) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbTrail(page).map((crumb, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: crumb.name,
+      item: crumb.url,
+    })),
+  };
+}
+
+export function breadcrumbLdJsonScript(page) {
+  return ldJsonScript(breadcrumbJsonLd(page));
+}

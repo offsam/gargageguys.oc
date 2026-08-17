@@ -5,6 +5,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { INDEXNOW_KEY } from "./indexnow-key.mjs";
 
 const root = process.cwd();
 const fails = [];
@@ -61,6 +62,13 @@ ok(
 
 mustExist("public/llms.txt");
 mustExist("docs/AEO_CITATIONS_CHECKLIST.md");
+mustExist("scripts/indexnow-ping.mjs");
+mustExist("scripts/indexnow-key.mjs");
+mustExist(`public/${INDEXNOW_KEY}.txt`);
+ok(
+  readFileSync(join(root, `public/${INDEXNOW_KEY}.txt`), "utf8").trim() === INDEXNOW_KEY,
+  "IndexNow key file must contain the key",
+);
 
 const homepage = readFileSync(join(root, "public/index.html"), "utf8");
 ok(homepage.includes('"@type": "FAQPage"'), "homepage JSON-LD must include FAQPage");
@@ -70,6 +78,16 @@ const cityLanding = join(root, "public/service-areas/irvine-ca/index.html");
 mustExist("public/service-areas/irvine-ca/index.html");
 const cityHtml = readFileSync(cityLanding, "utf8");
 ok(cityHtml.includes('"@type": "FAQPage"'), "service-areas landing must include FAQPage JSON-LD");
+ok(cityHtml.includes('rel="canonical"'), "service-areas landing must include a canonical tag");
+ok(
+  cityHtml.includes("https://garageguysoc.com/service-areas/irvine-ca/"),
+  "Irvine canonical/url must be the city hub",
+);
+ok(cityHtml.includes('"@type": "BreadcrumbList"'), "service-areas landing must include BreadcrumbList JSON-LD");
+
+const problemHtml = readFileSync(join(root, "public/garage-door-wont-open/index.html"), "utf8");
+ok(problemHtml.includes('rel="canonical"'), "problem landing must include a canonical tag");
+ok(problemHtml.includes('"@type": "BreadcrumbList"'), "problem landing must include BreadcrumbList JSON-LD");
 
 function parseLdJsonBlocks(html, label) {
   const blocks = [...html.matchAll(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/g)];
@@ -84,6 +102,7 @@ function parseLdJsonBlocks(html, label) {
 }
 parseLdJsonBlocks(homepage, "public/index.html");
 parseLdJsonBlocks(cityHtml, "public/service-areas/irvine-ca/index.html");
+parseLdJsonBlocks(problemHtml, "public/garage-door-wont-open/index.html");
 
 if (fails.length) {
   console.error("SMOKE FAILED:");
