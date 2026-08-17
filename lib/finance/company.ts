@@ -2,7 +2,7 @@ export const COMPANY = {
   name: "Garage Guys",
   tagline: "Garage Door Repair",
   area: "Orange County, CA",
-  city: "Tustin, CA 92780",
+  city: "Newport Beach, CA 92660",
   phone: "(949) 539-0009",
   phoneHref: "tel:+19495390009",
   website: "garageguysoc.com",

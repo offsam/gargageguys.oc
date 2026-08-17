@@ -9,9 +9,9 @@ export const BUSINESS_PHONE_DISPLAY = '(949) 539-0009';
 /** Shared LocalBusiness fields for Garage Guys schema.org markup. */
 export const BUSINESS_ADDRESS = {
   '@type': 'PostalAddress',
-  addressLocality: 'Tustin',
+  addressLocality: 'Newport Beach',
   addressRegion: 'CA',
-  postalCode: '92780',
+  postalCode: '92660',
   addressCountry: 'US',
 };
 
@@ -19,8 +19,8 @@ export const BUSINESS_LOCATION_DISPLAY = `${BUSINESS_ADDRESS.addressLocality}, $
 
 export const BUSINESS_GEO = {
   '@type': 'GeoCoordinates',
-  latitude: 33.7458,
-  longitude: -117.8261,
+  latitude: 33.6641495,
+  longitude: -117.8724153,
 };
 
 export const BUSINESS_HOURS = {

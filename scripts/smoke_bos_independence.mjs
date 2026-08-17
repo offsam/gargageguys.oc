@@ -73,6 +73,13 @@ ok(
 const homepage = readFileSync(join(root, "public/index.html"), "utf8");
 ok(homepage.includes('"@type": "FAQPage"'), "homepage JSON-LD must include FAQPage");
 ok(homepage.includes('"@type": "HomeRepairService"'), "homepage JSON-LD must include HomeRepairService");
+ok(homepage.includes('"addressLocality": "Newport Beach"'), "homepage schema address must be Newport Beach");
+ok(homepage.includes("Newport Beach, CA 92660"), "homepage footer NAP must be Newport Beach, CA 92660");
+ok(!homepage.includes("92780"), "homepage must not use the old Tustin ZIP");
+
+const company = readFileSync(join(root, "lib/finance/company.ts"), "utf8");
+ok(company.includes('city: "Newport Beach, CA 92660"'), "invoice COMPANY.city must be Newport Beach, CA 92660");
+ok(!company.includes("92780"), "invoice COMPANY must not use the old Tustin ZIP");
 
 const cityLanding = join(root, "public/service-areas/irvine-ca/index.html");
 mustExist("public/service-areas/irvine-ca/index.html");
