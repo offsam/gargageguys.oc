@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { writeStaticHtml, writeStaticFile } from './write-static-html.mjs';
+import { buildLlmsTxt } from './generate-llms-txt.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAllOcCityPages } from './build-city-pages.mjs';
@@ -10,7 +11,7 @@ import {
 } from './city-unified.mjs';
 import { renderUnifiedCityPage } from './city-pilot-render.mjs';
 import { loadCityMaps } from './city-maps.mjs';
-import { localBusinessFields } from './seo-business.mjs';
+import { localBusinessFields, faqLdJsonScript } from './seo-business.mjs';
 import {
   ctaBlock,
   heroActionsBlock,
@@ -184,6 +185,7 @@ ${heroActionsBlock()}
 <script type="application/ld+json">
 ${schemaJson(page)}
 </script>
+${faqLdJsonScript(page)}
 <meta name="theme-color" content="#0f2340">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -1237,15 +1239,13 @@ const cityMaps = await loadCityMaps(cityNames);
 const pagesByPath = new Map(allPages.map((p) => [p.path, p]));
 
 for (const page of allPages) {
-  const dir = path.join(root, page.path);
-  await mkdir(dir, { recursive: true });
   let html;
   if (isCityPilotUnifiedPath(page.path)) {
     html = renderUnifiedCityPage(page, pagesByPath, cityMaps, problemPages);
   } else {
     html = renderPage(page, cityMaps);
   }
-  await writeFile(path.join(dir, 'index.html'), html, 'utf8');
+  await writeStaticHtml(page.path, html);
   console.log('wrote', page.path);
 }
 
@@ -1271,7 +1271,8 @@ for (const p of sitemapPaths) {
   sitemap += `  <url>\n    <loc>https://garageguysoc.com${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${freq}</changefreq>\n    <priority>${pri}</priority>\n  </url>\n`;
 }
 sitemap += '</urlset>\n';
-await writeFile(path.join(root, 'sitemap.xml'), sitemap, 'utf8');
+await writeStaticFile('sitemap.xml', sitemap);
+await writeStaticFile('llms.txt', buildLlmsTxt());
 
 console.log(`Generated ${allPages.length} SEO landing pages. Sitemap: ${sitemapPaths.length} URLs.`);
 }

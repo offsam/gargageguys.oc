@@ -59,6 +59,32 @@ ok(
   "google leads webhook must fail-closed without key",
 );
 
+mustExist("public/llms.txt");
+mustExist("docs/AEO_CITATIONS_CHECKLIST.md");
+
+const homepage = readFileSync(join(root, "public/index.html"), "utf8");
+ok(homepage.includes('"@type": "FAQPage"'), "homepage JSON-LD must include FAQPage");
+ok(homepage.includes('"@type": "HomeRepairService"'), "homepage JSON-LD must include HomeRepairService");
+
+const cityLanding = join(root, "public/service-areas/irvine-ca/index.html");
+mustExist("public/service-areas/irvine-ca/index.html");
+const cityHtml = readFileSync(cityLanding, "utf8");
+ok(cityHtml.includes('"@type": "FAQPage"'), "service-areas landing must include FAQPage JSON-LD");
+
+function parseLdJsonBlocks(html, label) {
+  const blocks = [...html.matchAll(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/g)];
+  ok(blocks.length > 0, `${label} must contain ld+json`);
+  for (const block of blocks) {
+    try {
+      JSON.parse(block[1]);
+    } catch (err) {
+      ok(false, `${label} has invalid JSON-LD: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+}
+parseLdJsonBlocks(homepage, "public/index.html");
+parseLdJsonBlocks(cityHtml, "public/service-areas/irvine-ca/index.html");
+
 if (fails.length) {
   console.error("SMOKE FAILED:");
   for (const f of fails) console.error(` - ${f}`);

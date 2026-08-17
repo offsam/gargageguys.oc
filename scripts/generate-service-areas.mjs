@@ -1,8 +1,9 @@
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAllPages } from './generate-seo-landing-pages.mjs';
-import { localBusinessFields } from './seo-business.mjs';
+import { localBusinessFields, faqLdJsonScript } from './seo-business.mjs';
+import { writeStaticHtml } from './write-static-html.mjs';
 import { OC_CITIES_SERVICE } from './oc-city-content.mjs';
 import { renderPilotServiceAreaPage } from './city-pilot-render.mjs';
 import { problemPages } from './seo-problem-pages.mjs';
@@ -50,6 +51,7 @@ function headBlock({ title, description, canonical, ogTitle, schema }) {
 <script type="application/ld+json">
 ${schema}
 </script>
+${faqLdJsonScript({ path: 'service-areas', areaServed: { type: 'AdministrativeArea', name: 'Orange County, California' } })}
 </head>
 <body>
 <div class="site-van-bg" data-tone="hero" aria-hidden="true"></div>`;
@@ -147,17 +149,13 @@ for (const city of CITIES) {
 const pagesByPath = new Map(buildAllPages().map((p) => [p.path, p]));
 const cityMapsByName = new Map(CITIES.map((c) => [c.name, cityMaps[c.slug]]));
 
-await mkdir(path.join(root, 'service-areas'), { recursive: true });
-await writeFile(path.join(root, 'service-areas/index.html'), renderHub(cityMaps), 'utf8');
+await writeStaticHtml('service-areas', renderHub(cityMaps));
 console.log('wrote service-areas/');
 
 for (const city of CITIES) {
-  const dir = path.join(root, 'service-areas', city.slug);
-  await mkdir(dir, { recursive: true });
-  await writeFile(
-    path.join(dir, 'index.html'),
+  await writeStaticHtml(
+    `service-areas/${city.slug}`,
     renderCityPage(city, pagesByPath, cityMapsByName),
-    'utf8',
   );
   console.log('wrote service-areas/' + city.slug);
 }

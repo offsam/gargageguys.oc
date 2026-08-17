@@ -1,4 +1,4 @@
-import { FOOTER_DISCLAIMER } from './seo-business.mjs';
+import { FOOTER_DISCLAIMER, BUSINESS_PHONE_DISPLAY, BUSINESS_PHONE_E164, BUSINESS_LOCATION_DISPLAY, BUSINESS_NAME } from './seo-business.mjs';
 
 const FAB_PHONE_ICON = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
 
@@ -33,8 +33,8 @@ export function navActiveFromPath(path) {
 
 export function heroActionsBlock() {
   return `    <div class="service-hero__actions">
-      <a href="tel:+19495390009" class="btn-call-now">Call Now</a>
-      <a href="tel:+19495390009" class="service-hero__phone">(949) 539-0009</a>
+      <a href="tel:${BUSINESS_PHONE_E164}" class="btn-call-now">Call Now</a>
+      <a href="tel:${BUSINESS_PHONE_E164}" class="service-hero__phone">${BUSINESS_PHONE_DISPLAY}</a>
       <button type="button" class="btn-callback-inline" data-open-callback>
         Request Callback
         <span>Free Estimate</span>
@@ -46,18 +46,18 @@ export function ctaBlock({ title, text }) {
   return `<section class="service-cta">
   <h2>${title}</h2>
   <p>${text}</p>
-  <a href="tel:+19495390009" class="btn-call-now btn-call-now--cta">Call Now</a>
-  <a href="tel:+19495390009" class="service-cta__phone">(949) 539-0009</a>
+  <a href="tel:${BUSINESS_PHONE_E164}" class="btn-call-now btn-call-now--cta">Call Now</a>
+  <a href="tel:${BUSINESS_PHONE_E164}" class="service-cta__phone">${BUSINESS_PHONE_DISPLAY}</a>
 </section>`;
 }
 
 export function pageTail(logoAlt) {
   return `  <div class="fab-bar" id="fab-bar">
-  <a href="tel:+19495390009" class="fab-call" aria-label="Call (949) 539-0009">
+  <a href="tel:${BUSINESS_PHONE_E164}" class="fab-call" aria-label="Call ${BUSINESS_PHONE_DISPLAY}">
     <span class="fab-call-icon" aria-hidden="true">${FAB_PHONE_ICON}</span>
     <span class="fab-call-text">
       <span class="fab-call-label">Tap to call</span>
-      <span class="fab-call-number">(949) 539-0009</span>
+      <span class="fab-call-number">${BUSINESS_PHONE_DISPLAY}</span>
     </span>
   </a>
   <button type="button" class="fab-callback" data-open-callback aria-label="Request a callback">
@@ -107,7 +107,7 @@ export function pageTail(logoAlt) {
   <a href="/" class="footer-logo">
     <img src="/Pictures/Logo.png" alt="${logoAlt}">
   </a>
-  <div class="footer-copy">© 2026 Garage Guys · <a href="/">Orange County, CA</a></div>
+  <div class="footer-copy">© 2026 ${BUSINESS_NAME} · ${BUSINESS_LOCATION_DISPLAY} · <a href="tel:${BUSINESS_PHONE_E164}">${BUSINESS_PHONE_DISPLAY}</a></div>
   <p class="footer-disclaimer">${FOOTER_DISCLAIMER}</p>
 </footer>
 
