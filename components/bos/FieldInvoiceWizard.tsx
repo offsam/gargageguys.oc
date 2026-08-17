@@ -12,7 +12,7 @@ import {
   saveSignatureAction,
   startPaymentAction,
 } from "@/app/actions/job-invoice";
-import { FIELD_SERVICES, findFieldServiceByName } from "@/lib/field/services-catalog";
+import { FIELD_SERVICES, findFieldServiceByName, withCustomService, type FieldService } from "@/lib/field/services-catalog";
 import {
   money,
   formatJobNumber,
@@ -49,6 +49,7 @@ export function FieldInvoiceWizard({
   stockFrom = "van",
   invoice: initial,
   defaultServiceName = "",
+  services = FIELD_SERVICES,
 }: {
   jobId: string;
   technicianId: string;
@@ -57,6 +58,7 @@ export function FieldInvoiceWizard({
   stockFrom?: "van" | "partner";
   invoice: JobInvoice;
   defaultServiceName?: string;
+  services?: FieldService[];
 }) {
   const router = useRouter();
   const [invoice, setInvoice] = useState(initial);
@@ -64,8 +66,14 @@ export function FieldInvoiceWizard({
   const [error, setError] = useState("");
   const [partId, setPartId] = useState("");
   const [partQty, setPartQty] = useState(1);
+  const catalog = useMemo(() => withCustomService(services), [services]);
   const [serviceId, setServiceId] = useState(
-    () => findFieldServiceByName(defaultServiceName)?.id || "",
+    () =>
+      withCustomService(services).find(
+        (s) => s.name.toLowerCase() === defaultServiceName.trim().toLowerCase(),
+      )?.id ||
+      findFieldServiceByName(defaultServiceName)?.id ||
+      "",
   );
   const [serviceQty, setServiceQty] = useState(1);
   const [customName, setCustomName] = useState("");
@@ -105,8 +113,8 @@ export function FieldInvoiceWizard({
   const active = stepIndex(invoice.status);
 
   const selectedService = useMemo(
-    () => FIELD_SERVICES.find((s) => s.id === serviceId),
-    [serviceId],
+    () => catalog.find((s) => s.id === serviceId),
+    [catalog, serviceId],
   );
 
   function run(action: () => Promise<{ ok: boolean; error?: string; invoice?: JobInvoice }>) {
@@ -292,7 +300,7 @@ export function FieldInvoiceWizard({
           <div className="inv-row">
             <select value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
               <option value="">Service…</option>
-              {FIELD_SERVICES.map((s) => (
+              {catalog.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                   {s.unitPriceCents ? ` · ${money(s.unitPriceCents)}` : ""}

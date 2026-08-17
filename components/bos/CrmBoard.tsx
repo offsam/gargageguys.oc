@@ -14,6 +14,7 @@ import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
 import { FIELD_SERVICES } from "@/lib/field/services-catalog";
+import { applyServicePriceToJobCost, parseMoney } from "@/lib/sheet/money";
 import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/ScheduleLeadModal";
 
 export type CrmLeadCard = {
@@ -52,6 +53,13 @@ const LEAD_SOURCES = [
   "Thumbtack",
   "Yelp",
 ] as const;
+
+const CRM_SERVICE_LIST_ID = "crm-service-list";
+
+export type CrmServiceOption = {
+  name: string;
+  unitPrice: string;
+};
 
 const PAYMENT_TYPES = ["", "Credit Card", "Venmo", "Zelle", "Cash", "Check"] as const;
 
@@ -114,10 +122,12 @@ export function CrmBoard({
   leads: initialLeads,
   technicians = [],
   stockParts = [],
+  catalogServices = [],
 }: {
   leads: CrmLeadCard[];
   technicians?: CrmTechnician[];
   stockParts?: string[];
+  catalogServices?: CrmServiceOption[];
 }) {
   const router = useRouter();
   const [leads, setLeads] = useState(initialLeads);
@@ -130,6 +140,7 @@ export function CrmBoard({
   const [scheduleLead, setScheduleLead] = useState<CrmLeadCard | null>(null);
   const [scheduleError, setScheduleError] = useState("");
   const [liveNotice, setLiveNotice] = useState("");
+  const [extraServices, setExtraServices] = useState<CrmServiceOption[]>([]);
   const seenIds = useRef(new Set(initialLeads.map((l) => l.id)));
   const firstSync = useRef(true);
 
@@ -263,6 +274,67 @@ export function CrmBoard({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  const allCatalogServices = useMemo(() => {
+    const map = new Map<string, CrmServiceOption>();
+    const seed =
+      catalogServices.length > 0
+        ? catalogServices
+        : FIELD_SERVICES.filter((s) => s.id !== "svc-custom").map((s) => ({
+            name: s.name,
+            unitPrice: s.unitPriceCents > 0 ? (s.unitPriceCents / 100).toFixed(2) : "",
+          }));
+    for (const svc of [...seed, ...extraServices]) {
+      const name = svc.name.trim();
+      if (!name) continue;
+      map.set(name.toLowerCase(), { name, unitPrice: svc.unitPrice || "" });
+    }
+    if (form.service.trim() && !map.has(form.service.trim().toLowerCase())) {
+      map.set(form.service.trim().toLowerCase(), { name: form.service.trim(), unitPrice: "" });
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [catalogServices, extraServices, form.service]);
+
+  const servicePriceByName = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const svc of allCatalogServices) {
+      const n = parseMoney(svc.unitPrice);
+      if (n > 0) map.set(svc.name.toLowerCase(), n);
+    }
+    return map;
+  }, [allCatalogServices]);
+
+  function rememberService(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const known =
+      catalogServices.some((s) => s.name.toLowerCase() === trimmed.toLowerCase()) ||
+      extraServices.some((s) => s.name.toLowerCase() === trimmed.toLowerCase());
+    if (known) return;
+    setExtraServices((prev) =>
+      prev.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())
+        ? prev
+        : [...prev, { name: trimmed, unitPrice: "" }],
+    );
+    void fetch("/api/sheet/services", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    }).catch(() => {});
+  }
+
+  function setService(raw: string, persistName: boolean) {
+    setForm((prev) => {
+      const jobCost = applyServicePriceToJobCost(
+        prev.jobCost,
+        prev.service,
+        raw.trim(),
+        servicePriceByName,
+      );
+      return { ...prev, service: persistName ? raw.trim() : raw, jobCost };
+    });
+    if (persistName && raw.trim()) rememberService(raw);
+  }
+
   function submitAdd(e: React.FormEvent) {
     e.preventDefault();
     setFormError("");
@@ -271,6 +343,7 @@ export function CrmBoard({
       setFormError(blocked);
       return;
     }
+    rememberService(form.service);
     const fd = new FormData();
     for (const [key, value] of Object.entries(form)) {
       fd.set(key, value);
@@ -501,20 +574,18 @@ export function CrmBoard({
               </label>
               <label>
                 Service
-                <select
+                <input
+                  list={CRM_SERVICE_LIST_ID}
                   value={form.service}
-                  onChange={(e) => setField("service", e.target.value)}
-                >
-                  <option value="">—</option>
-                  {FIELD_SERVICES.map((s) => (
-                    <option key={s.id} value={s.name}>
-                      {s.name}
-                    </option>
+                  onChange={(e) => setService(e.target.value, false)}
+                  onBlur={(e) => setService(e.currentTarget.value, true)}
+                  placeholder="Pick or type a service…"
+                />
+                <datalist id={CRM_SERVICE_LIST_ID}>
+                  {allCatalogServices.map((s) => (
+                    <option key={s.name} value={s.name} />
                   ))}
-                  {form.service && !FIELD_SERVICES.some((s) => s.name === form.service) ? (
-                    <option value={form.service}>{form.service}</option>
-                  ) : null}
-                </select>
+                </datalist>
               </label>
               <label>
                 Parts

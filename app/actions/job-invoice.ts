@@ -9,6 +9,7 @@ import { loadStockState } from "@/lib/stock/store";
 import { pickLeadWorkMeta, resolveJobStockSource } from "@/lib/stock/job-source";
 import { listPartnersAction } from "@/app/actions/partners";
 import { findFieldService } from "@/lib/field/services-catalog";
+import { findServiceInList, loadServices, upsertService } from "@/lib/field/service-store";
 import {
   ensureJobInvoice,
   formatJobNumber,
@@ -137,7 +138,8 @@ export async function addServiceToInvoiceAction(formData: FormData) {
 
   if (!jobId || !serviceId) return { ok: false as const, error: "Missing service" };
 
-  const service = findFieldService(serviceId);
+  const catalog = await loadServices().catch(() => []);
+  const service = findServiceInList(catalog, serviceId) || findFieldService(serviceId);
   if (!service) return { ok: false as const, error: "Unknown service" };
 
   const invoice = await ensureJobInvoice({ jobId, createdBy: session.id });
@@ -153,6 +155,10 @@ export async function addServiceToInvoiceAction(formData: FormData) {
 
   if (isCustom && unitCents <= 0) {
     return { ok: false as const, error: "Set a price for custom service" };
+  }
+
+  if (isCustom && customName) {
+    await upsertService({ name: customName, unitPriceCents: unitCents }).catch(() => null);
   }
 
   const line: InvoiceLine = {

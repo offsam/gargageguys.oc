@@ -11,6 +11,8 @@ import { getFieldAttentionCount } from "@/lib/field/load-attention";
 import { ensureJobInvoice, formatJobNumber } from "@/lib/field/job-invoice";
 import { listPartnersAction } from "@/app/actions/partners";
 import { pickLeadWorkMeta, resolveJobStockSource } from "@/lib/stock/job-source";
+import { loadServices } from "@/lib/field/service-store";
+import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 import { sheetServiceFromLead } from "@/lib/sheet/issue-service";
 
 export default async function FieldJobPage({
@@ -30,12 +32,13 @@ export default async function FieldJobPage({
   }
 
   const techId = user.role === "technician" ? user.id : job.technician_id || user.id;
-  const [state, partners, leadRow] = await Promise.all([
+  const [state, partners, leadRow, catalog] = await Promise.all([
     ensureStockSeeded(techId),
     listPartnersAction(),
     job.lead_id
       ? supabase.from("leads").select("metadata").eq("id", job.lead_id).maybeSingle()
       : Promise.resolve({ data: null }),
+    loadServices().catch(() => FIELD_SERVICES.filter((s) => s.id !== "svc-custom")),
   ]);
   const leadMeta =
     leadRow.data?.metadata && typeof leadRow.data.metadata === "object"
@@ -134,6 +137,7 @@ export default async function FieldJobPage({
           stockFrom={stockSource.from}
           invoice={invoice}
           defaultServiceName={sheetServiceFromLead(leadMeta)}
+          services={catalog}
         />
       ) : (
         <section className="field-section">

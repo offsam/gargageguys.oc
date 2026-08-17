@@ -35,4 +35,24 @@ export function findFieldServiceByName(name: string) {
   return FIELD_SERVICES.find((s) => s.name.toLowerCase() === needle) || null;
 }
 
+export const CUSTOM_FIELD_SERVICE =
+  FIELD_SERVICES.find((s) => s.id === "svc-custom") ||
+  ({
+    id: "svc-custom",
+    name: "Custom service (set price)",
+    unitPriceCents: 0,
+    category: "Other",
+  } satisfies FieldService);
+
 export const FIELD_SERVICE_NAMES = FIELD_SERVICES.map((s) => s.name);
+
+export function withCustomService(list: FieldService[]): FieldService[] {
+  const seen = new Set<string>();
+  const out: FieldService[] = [];
+  for (const item of [...list, CUSTOM_FIELD_SERVICE]) {
+    if (!item?.id || seen.has(item.id)) continue;
+    seen.add(item.id);
+    out.push(item);
+  }
+  return out;
+}

@@ -10,7 +10,7 @@ import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/Schedule
 import { scheduleCrmLeadAction } from "@/app/actions/crm";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
 import { SHEET_STATUSES, completeBlockedReason } from "@/lib/leads/stage-sync";
-import { FIELD_SERVICE_NAMES } from "@/lib/field/services-catalog";
+import { FIELD_SERVICES, FIELD_SERVICE_NAMES } from "@/lib/field/services-catalog";
 import {
   formatPartsLines,
   parsePartsLines,
@@ -29,6 +29,7 @@ import {
   type SheetPartner,
 } from "@/lib/sheet/work-source";
 import {
+  applyServicePriceToJobCost,
   bankFeeFor,
   clearProfitFor,
   effectiveTechPay,
@@ -85,6 +86,7 @@ const SORT_STORAGE_KEY = "bos-sheet-date-sort";
 const PERIOD_STORAGE_KEY = "bos-sheet-period-v1";
 const LEAD_SOURCE_LIST_ID = "sheet-lead-source-list";
 const PARTNER_LIST_ID = "sheet-partner-list";
+const SERVICE_LIST_ID = "sheet-service-list";
 
 type SheetPeriod =
   | "week"
@@ -131,7 +133,7 @@ const COLUMNS: Array<{
   { key: "clientAddress", label: "Address", width: 200 },
   { key: "jobStatus", label: "Status", width: 140, kind: "select", options: "status" },
   { key: "jobType", label: "Issue", width: 180 },
-  { key: "service", label: "Service", width: 200, kind: "select", options: "service" },
+  { key: "service", label: "Service", width: 200, kind: "combo", options: "service" },
   { key: "parts", label: "Parts", width: 220 },
   { key: "jobCost", label: "Job cost", width: 100, money: true },
   { key: "paymentType", label: "Payment type", width: 140, kind: "select", options: "payment" },
@@ -493,6 +495,11 @@ function cellMutedClass(
   return parts.filter(Boolean).join(" ") || undefined;
 }
 
+export type SheetServiceOption = {
+  name: string;
+  unitPrice: string;
+};
+
 export function SheetTable({
   rows: initialRows,
   technicians,
@@ -500,6 +507,7 @@ export function SheetTable({
   stockParts = [],
   partnerStockParts = {},
   partners = [],
+  catalogServices = [],
 }: {
   rows: SheetRow[];
   technicians: string[];
@@ -509,6 +517,7 @@ export function SheetTable({
   /** Parts + on-hand qty keyed by partner display name (own-stock partners). */
   partnerStockParts?: Record<string, StockPartOption[]>;
   partners?: SheetPartner[];
+  catalogServices?: SheetServiceOption[];
 }) {
   useBosLiveRefresh(["leads", "jobs"]);
   const router = useRouter();
@@ -521,6 +530,7 @@ export function SheetTable({
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [partsPickerRowId, setPartsPickerRowId] = useState<string | null>(null);
+  const [extraServices, setExtraServices] = useState<SheetServiceOption[]>([]);
   const [scheduleRow, setScheduleRow] = useState<SheetRow | null>(null);
   const [scheduleError, setScheduleError] = useState("");
   const [headerAside, setHeaderAside] = useState<HTMLElement | null>(null);
@@ -952,6 +962,39 @@ export function SheetTable({
     void drainPersist(key);
   }
 
+  function rememberService(name: string, unitPrice = "") {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const known =
+      catalogServices.some((s) => s.name.toLowerCase() === trimmed.toLowerCase()) ||
+      extraServices.some((s) => s.name.toLowerCase() === trimmed.toLowerCase());
+    if (known) return;
+    setExtraServices((prev) =>
+      prev.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())
+        ? prev
+        : [...prev, { name: trimmed, unitPrice }],
+    );
+    void fetch("/api/sheet/services", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    }).catch(() => {});
+  }
+
+  function commitService(rowId: string, rawName: string, save: boolean) {
+    const row = rowsRef.current.find((r) => rowKey(r) === rowId || r.id === rowId);
+    if (!row) return;
+    const name = save ? rawName.trim() : rawName;
+    const jobCost = applyServicePriceToJobCost(
+      row.jobCost,
+      row.service,
+      name.trim(),
+      servicePriceByName,
+    );
+    patchRow(row.id, { service: name, jobCost }, save);
+    if (save && name.trim()) rememberService(name.trim());
+  }
+
   function patchRow(rowId: string, patch: Partial<SheetRow>, save: boolean) {
     let key = rowId;
     setRows((prev) => {
@@ -1110,6 +1153,42 @@ export function SheetTable({
     }
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [partners, rows]);
+
+  const allCatalogServices = useMemo(() => {
+    const map = new Map<string, SheetServiceOption>();
+    const seed =
+      catalogServices.length > 0
+        ? catalogServices
+        : FIELD_SERVICES.filter((s) => s.id !== "svc-custom").map((s) => ({
+            name: s.name,
+            unitPrice: s.unitPriceCents > 0 ? (s.unitPriceCents / 100).toFixed(2) : "",
+          }));
+    for (const svc of [...seed, ...extraServices]) {
+      const name = svc.name.trim();
+      if (!name) continue;
+      map.set(name.toLowerCase(), { name, unitPrice: svc.unitPrice || "" });
+    }
+    for (const row of rows) {
+      const name = row.service.trim();
+      if (!name) continue;
+      if (!map.has(name.toLowerCase())) map.set(name.toLowerCase(), { name, unitPrice: "" });
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [catalogServices, extraServices, rows]);
+
+  const servicePriceByName = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const svc of allCatalogServices) {
+      const n = money(svc.unitPrice);
+      if (n > 0) map.set(svc.name.toLowerCase(), n);
+    }
+    return map;
+  }, [allCatalogServices]);
+
+  const serviceSuggestions = useMemo(
+    () => allCatalogServices.map((s) => s.name),
+    [allCatalogServices],
+  );
 
   const activeRange = useMemo(
     () => periodRange(period, customFrom, customTo),
@@ -1280,6 +1359,11 @@ export function SheetTable({
       </datalist>
       <datalist id={PARTNER_LIST_ID}>
         {partnerSuggestions.map((opt) => (
+          <option key={opt} value={opt} />
+        ))}
+      </datalist>
+      <datalist id={SERVICE_LIST_ID}>
+        {serviceSuggestions.map((opt) => (
           <option key={opt} value={opt} />
         ))}
       </datalist>
@@ -1547,21 +1631,42 @@ export function SheetTable({
                             list={
                               col.key === "partnerName"
                                 ? PARTNER_LIST_ID
-                                : col.options === "leadSource"
-                                  ? LEAD_SOURCE_LIST_ID
-                                  : undefined
+                                : col.key === "service"
+                                  ? SERVICE_LIST_ID
+                                  : col.options === "leadSource"
+                                    ? LEAD_SOURCE_LIST_ID
+                                    : undefined
                             }
                             value={row[col.key]}
-                            placeholder={editable ? "Pick or type…" : ""}
+                            placeholder={
+                              editable
+                                ? col.key === "service"
+                                  ? "Pick or type a service…"
+                                  : "Pick or type…"
+                                : ""
+                            }
                             disabled={!editable}
                             readOnly={!editable}
                             tabIndex={editable ? 0 : -1}
                             onChange={(e) => {
                               if (!editable) return;
+                              if (col.key === "service") {
+                                const raw = e.target.value;
+                                if (servicePriceByName.has(raw.trim().toLowerCase())) {
+                                  commitService(rowKey(row), raw, false);
+                                } else {
+                                  patchRow(row.id, { service: raw }, false);
+                                }
+                                return;
+                              }
                               patchRow(row.id, { [col.key]: e.target.value }, false);
                             }}
-                            onBlur={() => {
+                            onBlur={(e) => {
                               if (!editable) return;
+                              if (col.key === "service") {
+                                commitService(rowKey(row), e.currentTarget.value, true);
+                                return;
+                              }
                               queuePersistNow(rowKey(row));
                             }}
                           />

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  applyServicePriceToJobCost,
   bankFeeFor,
   clearProfitFor,
   effectiveTechPay,
@@ -100,6 +101,34 @@ describe("effectiveTechPay", () => {
         partsCost: "",
       }),
       250,
+    );
+  });
+});
+
+describe("applyServicePriceToJobCost", () => {
+  const prices = new Map<string, number>([
+    ["tune-up / lubrication", 99],
+    ["cable replacement", 189],
+  ]);
+
+  it("fills empty job cost from catalog price", () => {
+    assert.equal(
+      applyServicePriceToJobCost("", "", "Tune-up / lubrication", prices),
+      "99.00",
+    );
+  });
+
+  it("replaces auto-filled previous service price", () => {
+    assert.equal(
+      applyServicePriceToJobCost("99.00", "Tune-up / lubrication", "Cable replacement", prices),
+      "189.00",
+    );
+  });
+
+  it("leaves a manually typed job cost alone", () => {
+    assert.equal(
+      applyServicePriceToJobCost("450", "Tune-up / lubrication", "Cable replacement", prices),
+      "450",
     );
   });
 });

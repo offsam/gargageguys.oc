@@ -87,3 +87,26 @@ export function effectiveTechPay(row: SheetMoneyRow): number {
   }
   return pay;
 }
+
+/**
+ * Fill job cost from a priced catalog service when the cell is empty
+ * or still holds the previous service's auto price.
+ */
+export function applyServicePriceToJobCost(
+  jobCost: string,
+  previousService: string,
+  nextService: string,
+  priceByName: Map<string, number>,
+): string {
+  const prevPrice = priceByName.get(previousService.trim().toLowerCase()) || 0;
+  const nextPrice = priceByName.get(nextService.trim().toLowerCase()) || 0;
+  const current = parseMoney(jobCost);
+  if (!nextService.trim()) {
+    if (prevPrice > 0 && Math.abs(current - prevPrice) < 0.009) return "";
+    return jobCost;
+  }
+  if (nextPrice <= 0) return jobCost;
+  if (current === 0) return formatFee(nextPrice);
+  if (prevPrice > 0 && Math.abs(current - prevPrice) < 0.009) return formatFee(nextPrice);
+  return jobCost;
+}

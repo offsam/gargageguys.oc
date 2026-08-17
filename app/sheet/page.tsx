@@ -6,6 +6,8 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { loadStockState, masterQty, partnerMasterQty } from "@/lib/stock/store";
 import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
 import { listPartnersAction } from "@/app/actions/partners";
+import { loadServices } from "@/lib/field/service-store";
+import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
 import { sheetIssueFromLead, sheetServiceFromLead } from "@/lib/sheet/issue-service";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
@@ -30,7 +32,7 @@ export default async function SheetPage() {
   const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();
 
-  const [{ data: leads }, { data: techProfiles }, { data: jobsForNumbers }, stockState, partners] =
+  const [{ data: leads }, { data: techProfiles }, { data: jobsForNumbers }, stockState, partners, catalog] =
     await Promise.all([
     supabase
       .from("leads")
@@ -53,6 +55,7 @@ export default async function SheetPage() {
       .limit(500),
     loadStockState().catch(() => null),
     listPartnersAction(),
+    loadServices().catch(() => FIELD_SERVICES.filter((s) => s.id !== "svc-custom")),
   ]);
 
   const jobNumberByLead = new Map<string, string>();
@@ -192,6 +195,10 @@ export default async function SheetPage() {
         stockParts={stockParts}
         partnerStockParts={partnerStockParts}
         partners={partnerOpts}
+        catalogServices={catalog.map((s) => ({
+          name: s.name,
+          unitPrice: s.unitPriceCents > 0 ? (s.unitPriceCents / 100).toFixed(2) : "",
+        }))}
       />
     </BosShell>
   );

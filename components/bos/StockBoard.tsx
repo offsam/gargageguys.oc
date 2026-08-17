@@ -9,7 +9,8 @@ import {
   receiveStockAction,
   saveItemCostAction,
 } from "@/app/actions/stock";
-import { FIELD_SERVICES } from "@/lib/field/services-catalog";
+import { saveServicePriceAction, upsertServiceAction } from "@/app/actions/services";
+import type { FieldService } from "@/lib/field/services-catalog";
 
 export type StockRow = {
   id: string;
@@ -36,6 +37,7 @@ const CATEGORY_ORDER = [
   "Genie",
   "Marantec",
   "Hinges/Brackets",
+  "Services",
 ];
 
 function sortCategories(cats: string[]) {
@@ -57,10 +59,14 @@ function CostCell({
   itemId,
   cents,
   onSaved,
+  saveAction = saveItemCostAction,
+  ariaLabel = "Unit cost",
 }: {
   itemId: string;
   cents: number;
   onSaved: (itemId: string, cents: number) => void;
+  saveAction?: (fd: FormData) => Promise<unknown>;
+  ariaLabel?: string;
 }) {
   const [value, setValue] = useState(money(cents));
   const [saved, setSaved] = useState(false);
@@ -87,7 +93,7 @@ function CostCell({
       const fd = new FormData();
       fd.set("itemId", itemId);
       fd.set("unitCost", money(nextCents));
-      await saveItemCostAction(fd);
+      await saveAction(fd);
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1200);
     });
@@ -109,7 +115,7 @@ function CostCell({
             e.currentTarget.blur();
           }
         }}
-        aria-label="Unit cost"
+        aria-label={ariaLabel}
       />
     </label>
   );
@@ -127,6 +133,7 @@ export function StockBoard({
   ownerTotals = {},
   partnerWarehouseCount = 0,
   notice = "",
+  services = [],
 }: {
   rows: StockRow[];
   technicians: Tech[];
@@ -139,6 +146,7 @@ export function StockBoard({
   ownerTotals?: Record<string, number>;
   partnerWarehouseCount?: number;
   notice?: string;
+  services?: FieldService[];
 }) {
   const router = useRouter();
   const partnerMode = stockOwner !== "gg";
@@ -149,13 +157,21 @@ export function StockBoard({
   const [openActionId, setOpenActionId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState("");
+  const [addCategory, setAddCategory] = useState("Misc");
   const [costs, setCosts] = useState<Record<string, number>>(() =>
     Object.fromEntries(rows.map((r) => [r.id, r.unitCostCents])),
+  );
+  const [servicePrices, setServicePrices] = useState<Record<string, number>>(() =>
+    Object.fromEntries(services.map((s) => [s.id, s.unitPriceCents])),
   );
 
   useEffect(() => {
     setCosts(Object.fromEntries(rows.map((r) => [r.id, r.unitCostCents])));
   }, [rows]);
+
+  useEffect(() => {
+    setServicePrices(Object.fromEntries(services.map((s) => [s.id, s.unitPriceCents])));
+  }, [services]);
 
   const categories = useMemo(() => {
     const fromRows = sortCategories([...new Set(rows.map((r) => r.category).filter(Boolean))]);
@@ -187,15 +203,16 @@ export function StockBoard({
 
   const serviceGroups = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    const services = FIELD_SERVICES.filter((s) => s.id !== "svc-custom").filter((s) => {
+    const list = services.filter((s) => {
       if (!needle) return true;
       return `${s.name} ${s.category}`.toLowerCase().includes(needle);
     });
-    const map = new Map<string, typeof services>();
-    for (const service of services) {
-      const list = map.get(service.category) || [];
-      list.push(service);
-      map.set(service.category, list);
+    const map = new Map<string, FieldService[]>();
+    for (const service of list) {
+      const cat = service.category || "Service";
+      const group = map.get(cat) || [];
+      group.push(service);
+      map.set(cat, group);
     }
     return [...map.keys()]
       .sort((a, b) => a.localeCompare(b))
@@ -203,7 +220,7 @@ export function StockBoard({
         cat,
         items: (map.get(cat) || []).slice().sort((a, b) => a.name.localeCompare(b.name)),
       }));
-  }, [q]);
+  }, [q, services]);
 
   const inventoryValue = useMemo(() => {
     if (!showPrices) return 0;
@@ -228,14 +245,19 @@ export function StockBoard({
   function submitNewItem(form: HTMLFormElement) {
     setAddError("");
     const fd = new FormData(form);
-    if (partnerMode) fd.set("partnerId", stockOwner);
+    const addingService = String(fd.get("category") || "") === "Services";
+    if (addingService) fd.set("category", "Service");
+    if (partnerMode && !addingService) fd.set("partnerId", stockOwner);
     startTransition(async () => {
-      const result = await createStockItemAction(fd);
+      const result = addingService
+        ? await upsertServiceAction(fd)
+        : await createStockItemAction(fd);
       if (!result.ok) {
         setAddError(result.error || "Could not add item");
         return;
       }
       form.reset();
+      setAddCategory("Misc");
       setAddOpen(false);
       router.refresh();
     });
@@ -251,6 +273,7 @@ export function StockBoard({
 
   const showOwnerTabs = !isTechOnly || stockOwners.length > 1;
   const techVanOnly = isTechOnly;
+  const addingService = addCategory === "Services";
 
   return (
     <div className="stock-board">
@@ -339,6 +362,7 @@ export function StockBoard({
             aria-expanded={addOpen}
             onClick={() => {
               setAddError("");
+              setAddCategory("Misc");
               setAddOpen((open) => !open);
             }}
           >
@@ -361,18 +385,27 @@ export function StockBoard({
           }}
         >
           <div className="emp-create-head">
-            <h3>New item</h3>
+            <h3>{addingService ? "New service" : "New item"}</h3>
             <button type="button" className="emp-cancel" onClick={() => setAddOpen(false)}>
               Cancel
             </button>
           </div>
           <label>
             Name
-            <input name="name" required autoFocus placeholder="LM 8500 7-ft" />
+            <input
+              name="name"
+              required
+              autoFocus
+              placeholder={addingService ? "Cable replacement" : "LM 8500 7-ft"}
+            />
           </label>
           <label>
             Category
-            <select name="category" defaultValue={categories[0] || "Misc"}>
+            <select
+              name="category"
+              value={addCategory}
+              onChange={(e) => setAddCategory(e.target.value)}
+            >
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
@@ -380,23 +413,27 @@ export function StockBoard({
               ))}
             </select>
           </label>
-          <label>
-            SKU <span className="stock-optional">(optional)</span>
-            <input name="sku" placeholder="Auto if empty" />
-          </label>
+          {addingService ? null : (
+            <label>
+              SKU <span className="stock-optional">(optional)</span>
+              <input name="sku" placeholder="Auto if empty" />
+            </label>
+          )}
           {showPrices ? (
             <label>
-              Cost
+              {addingService ? "Price" : "Cost"}
               <input name="unitCost" type="number" min="0" step="0.01" inputMode="decimal" defaultValue="0" />
             </label>
           ) : null}
-          <label>
-            Qty in this stock
-            <input name="qty" type="number" min="0" step="1" defaultValue="0" />
-          </label>
+          {addingService ? null : (
+            <label>
+              Qty in this stock
+              <input name="qty" type="number" min="0" step="1" defaultValue="0" />
+            </label>
+          )}
           {addError ? <p className="stock-add-error">{addError}</p> : null}
           <button type="submit" className="emp-add-btn" disabled={pending}>
-            Add item
+            {addingService ? "Add service" : "Add item"}
           </button>
         </form>
       ) : null}
@@ -553,12 +590,12 @@ export function StockBoard({
         </table>
       </div>
 
-      <section className="stock-services">
+      <section className="stock-services" id="stock-services">
         <div className="stock-services-head">
           <h2>Services</h2>
           <span className="stock-meta">
-            {serviceGroups.reduce((sum, g) => sum + g.items.length, 0)} listed · same list as Field
-            invoice
+            {serviceGroups.reduce((sum, g) => sum + g.items.length, 0)} listed · Sheet and Field
+            use this list
           </span>
         </div>
         <div className="stock-wrap stock-services-wrap">
@@ -566,31 +603,47 @@ export function StockBoard({
             <thead>
               <tr>
                 <th className="stock-col-item">Service</th>
-                <th className="stock-col-cost">Price</th>
+                {showPrices || !isTechOnly ? <th className="stock-col-cost">Price</th> : null}
               </tr>
             </thead>
             <tbody>
               {serviceGroups.map(({ cat, items }) => (
                 <Fragment key={`svc-${cat}`}>
                   <tr className="stock-cat">
-                    <td colSpan={2}>{cat}</td>
+                    <td colSpan={showPrices || !isTechOnly ? 2 : 1}>{cat}</td>
                   </tr>
                   {items.map((service) => (
                     <tr key={service.id}>
                       <td className="stock-col-item">
                         <span className="stock-name">{service.name}</span>
                       </td>
-                      <td className="stock-col-cost stock-service-price">
-                        {service.unitPriceCents > 0 ? `$${money(service.unitPriceCents)}` : "—"}
-                      </td>
+                      {showPrices ? (
+                        <td className="stock-col-cost">
+                          <CostCell
+                            itemId={service.id}
+                            cents={servicePrices[service.id] ?? service.unitPriceCents}
+                            saveAction={saveServicePriceAction}
+                            ariaLabel="Service price"
+                            onSaved={(id, next) =>
+                              setServicePrices((prev) => ({ ...prev, [id]: next }))
+                            }
+                          />
+                        </td>
+                      ) : !isTechOnly ? (
+                        <td className="stock-col-cost stock-service-price">
+                          {(servicePrices[service.id] ?? service.unitPriceCents) > 0
+                            ? `$${money(servicePrices[service.id] ?? service.unitPriceCents)}`
+                            : "—"}
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </Fragment>
               ))}
               {serviceGroups.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="stock-empty">
-                    Nothing matches “{q}”
+                  <td colSpan={showPrices || !isTechOnly ? 2 : 1} className="stock-empty">
+                    {q ? `Nothing matches “${q}”` : "No services yet — add one with +"}
                   </td>
                 </tr>
               ) : null}

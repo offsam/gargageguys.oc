@@ -9,6 +9,8 @@ import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
 import { sheetIssueFromLead, sheetServiceFromLead } from "@/lib/sheet/issue-service";
 import { loadStockState } from "@/lib/stock/store";
 import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
+import { loadServices } from "@/lib/field/service-store";
+import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 
 function asMeta(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -29,7 +31,7 @@ export default async function CrmPage() {
   const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();
 
-  const [{ data: leads }, { data: inbox }, { data: techs }, stockState] =
+  const [{ data: leads }, { data: inbox }, { data: techs }, stockState, catalog] =
     await Promise.all([
       supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(300),
       supabase.from("inbox_items").select("*").order("created_at", { ascending: false }).limit(50),
@@ -39,6 +41,7 @@ export default async function CrmPage() {
         .eq("role", "technician")
         .order("created_at", { ascending: true }),
       loadStockState().catch(() => null),
+      loadServices().catch(() => FIELD_SERVICES.filter((s) => s.id !== "svc-custom")),
     ]);
 
   const technicians = (techs || [])
@@ -108,7 +111,15 @@ export default async function CrmPage() {
       subtitle="Same funnel as Sheet — website forms and + Add land here"
     >
       <h2 style={{ marginTop: 0 }}>Lead funnel</h2>
-      <CrmBoard leads={cards} technicians={technicians} stockParts={stockParts} />
+      <CrmBoard
+        leads={cards}
+        technicians={technicians}
+        stockParts={stockParts}
+        catalogServices={catalog.map((s) => ({
+          name: s.name,
+          unitPrice: s.unitPriceCents > 0 ? (s.unitPriceCents / 100).toFixed(2) : "",
+        }))}
+      />
 
       <h2>Clients</h2>
       <p>
