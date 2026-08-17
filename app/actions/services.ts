@@ -16,6 +16,7 @@ async function requireStaff() {
 }
 
 function revalidateServicePages() {
+  revalidatePath("/services");
   revalidatePath("/stock");
   revalidatePath("/sheet");
   revalidatePath("/crm");
@@ -35,12 +36,13 @@ export async function upsertServiceAction(formData: FormData) {
   const category = String(formData.get("category") || "Service").trim() || "Service";
   const dollars = Number(formData.get("unitCost") || formData.get("price") || 0);
   if (!name) return { ok: false as const, error: "Name required" };
-  const canSetPrice = session.role !== "technician";
+  const existing = (await loadServices()).find((s) => s.name.toLowerCase() === name.toLowerCase());
+  const allowPrice = session.role !== "technician" || !existing;
   const service = await upsertService({
     name,
     category,
     unitPriceCents:
-      canSetPrice && Number.isFinite(dollars) && dollars > 0
+      allowPrice && Number.isFinite(dollars) && dollars > 0
         ? Math.round(dollars * 100)
         : undefined,
   });

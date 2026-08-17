@@ -9,8 +9,6 @@ import {
   receiveStockAction,
   saveItemCostAction,
 } from "@/app/actions/stock";
-import { saveServicePriceAction, upsertServiceAction } from "@/app/actions/services";
-import type { FieldService } from "@/lib/field/services-catalog";
 
 export type StockRow = {
   id: string;
@@ -37,7 +35,6 @@ const CATEGORY_ORDER = [
   "Genie",
   "Marantec",
   "Hinges/Brackets",
-  "Services",
 ];
 
 function sortCategories(cats: string[]) {
@@ -133,7 +130,6 @@ export function StockBoard({
   ownerTotals = {},
   partnerWarehouseCount = 0,
   notice = "",
-  services = [],
 }: {
   rows: StockRow[];
   technicians: Tech[];
@@ -146,7 +142,6 @@ export function StockBoard({
   ownerTotals?: Record<string, number>;
   partnerWarehouseCount?: number;
   notice?: string;
-  services?: FieldService[];
 }) {
   const router = useRouter();
   const partnerMode = stockOwner !== "gg";
@@ -157,21 +152,13 @@ export function StockBoard({
   const [openActionId, setOpenActionId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState("");
-  const [addCategory, setAddCategory] = useState("Misc");
   const [costs, setCosts] = useState<Record<string, number>>(() =>
     Object.fromEntries(rows.map((r) => [r.id, r.unitCostCents])),
-  );
-  const [servicePrices, setServicePrices] = useState<Record<string, number>>(() =>
-    Object.fromEntries(services.map((s) => [s.id, s.unitPriceCents])),
   );
 
   useEffect(() => {
     setCosts(Object.fromEntries(rows.map((r) => [r.id, r.unitCostCents])));
   }, [rows]);
-
-  useEffect(() => {
-    setServicePrices(Object.fromEntries(services.map((s) => [s.id, s.unitPriceCents])));
-  }, [services]);
 
   const categories = useMemo(() => {
     const fromRows = sortCategories([...new Set(rows.map((r) => r.category).filter(Boolean))]);
@@ -201,27 +188,6 @@ export function StockBoard({
     }));
   }, [filtered]);
 
-  const serviceGroups = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    const list = services.filter((s) => {
-      if (!needle) return true;
-      return `${s.name} ${s.category}`.toLowerCase().includes(needle);
-    });
-    const map = new Map<string, FieldService[]>();
-    for (const service of list) {
-      const cat = service.category || "Service";
-      const group = map.get(cat) || [];
-      group.push(service);
-      map.set(cat, group);
-    }
-    return [...map.keys()]
-      .sort((a, b) => a.localeCompare(b))
-      .map((cat) => ({
-        cat,
-        items: (map.get(cat) || []).slice().sort((a, b) => a.name.localeCompare(b.name)),
-      }));
-  }, [q, services]);
-
   const inventoryValue = useMemo(() => {
     if (!showPrices) return 0;
     return rows.reduce((sum, r) => sum + r.master * (costs[r.id] ?? r.unitCostCents), 0);
@@ -245,19 +211,14 @@ export function StockBoard({
   function submitNewItem(form: HTMLFormElement) {
     setAddError("");
     const fd = new FormData(form);
-    const addingService = String(fd.get("category") || "") === "Services";
-    if (addingService) fd.set("category", "Service");
-    if (partnerMode && !addingService) fd.set("partnerId", stockOwner);
+    if (partnerMode) fd.set("partnerId", stockOwner);
     startTransition(async () => {
-      const result = addingService
-        ? await upsertServiceAction(fd)
-        : await createStockItemAction(fd);
+      const result = await createStockItemAction(fd);
       if (!result.ok) {
         setAddError(result.error || "Could not add item");
         return;
       }
       form.reset();
-      setAddCategory("Misc");
       setAddOpen(false);
       router.refresh();
     });
@@ -273,7 +234,6 @@ export function StockBoard({
 
   const showOwnerTabs = !isTechOnly || stockOwners.length > 1;
   const techVanOnly = isTechOnly;
-  const addingService = addCategory === "Services";
 
   return (
     <div className="stock-board">
@@ -336,7 +296,7 @@ export function StockBoard({
         <input
           className="stock-search"
           type="search"
-          placeholder="Search part or service…"
+          placeholder="Search part…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           autoFocus={!addOpen}
@@ -362,7 +322,6 @@ export function StockBoard({
             aria-expanded={addOpen}
             onClick={() => {
               setAddError("");
-              setAddCategory("Misc");
               setAddOpen((open) => !open);
             }}
           >
@@ -385,27 +344,18 @@ export function StockBoard({
           }}
         >
           <div className="emp-create-head">
-            <h3>{addingService ? "New service" : "New item"}</h3>
+            <h3>New item</h3>
             <button type="button" className="emp-cancel" onClick={() => setAddOpen(false)}>
               Cancel
             </button>
           </div>
           <label>
             Name
-            <input
-              name="name"
-              required
-              autoFocus
-              placeholder={addingService ? "Cable replacement" : "LM 8500 7-ft"}
-            />
+            <input name="name" required autoFocus placeholder="LM 8500 7-ft" />
           </label>
           <label>
             Category
-            <select
-              name="category"
-              value={addCategory}
-              onChange={(e) => setAddCategory(e.target.value)}
-            >
+            <select name="category" defaultValue={categories[0] || "Misc"}>
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
@@ -413,27 +363,23 @@ export function StockBoard({
               ))}
             </select>
           </label>
-          {addingService ? null : (
-            <label>
-              SKU <span className="stock-optional">(optional)</span>
-              <input name="sku" placeholder="Auto if empty" />
-            </label>
-          )}
+          <label>
+            SKU <span className="stock-optional">(optional)</span>
+            <input name="sku" placeholder="Auto if empty" />
+          </label>
           {showPrices ? (
             <label>
-              {addingService ? "Price" : "Cost"}
+              Cost
               <input name="unitCost" type="number" min="0" step="0.01" inputMode="decimal" defaultValue="0" />
             </label>
           ) : null}
-          {addingService ? null : (
-            <label>
-              Qty in this stock
-              <input name="qty" type="number" min="0" step="1" defaultValue="0" />
-            </label>
-          )}
+          <label>
+            Qty in this stock
+            <input name="qty" type="number" min="0" step="1" defaultValue="0" />
+          </label>
           {addError ? <p className="stock-add-error">{addError}</p> : null}
           <button type="submit" className="emp-add-btn" disabled={pending}>
-            {addingService ? "Add service" : "Add item"}
+            Add item
           </button>
         </form>
       ) : null}
@@ -589,68 +535,6 @@ export function StockBoard({
           </tbody>
         </table>
       </div>
-
-      <section className="stock-services" id="stock-services">
-        <div className="stock-services-head">
-          <h2>Services</h2>
-          <span className="stock-meta">
-            {serviceGroups.reduce((sum, g) => sum + g.items.length, 0)} listed · Sheet and Field
-            use this list
-          </span>
-        </div>
-        <div className="stock-wrap stock-services-wrap">
-          <table className="stock-table">
-            <thead>
-              <tr>
-                <th className="stock-col-item">Service</th>
-                {showPrices || !isTechOnly ? <th className="stock-col-cost">Price</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {serviceGroups.map(({ cat, items }) => (
-                <Fragment key={`svc-${cat}`}>
-                  <tr className="stock-cat">
-                    <td colSpan={showPrices || !isTechOnly ? 2 : 1}>{cat}</td>
-                  </tr>
-                  {items.map((service) => (
-                    <tr key={service.id}>
-                      <td className="stock-col-item">
-                        <span className="stock-name">{service.name}</span>
-                      </td>
-                      {showPrices ? (
-                        <td className="stock-col-cost">
-                          <CostCell
-                            itemId={service.id}
-                            cents={servicePrices[service.id] ?? service.unitPriceCents}
-                            saveAction={saveServicePriceAction}
-                            ariaLabel="Service price"
-                            onSaved={(id, next) =>
-                              setServicePrices((prev) => ({ ...prev, [id]: next }))
-                            }
-                          />
-                        </td>
-                      ) : !isTechOnly ? (
-                        <td className="stock-col-cost stock-service-price">
-                          {(servicePrices[service.id] ?? service.unitPriceCents) > 0
-                            ? `$${money(servicePrices[service.id] ?? service.unitPriceCents)}`
-                            : "—"}
-                        </td>
-                      ) : null}
-                    </tr>
-                  ))}
-                </Fragment>
-              ))}
-              {serviceGroups.length === 0 ? (
-                <tr>
-                  <td colSpan={showPrices || !isTechOnly ? 2 : 1} className="stock-empty">
-                    {q ? `Nothing matches “${q}”` : "No services yet — add one with +"}
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
     </div>
   );
 }

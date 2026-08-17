@@ -25,6 +25,8 @@ mustExist("app/owner/page.tsx");
 mustExist("app/crm/page.tsx");
 mustExist("app/sheet/page.tsx");
 mustExist("app/finance/page.tsx");
+mustExist("app/stock/page.tsx");
+mustExist("app/services/page.tsx");
 mustExist("app/field/page.tsx");
 mustExist("app/ads/page.tsx");
 mustExist("app/reviews/page.tsx");

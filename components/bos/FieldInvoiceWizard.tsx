@@ -13,6 +13,8 @@ import {
   startPaymentAction,
 } from "@/app/actions/job-invoice";
 import { FIELD_SERVICES, findFieldServiceByName, withCustomService, type FieldService } from "@/lib/field/services-catalog";
+import { upsertServiceAction } from "@/app/actions/services";
+import { CustomServiceModal } from "@/components/bos/CustomServiceModal";
 import {
   money,
   formatJobNumber,
@@ -66,7 +68,13 @@ export function FieldInvoiceWizard({
   const [error, setError] = useState("");
   const [partId, setPartId] = useState("");
   const [partQty, setPartQty] = useState(1);
-  const catalog = useMemo(() => withCustomService(services), [services]);
+  const [extraServices, setExtraServices] = useState<FieldService[]>([]);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customError, setCustomError] = useState("");
+  const catalog = useMemo(
+    () => withCustomService([...services, ...extraServices]),
+    [services, extraServices],
+  );
   const [serviceId, setServiceId] = useState(
     () =>
       withCustomService(services).find(
@@ -76,8 +84,6 @@ export function FieldInvoiceWizard({
       "",
   );
   const [serviceQty, setServiceQty] = useState(1);
-  const [customName, setCustomName] = useState("");
-  const [customPrice, setCustomPrice] = useState("");
   const [paymentType, setPaymentType] = useState(invoice.payment_type || "Credit Card");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef(false);
@@ -112,11 +118,6 @@ export function FieldInvoiceWizard({
 
   const active = stepIndex(invoice.status);
 
-  const selectedService = useMemo(
-    () => catalog.find((s) => s.id === serviceId),
-    [catalog, serviceId],
-  );
-
   function run(action: () => Promise<{ ok: boolean; error?: string; invoice?: JobInvoice }>) {
     setError("");
     startTransition(async () => {
@@ -126,6 +127,27 @@ export function FieldInvoiceWizard({
         return;
       }
       if (result.invoice) setInvoice(result.invoice);
+      router.refresh();
+    });
+  }
+
+  function saveCustomService(input: { name: string; price: string }) {
+    setCustomError("");
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("name", input.name);
+      if (input.price) fd.set("price", input.price);
+      const result = await upsertServiceAction(fd);
+      if (!result.ok) {
+        setCustomError(result.error || "Could not save service");
+        return;
+      }
+      setExtraServices((prev) => {
+        const next = prev.filter((s) => s.id !== result.service.id);
+        return [...next, result.service];
+      });
+      setServiceId(result.service.id);
+      setCustomOpen(false);
       router.refresh();
     });
   }
@@ -298,14 +320,28 @@ export function FieldInvoiceWizard({
 
           <h3>Add service</h3>
           <div className="inv-row">
-            <select value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
+            <select
+              value={serviceId === "svc-custom" ? "" : serviceId}
+              onChange={(e) => {
+                const next = e.target.value;
+                if (next === "svc-custom") {
+                  setCustomError("");
+                  setCustomOpen(true);
+                  return;
+                }
+                setServiceId(next);
+              }}
+            >
               <option value="">Service…</option>
-              {catalog.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                  {s.unitPriceCents ? ` · ${money(s.unitPriceCents)}` : ""}
-                </option>
-              ))}
+              {catalog
+                .filter((s) => s.id !== "svc-custom")
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                    {s.unitPriceCents ? ` · ${money(s.unitPriceCents)}` : ""}
+                  </option>
+                ))}
+              <option value="svc-custom">Custom…</option>
             </select>
             <input
               type="number"
@@ -315,37 +351,18 @@ export function FieldInvoiceWizard({
             />
             <button
               type="button"
-              disabled={pending || !serviceId}
+              disabled={pending || !serviceId || serviceId === "svc-custom"}
               onClick={() => {
                 const fd = new FormData();
                 fd.set("jobId", jobId);
                 fd.set("serviceId", serviceId);
                 fd.set("qty", String(serviceQty));
-                fd.set("customName", customName);
-                fd.set("customPrice", customPrice);
                 run(() => addServiceToInvoiceAction(fd));
               }}
             >
               Add service
             </button>
           </div>
-          {selectedService?.id === "svc-custom" ? (
-            <div className="inv-row">
-              <input
-                placeholder="Custom service name"
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-              />
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Price $"
-                value={customPrice}
-                onChange={(e) => setCustomPrice(e.target.value)}
-              />
-            </div>
-          ) : null}
         </div>
       )}
 
@@ -512,6 +529,17 @@ export function FieldInvoiceWizard({
           </p>
         </div>
       )}
+      {customOpen ? (
+        <CustomServiceModal
+          pending={pending}
+          error={customError}
+          showPrice
+          onClose={() => {
+            if (!pending) setCustomOpen(false);
+          }}
+          onSave={saveCustomService}
+        />
+      ) : null}
     </section>
   );
 }

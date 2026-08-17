@@ -14,8 +14,6 @@ import {
   warehouseQty,
 } from "@/lib/stock/store";
 import { getFieldAttentionCount } from "@/lib/field/load-attention";
-import { loadServices } from "@/lib/field/service-store";
-import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 
 export default async function StockPage({
   searchParams,
@@ -71,11 +69,7 @@ export default async function StockPage({
 
   await ensureStockSeeded(seedTechId);
 
-  const [partners, state, catalog] = await Promise.all([
-    listPartnersAction(),
-    loadStockState(),
-    loadServices().catch(() => FIELD_SERVICES.filter((s) => s.id !== "svc-custom")),
-  ]);
+  const [partners, state] = await Promise.all([listPartnersAction(), loadStockState()]);
   const showPrices = user.role === "owner";
   const isTechOnly = user.role === "technician";
   const canManage = !isTechOnly;
@@ -154,7 +148,6 @@ export default async function StockPage({
       stockOwner={stockOwner}
       ownerTotals={ownerTotals}
       partnerWarehouseCount={partnerWarehouses.length}
-      services={catalog}
     />
   );
 
@@ -181,7 +174,7 @@ export default async function StockPage({
       user={user}
       active="/stock"
       title="Stock"
-      subtitle="Parts inventory and service prices"
+      subtitle="Parts inventory"
     >
       {board}
     </BosShell>

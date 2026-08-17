@@ -24,6 +24,7 @@ const BOS_HEADER_SOURCES = [
   "/employees/:path*",
   "/sheet/:path*",
   "/stock/:path*",
+  "/services/:path*",
   "/dispatch/:path*",
   "/finance/:path*",
   "/field/:path*",

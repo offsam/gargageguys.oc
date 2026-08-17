@@ -28,12 +28,13 @@ export async function POST(request: NextRequest) {
   const name = String(body.name || "").trim();
   if (!name) return NextResponse.json({ error: "Name required" }, { status: 400 });
   const dollars = Number(body.price || 0);
-  const canSetPrice = user.role !== "technician";
+  const existing = (await loadServices()).find((s) => s.name.toLowerCase() === name.toLowerCase());
+  const allowPrice = user.role !== "technician" || !existing;
   const service = await upsertService({
     name,
     category: String(body.category || "Service").trim() || "Service",
     unitPriceCents:
-      canSetPrice && Number.isFinite(dollars) && String(body.price ?? "").trim() !== ""
+      allowPrice && Number.isFinite(dollars) && String(body.price ?? "").trim() !== ""
         ? Math.round(dollars * 100)
         : undefined,
   });

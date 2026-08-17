@@ -35,6 +35,8 @@ export function findFieldServiceByName(name: string) {
   return FIELD_SERVICES.find((s) => s.name.toLowerCase() === needle) || null;
 }
 
+export const CUSTOM_SERVICE_LABEL = "Custom…";
+
 export const CUSTOM_FIELD_SERVICE =
   FIELD_SERVICES.find((s) => s.id === "svc-custom") ||
   ({
@@ -45,6 +47,15 @@ export const CUSTOM_FIELD_SERVICE =
   } satisfies FieldService);
 
 export const FIELD_SERVICE_NAMES = FIELD_SERVICES.map((s) => s.name);
+
+export function isCustomServiceChoice(value: string) {
+  const needle = value.trim().toLowerCase().replace(/…/g, "...");
+  return (
+    needle === "custom..." ||
+    needle === "svc-custom" ||
+    needle === "custom service (set price)"
+  );
+}
 
 export function withCustomService(list: FieldService[]): FieldService[] {
   const seen = new Set<string>();

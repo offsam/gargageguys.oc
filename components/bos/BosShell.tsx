@@ -13,6 +13,7 @@ const LINKS: Array<{ href: string; label: string; roles?: Array<SessionUser["rol
   { href: "/clients", label: "Clients", roles: ["owner", "office", "dispatcher", "accountant"] },
   { href: "/sheet", label: "Sheet", roles: ["owner", "office", "dispatcher"] },
   { href: "/stock", label: "Stock", roles: ["owner", "office", "dispatcher", "technician"] },
+  { href: "/services", label: "Services", roles: ["owner", "office", "dispatcher"] },
   { href: "/ads", label: "Ads", roles: ["owner", "office"] },
   { href: "/reviews", label: "Reviews", roles: ["owner", "office"] },
   { href: "/serm", label: "Search", roles: ["owner", "office"] },

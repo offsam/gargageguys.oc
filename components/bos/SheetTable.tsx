@@ -10,7 +10,8 @@ import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/Schedule
 import { scheduleCrmLeadAction } from "@/app/actions/crm";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
 import { SHEET_STATUSES, completeBlockedReason } from "@/lib/leads/stage-sync";
-import { FIELD_SERVICES, FIELD_SERVICE_NAMES } from "@/lib/field/services-catalog";
+import { FIELD_SERVICES, FIELD_SERVICE_NAMES, CUSTOM_SERVICE_LABEL, isCustomServiceChoice } from "@/lib/field/services-catalog";
+import { CustomServiceModal } from "@/components/bos/CustomServiceModal";
 import {
   formatPartsLines,
   parsePartsLines,
@@ -531,6 +532,9 @@ export function SheetTable({
   const [customTo, setCustomTo] = useState("");
   const [partsPickerRowId, setPartsPickerRowId] = useState<string | null>(null);
   const [extraServices, setExtraServices] = useState<SheetServiceOption[]>([]);
+  const [customRowId, setCustomRowId] = useState<string | null>(null);
+  const [customError, setCustomError] = useState("");
+  const [customPending, startCustomTransition] = useTransition();
   const [scheduleRow, setScheduleRow] = useState<SheetRow | null>(null);
   const [scheduleError, setScheduleError] = useState("");
   const [headerAside, setHeaderAside] = useState<HTMLElement | null>(null);
@@ -964,7 +968,7 @@ export function SheetTable({
 
   function rememberService(name: string, unitPrice = "") {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed || isCustomServiceChoice(trimmed)) return;
     const known =
       catalogServices.some((s) => s.name.toLowerCase() === trimmed.toLowerCase()) ||
       extraServices.some((s) => s.name.toLowerCase() === trimmed.toLowerCase());
@@ -977,20 +981,25 @@ export function SheetTable({
     void fetch("/api/sheet/services", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: trimmed }),
+      body: JSON.stringify({ name: trimmed, price: unitPrice || undefined }),
     }).catch(() => {});
   }
 
-  function commitService(rowId: string, rawName: string, save: boolean) {
+  function commitService(rowId: string, rawName: string, save: boolean, priceOverride?: number) {
     const row = rowsRef.current.find((r) => rowKey(r) === rowId || r.id === rowId);
     if (!row) return;
+    if (isCustomServiceChoice(rawName)) {
+      setCustomError("");
+      setCustomRowId(rowKey(row));
+      patchRow(row.id, { service: row.service === rawName ? "" : row.service }, false);
+      return;
+    }
     const name = save ? rawName.trim() : rawName;
-    const jobCost = applyServicePriceToJobCost(
-      row.jobCost,
-      row.service,
-      name.trim(),
-      servicePriceByName,
-    );
+    const prices = new Map(servicePriceByName);
+    if (priceOverride && priceOverride > 0) {
+      prices.set(name.trim().toLowerCase(), priceOverride);
+    }
+    const jobCost = applyServicePriceToJobCost(row.jobCost, row.service, name.trim(), prices);
     patchRow(row.id, { service: name, jobCost }, save);
     if (save && name.trim()) rememberService(name.trim());
   }
@@ -1186,7 +1195,7 @@ export function SheetTable({
   }, [allCatalogServices]);
 
   const serviceSuggestions = useMemo(
-    () => allCatalogServices.map((s) => s.name),
+    () => [CUSTOM_SERVICE_LABEL, ...allCatalogServices.map((s) => s.name)],
     [allCatalogServices],
   );
 
@@ -1652,7 +1661,7 @@ export function SheetTable({
                               if (!editable) return;
                               if (col.key === "service") {
                                 const raw = e.target.value;
-                                if (servicePriceByName.has(raw.trim().toLowerCase())) {
+                                if (isCustomServiceChoice(raw) || servicePriceByName.has(raw.trim().toLowerCase())) {
                                   commitService(rowKey(row), raw, false);
                                 } else {
                                   patchRow(row.id, { service: raw }, false);
@@ -1853,6 +1862,55 @@ export function SheetTable({
             setScheduleError("");
           }}
           onSubmit={submitSchedule}
+        />
+      ) : null}
+      {customRowId ? (
+        <CustomServiceModal
+          pending={customPending}
+          error={customError}
+          showPrice
+          onClose={() => {
+            if (customPending) return;
+            setCustomRowId(null);
+            setCustomError("");
+          }}
+          onSave={({ name, price }) => {
+            const rowId = customRowId;
+            setCustomError("");
+            startCustomTransition(async () => {
+              try {
+                const res = await fetch("/api/sheet/services", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ name, price: price || undefined }),
+                });
+                const data = (await res.json()) as {
+                  ok?: boolean;
+                  error?: string;
+                  service?: { name: string; unitPrice: string };
+                };
+                if (!res.ok || !data.service) {
+                  setCustomError(data.error || "Could not save service");
+                  return;
+                }
+                const unitPrice = data.service.unitPrice || price || "";
+                setExtraServices((prev) => {
+                  if (prev.some((s) => s.name.toLowerCase() === data.service!.name.toLowerCase())) {
+                    return prev.map((s) =>
+                      s.name.toLowerCase() === data.service!.name.toLowerCase()
+                        ? { name: data.service!.name, unitPrice }
+                        : s,
+                    );
+                  }
+                  return [...prev, { name: data.service!.name, unitPrice }];
+                });
+                commitService(rowId, data.service.name, true, Number(unitPrice) || undefined);
+                setCustomRowId(null);
+              } catch {
+                setCustomError("Could not save service");
+              }
+            });
+          }}
         />
       ) : null}
     </div>

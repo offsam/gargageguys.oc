@@ -13,8 +13,9 @@ import { SHEET_STATUSES, completeBlockedReason, type SheetStatus } from "@/lib/l
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
-import { FIELD_SERVICES } from "@/lib/field/services-catalog";
+import { CUSTOM_SERVICE_LABEL, FIELD_SERVICES, isCustomServiceChoice } from "@/lib/field/services-catalog";
 import { applyServicePriceToJobCost, parseMoney } from "@/lib/sheet/money";
+import { CustomServiceModal } from "@/components/bos/CustomServiceModal";
 import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/ScheduleLeadModal";
 
 export type CrmLeadCard = {
@@ -141,6 +142,8 @@ export function CrmBoard({
   const [scheduleError, setScheduleError] = useState("");
   const [liveNotice, setLiveNotice] = useState("");
   const [extraServices, setExtraServices] = useState<CrmServiceOption[]>([]);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customError, setCustomError] = useState("");
   const seenIds = useRef(new Set(initialLeads.map((l) => l.id)));
   const firstSync = useRef(true);
 
@@ -303,9 +306,9 @@ export function CrmBoard({
     return map;
   }, [allCatalogServices]);
 
-  function rememberService(name: string) {
+  function rememberService(name: string, unitPrice = "") {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed || isCustomServiceChoice(trimmed)) return;
     const known =
       catalogServices.some((s) => s.name.toLowerCase() === trimmed.toLowerCase()) ||
       extraServices.some((s) => s.name.toLowerCase() === trimmed.toLowerCase());
@@ -313,16 +316,22 @@ export function CrmBoard({
     setExtraServices((prev) =>
       prev.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())
         ? prev
-        : [...prev, { name: trimmed, unitPrice: "" }],
+        : [...prev, { name: trimmed, unitPrice }],
     );
     void fetch("/api/sheet/services", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: trimmed }),
+      body: JSON.stringify({ name: trimmed, price: unitPrice || undefined }),
     }).catch(() => {});
   }
 
   function setService(raw: string, persistName: boolean) {
+    if (isCustomServiceChoice(raw)) {
+      setCustomError("");
+      setCustomOpen(true);
+      setForm((prev) => ({ ...prev, service: isCustomServiceChoice(prev.service) ? "" : prev.service }));
+      return;
+    }
     setForm((prev) => {
       const jobCost = applyServicePriceToJobCost(
         prev.jobCost,
@@ -582,6 +591,7 @@ export function CrmBoard({
                   placeholder="Pick or type a service…"
                 />
                 <datalist id={CRM_SERVICE_LIST_ID}>
+                  <option value={CUSTOM_SERVICE_LABEL} />
                   {allCatalogServices.map((s) => (
                     <option key={s.name} value={s.name} />
                   ))}
@@ -688,6 +698,60 @@ export function CrmBoard({
           error={scheduleError}
           onClose={() => setScheduleLead(null)}
           onSubmit={submitSchedule}
+        />
+      ) : null}
+      {customOpen ? (
+        <CustomServiceModal
+          pending={pending}
+          error={customError}
+          showPrice
+          onClose={() => {
+            if (pending) return;
+            setCustomOpen(false);
+            setCustomError("");
+          }}
+          onSave={({ name, price }) => {
+            setCustomError("");
+            startTransition(async () => {
+              try {
+                const res = await fetch("/api/sheet/services", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ name, price: price || undefined }),
+                });
+                const data = (await res.json()) as {
+                  error?: string;
+                  service?: { name: string; unitPrice: string };
+                };
+                if (!res.ok || !data.service) {
+                  setCustomError(data.error || "Could not save service");
+                  return;
+                }
+                const unitPrice = data.service.unitPrice || price || "";
+                setExtraServices((prev) => {
+                  if (prev.some((s) => s.name.toLowerCase() === data.service!.name.toLowerCase())) {
+                    return prev.map((s) =>
+                      s.name.toLowerCase() === data.service!.name.toLowerCase()
+                        ? { name: data.service!.name, unitPrice }
+                        : s,
+                    );
+                  }
+                  return [...prev, { name: data.service!.name, unitPrice }];
+                });
+                const prices = new Map(servicePriceByName);
+                const n = parseMoney(unitPrice);
+                if (n > 0) prices.set(data.service.name.toLowerCase(), n);
+                setForm((prev) => ({
+                  ...prev,
+                  service: data.service!.name,
+                  jobCost: applyServicePriceToJobCost(prev.jobCost, prev.service, data.service!.name, prices),
+                }));
+                setCustomOpen(false);
+              } catch {
+                setCustomError("Could not save service");
+              }
+            });
+          }}
         />
       ) : null}
     </div>
