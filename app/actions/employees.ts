@@ -5,6 +5,80 @@ import { getSessionUser } from "@/lib/auth/session";
 import { CREATABLE_STAFF_ROLES } from "@/lib/auth/roles";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { AppRole } from "@/lib/supabase/types";
+import { isDefaultSeniorTechEmail, normalizeTechRank, type TechRank } from "@/lib/auth/tech-rank";
+
+function mergeAppMeta(
+  existing: Record<string, unknown> | undefined,
+  patch: Record<string, unknown>,
+) {
+  return { ...(existing || {}), ...patch };
+}
+
+export async function updateEmployeeTechRankAction(formData: FormData) {
+  const session = await getSessionUser();
+  if (!session || session.role !== "owner") return;
+
+  const id = String(formData.get("id") || "");
+  const rank = normalizeTechRank(formData.get("techRank")) || "technician";
+  if (!id) return;
+
+  const admin = getSupabaseAdmin();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id, email, role")
+    .eq("id", id)
+    .maybeSingle();
+  if (!profile || profile.role !== "technician") return;
+
+  const { data: authUser } = await admin.auth.admin.getUserById(id);
+  const nextRank: TechRank = isDefaultSeniorTechEmail(profile.email) ? "senior" : rank;
+  await admin.auth.admin.updateUserById(id, {
+    app_metadata: mergeAppMeta(
+      authUser.user?.app_metadata as Record<string, unknown> | undefined,
+      { tech_rank: nextRank },
+    ),
+  });
+
+  revalidatePath("/employees");
+  revalidatePath("/field");
+}
+
+export async function ensureDefaultSeniorTechs() {
+  const admin = getSupabaseAdmin();
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, email, role")
+    .eq("role", "technician");
+  for (const profile of profiles || []) {
+    if (!isDefaultSeniorTechEmail(profile.email)) continue;
+    const { data: authUser } = await admin.auth.admin.getUserById(profile.id);
+    const stored = (authUser.user?.app_metadata as { tech_rank?: unknown } | undefined)?.tech_rank;
+    if (normalizeTechRank(stored) === "senior") continue;
+    await admin.auth.admin.updateUserById(profile.id, {
+      app_metadata: mergeAppMeta(
+        authUser.user?.app_metadata as Record<string, unknown> | undefined,
+        { tech_rank: "senior" },
+      ),
+    });
+  }
+}
+
+export async function loadTechRanks(): Promise<Record<string, TechRank>> {
+  const admin = getSupabaseAdmin();
+  const { data } = await admin.auth.admin.listUsers({ perPage: 200, page: 1 });
+  const ranks: Record<string, TechRank> = {};
+  for (const user of data.users || []) {
+    const email = user.email || "";
+    const stored = (user.app_metadata as { tech_rank?: unknown } | undefined)?.tech_rank;
+    if (isDefaultSeniorTechEmail(email)) {
+      ranks[user.id] = "senior";
+      continue;
+    }
+    const rank = normalizeTechRank(stored);
+    if (rank) ranks[user.id] = rank;
+  }
+  return ranks;
+}
 
 export type CreateEmployeeState = {
   ok?: boolean;
@@ -48,6 +122,16 @@ export async function createEmployeeAction(
       user_metadata: {
         full_name: fullName || email.split("@")[0],
         role,
+      },
+      app_metadata: {
+        role,
+        ...(role === "technician"
+          ? {
+              tech_rank: isDefaultSeniorTechEmail(email)
+                ? "senior"
+                : normalizeTechRank(formData.get("techRank")) || "technician",
+            }
+          : {}),
       },
     });
 

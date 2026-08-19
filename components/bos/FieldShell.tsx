@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { SessionUser } from "@/lib/auth/session";
+import { techRankLabel } from "@/lib/auth/tech-rank";
 import { signOutAction } from "@/app/actions/auth";
 
 type TabId = "schedule" | "report" | "stock" | "attention";
@@ -17,6 +18,7 @@ export function FieldShell({
   subtitle,
   active = "schedule",
   attentionCount = 0,
+  wide = false,
   children,
 }: {
   user: SessionUser;
@@ -24,6 +26,7 @@ export function FieldShell({
   subtitle?: string;
   active?: TabId | string;
   attentionCount?: number;
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   const activeId: TabId =
@@ -36,7 +39,7 @@ export function FieldShell({
           : "schedule";
 
   return (
-    <div className="field-app">
+    <div className={`field-app${wide ? " field-app--wide" : ""}`}>
       <header className="field-top">
         <div>
           <p className="field-brand">Garage Guys</p>
@@ -45,6 +48,9 @@ export function FieldShell({
         </div>
         <div className="field-user">
           <span>{user.fullName || user.email}</span>
+          {user.role === "technician" && user.techRank ? (
+            <span className="field-rank">{techRankLabel(user.techRank)}</span>
+          ) : null}
           <form action={signOutAction}>
             <button type="submit" className="field-signout">
               Sign out

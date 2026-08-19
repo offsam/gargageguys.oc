@@ -137,18 +137,28 @@ export function FieldInvoiceWizard({
       const fd = new FormData();
       fd.set("name", input.name);
       if (input.price) fd.set("price", input.price);
-      const result = await upsertServiceAction(fd);
-      if (!result.ok) {
-        setCustomError(result.error || "Could not save service");
-        return;
-      }
-      setExtraServices((prev) => {
-        const next = prev.filter((s) => s.id !== result.service.id);
-        return [...next, result.service];
-      });
-      setServiceId(result.service.id);
-      setCustomOpen(false);
-      router.refresh();
+              const result = await upsertServiceAction(fd);
+              if (!result.ok) {
+                setCustomError(result.error || "Could not save service");
+                return;
+              }
+              setExtraServices((prev) => {
+                const next = prev.filter((s) => s.id !== result.service.id);
+                return [...next, result.service];
+              });
+              setServiceId(result.service.id);
+              setCustomOpen(false);
+              const add = new FormData();
+              add.set("jobId", jobId);
+              add.set("serviceId", result.service.id);
+              add.set("qty", String(serviceQty));
+              const added = await addServiceToInvoiceAction(add);
+              if (!added.ok) {
+                setError(added.error || "Service saved — tap Add service");
+                return;
+              }
+              if (added.invoice) setInvoice(added.invoice);
+              router.refresh();
     });
   }
 
@@ -362,7 +372,21 @@ export function FieldInvoiceWizard({
             >
               Add service
             </button>
+            <button
+              type="button"
+              className="inv-custom-btn"
+              disabled={pending}
+              onClick={() => {
+                setCustomError("");
+                setCustomOpen(true);
+              }}
+            >
+              Custom
+            </button>
           </div>
+          <p className="field-muted">
+            Custom names the work you did — it is added to this invoice and stays in the service list.
+          </p>
         </div>
       )}
 
@@ -534,6 +558,7 @@ export function FieldInvoiceWizard({
           pending={pending}
           error={customError}
           showPrice
+          requirePrice={false}
           onClose={() => {
             if (!pending) setCustomOpen(false);
           }}

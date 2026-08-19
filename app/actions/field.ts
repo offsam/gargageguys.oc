@@ -5,6 +5,10 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { BUSY_JOB_MARKER } from "@/lib/field/busy";
 import { ensureJobInvoice } from "@/lib/field/job-invoice";
+import { isSeniorTechnician } from "@/lib/auth/tech-rank";
+import { addServiceToInvoiceAction } from "@/app/actions/job-invoice";
+import { findServiceInList, loadServices, upsertService } from "@/lib/field/service-store";
+import { parseMoney } from "@/lib/sheet/money";
 
 function revalidateField() {
   revalidatePath("/field");
@@ -23,6 +27,22 @@ function parseLocalDateTime(value: string): Date | null {
   return d;
 }
 
+async function resolveTechnicianId(technicianName: string): Promise<string | undefined> {
+  const needle = technicianName.trim().toLowerCase();
+  if (!needle) return undefined;
+  const admin = getSupabaseAdmin();
+  const { data: techs } = await admin
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("role", "technician");
+  const match = (techs || []).find(
+    (t) =>
+      (t.full_name || "").trim().toLowerCase() === needle ||
+      (t.email || "").trim().toLowerCase() === needle,
+  );
+  return match?.id;
+}
+
 export async function createFieldClientJobAction(formData: FormData) {
   const session = await getSessionUser();
   if (!session) return { ok: false as const, error: "Not signed in" };
@@ -30,6 +50,7 @@ export async function createFieldClientJobAction(formData: FormData) {
     return { ok: false as const, error: "Only technicians can add field clients" };
   }
 
+  const fullForm = isSeniorTechnician(session);
   const name = String(formData.get("name") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
   const address = String(formData.get("address") || "").trim();
@@ -41,6 +62,30 @@ export async function createFieldClientJobAction(formData: FormData) {
   if (!address) return { ok: false as const, error: "Address is required" };
   if (!start) return { ok: false as const, error: "Visit time is required" };
 
+  const workSource = fullForm
+    ? String(formData.get("workSource") || "").trim() || "Garage Guys"
+    : "Garage Guys";
+  const partnerName = fullForm ? String(formData.get("partnerName") || "").trim() : "";
+  const leadSource = fullForm
+    ? String(formData.get("leadSource") || "").trim()
+    : "Field";
+  const leadCost = fullForm ? String(formData.get("leadCost") || "").trim() : "";
+  const jobType = fullForm ? String(formData.get("jobType") || "").trim() : "";
+  const service = fullForm ? String(formData.get("service") || "").trim() : "";
+  const parts = fullForm ? String(formData.get("parts") || "").trim() : "";
+  const partsCost = fullForm ? String(formData.get("partsCost") || "").trim() : "";
+  const paymentType = fullForm ? String(formData.get("paymentType") || "").trim() : "";
+  const checkNumber = fullForm ? String(formData.get("checkNumber") || "").trim() : "";
+  const jobCost = fullForm ? String(formData.get("jobCost") || "").trim() : "";
+  const bankFee = fullForm ? String(formData.get("bankFee") || "").trim() : "";
+  const techSalary = fullForm ? String(formData.get("techSalary") || "").trim() : "";
+  const technicianName = fullForm
+    ? String(formData.get("technician") || "").trim() || session.fullName || session.email
+    : session.fullName || session.email;
+  const technicianId = fullForm
+    ? (await resolveTechnicianId(technicianName)) || session.id
+    : session.id;
+
   const end = new Date(start.getTime() + 60 * 60 * 1000);
   const admin = getSupabaseAdmin();
 
@@ -49,12 +94,13 @@ export async function createFieldClientJobAction(formData: FormData) {
     phone,
     zip: zip || null,
     address: address || null,
-    message: message || null,
-    source: "field",
+    message: message || jobType || null,
+    source: workSource === "Partner" ? partnerName || "Partner" : leadSource || "field",
     lead_type: "field_job",
     stage: "scheduled" as const,
-    assigned_to: session.id,
-    deal_title: message || "Field job",
+    assigned_to: technicianId,
+    deal_title: jobType || service || message || "Field job",
+    deal_price: jobCost || null,
     scheduled_at: start.toISOString(),
     metadata: {
       clientName: name,
@@ -62,9 +108,24 @@ export async function createFieldClientJobAction(formData: FormData) {
       phone,
       zip,
       jobStatus: "Scheduled",
-      technician: session.fullName || session.email,
+      technician: technicianName,
       sheetDate: start.toISOString().slice(0, 10),
       fromField: true,
+      workSource,
+      partnerName,
+      leadSource,
+      leadCost,
+      jobType,
+      issue: jobType,
+      service,
+      parts,
+      partsCost,
+      paymentType,
+      checkNumber,
+      jobCost,
+      bankFee,
+      techSalary,
+      description: message,
     },
   };
 
@@ -90,14 +151,14 @@ export async function createFieldClientJobAction(formData: FormData) {
     .from("jobs")
     .insert({
       lead_id: lead.id,
-      technician_id: session.id,
+      technician_id: technicianId,
       title: `${name}${zip ? ` — ${zip}` : ""}`.trim(),
       status: "assigned",
       scheduled_start: start.toISOString(),
       scheduled_end: end.toISOString(),
       address,
       zip: zip || null,
-      notes: message || null,
+      notes: [jobType, service, message].filter(Boolean).join(" · ") || null,
     })
     .select("id")
     .single();
@@ -110,6 +171,27 @@ export async function createFieldClientJobAction(formData: FormData) {
     await ensureJobInvoice({ jobId: job.id, createdBy: session.id });
   } catch (err) {
     console.error("[createFieldClientJobAction] invoice", err);
+  }
+
+  if (service) {
+    try {
+      const catalog = await loadServices();
+      let svc = findServiceInList(catalog, service);
+      if (!svc) {
+        const cents = Math.round(parseMoney(jobCost) * 100);
+        svc = await upsertService({
+          name: service,
+          unitPriceCents: cents > 0 ? cents : 0,
+        });
+      }
+      const fd = new FormData();
+      fd.set("jobId", job.id);
+      fd.set("serviceId", svc.id);
+      fd.set("qty", "1");
+      await addServiceToInvoiceAction(fd);
+    } catch (err) {
+      console.error("[createFieldClientJobAction] service", err);
+    }
   }
 
   revalidateField();

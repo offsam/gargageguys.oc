@@ -1218,6 +1218,13 @@ textarea {
   align-items: center;
 }
 
+.emp-rank {
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--bos-accent-2);
+}
+
 .emp-created code {
   background: var(--bos-accent-soft);
   padding: 0.1rem 0.35rem;
@@ -2606,6 +2613,20 @@ body.sheet-col-resizing * {
   color: var(--bos-muted);
   text-align: right;
   max-width: 40%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+}
+
+.field-rank {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--bos-accent-2);
+}
+
+.field-app--wide .field-main {
+  max-width: 42rem;
 }
 
 .field-main {
@@ -3006,13 +3027,33 @@ body.sheet-col-resizing * {
 }
 
 .field-form input,
-.field-form textarea {
+.field-form textarea,
+.field-form select {
   border: 1px solid var(--bos-border);
   border-radius: 8px;
   padding: 0.55rem 0.65rem;
   font: inherit;
   color: var(--bos-text);
   background: #fff;
+}
+
+.field-form--full {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem 0.8rem;
+}
+
+.field-form--full label:has(textarea),
+.field-form--full .field-form-error,
+.field-form--full button[type="submit"],
+.field-form--full .field-muted {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .field-form--full {
+    grid-template-columns: 1fr;
+  }
 }
 
 .field-form button[type="submit"] {
@@ -3906,7 +3947,7 @@ button.bos-btn:disabled {
 
 .inv-row {
   display: grid;
-  grid-template-columns: 1fr 64px auto;
+  grid-template-columns: 1fr 64px auto auto;
   gap: 0.4rem;
   margin-bottom: 0.55rem;
 }

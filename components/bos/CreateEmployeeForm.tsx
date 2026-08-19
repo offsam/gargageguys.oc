@@ -13,6 +13,7 @@ const initial: CreateEmployeeState = {};
 export function CreateEmployeeForm({ defaultRole }: { defaultRole?: AppRole }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(createEmployeeAction, initial);
+  const [role, setRole] = useState<AppRole>(defaultRole || "technician");
 
   if (!open && !state.ok) {
     return (
@@ -69,7 +70,12 @@ export function CreateEmployeeForm({ defaultRole }: { defaultRole?: AppRole }) {
       </label>
       <label>
         Role
-        <select name="role" defaultValue={defaultRole || "technician"} required>
+        <select
+          name="role"
+          defaultValue={defaultRole || "technician"}
+          required
+          onChange={(e) => setRole(e.target.value as AppRole)}
+        >
           {CREATABLE_STAFF_ROLES.map((role) => (
             <option key={role} value={role}>
               {ROLE_LABELS[role]}
@@ -77,6 +83,15 @@ export function CreateEmployeeForm({ defaultRole }: { defaultRole?: AppRole }) {
           ))}
         </select>
       </label>
+      {role === "technician" ? (
+        <label>
+          Rank
+          <select name="techRank" defaultValue="technician">
+            <option value="technician">Technician</option>
+            <option value="senior">Senior technician</option>
+          </select>
+        </label>
+      ) : null}
       <label>
         Password (optional)
         <input name="password" type="text" placeholder="Leave blank to auto-generate" minLength={8} />

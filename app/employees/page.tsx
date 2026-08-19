@@ -3,7 +3,8 @@ import { CreateEmployeeForm } from "@/components/bos/CreateEmployeeForm";
 import { requireRouteAccess } from "@/lib/auth/require";
 import { EMPLOYEE_SECTIONS, ROLE_HOME, ROLE_LABELS } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { updateEmployeeRoleAction } from "@/app/actions/employees";
+import { updateEmployeeRoleAction, updateEmployeeTechRankAction, loadTechRanks, ensureDefaultSeniorTechs } from "@/app/actions/employees";
+import { techRankLabel, type TechRank } from "@/lib/auth/tech-rank";
 import type { AppRole } from "@/lib/supabase/types";
 import Link from "next/link";
 
@@ -11,10 +12,11 @@ export default async function EmployeesPage() {
   const user = await requireRouteAccess("/employees");
 
   const supabase = await createSupabaseServerClient();
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, email, full_name, role, created_at")
-    .order("created_at", { ascending: true });
+  await ensureDefaultSeniorTechs().catch(() => null);
+  const [{ data: profiles }, techRanks] = await Promise.all([
+    supabase.from("profiles").select("id, email, full_name, role, created_at").order("created_at", { ascending: true }),
+    loadTechRanks().catch(() => ({} as Record<string, TechRank>)),
+  ]);
 
   const staff = profiles || [];
 
@@ -60,7 +62,12 @@ export default async function EmployeesPage() {
                   <tbody>
                     {people.map((person) => (
                       <tr key={person.id}>
-                        <td>{person.full_name || "—"}</td>
+                        <td>
+                          {person.full_name || "—"}
+                          {person.role === "technician" && techRanks[person.id] === "senior" ? (
+                            <div className="emp-rank">{techRankLabel("senior")}</div>
+                          ) : null}
+                        </td>
                         <td>{person.email}</td>
                         <td>
                           <Link href={ROLE_HOME[person.role as AppRole]}>
@@ -79,6 +86,19 @@ export default async function EmployeesPage() {
                             </select>
                             <button type="submit">Save</button>
                           </form>
+                          {person.role === "technician" ? (
+                            <form action={updateEmployeeTechRankAction} className="emp-role-form">
+                              <input type="hidden" name="id" value={person.id} />
+                              <select
+                                name="techRank"
+                                defaultValue={techRanks[person.id] || "technician"}
+                              >
+                                <option value="technician">Technician</option>
+                                <option value="senior">Senior technician</option>
+                              </select>
+                              <button type="submit">Save rank</button>
+                            </form>
+                          ) : null}
                         </td>
                       </tr>
                     ))}
