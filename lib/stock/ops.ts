@@ -7,10 +7,13 @@ import {
   setBalanceQty,
   techQty,
   warehouseQty,
+  type StockItem,
   type StockLocationType,
   type StockMovementKind,
   type StockState,
 } from "@/lib/stock/store";
+import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
+import type { ChampionPaperCount } from "@/lib/stock/champion-paper-count";
 
 export type StockOpResult = { ok: true; state: StockState } | { ok: false; error: string };
 
@@ -654,4 +657,65 @@ export async function createStockItem(input: {
 
   await saveStockState(state);
   return { ok: true, state: await loadStockState() };
+}
+
+function normPartName(name: string) {
+  return name.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function findItemByLooseName(state: StockState, name: string): StockItem | undefined {
+  const needle = normPartName(name);
+  return state.items.find((item) => normPartName(item.name) === needle);
+}
+
+/** Overwrite partner warehouse counts. Does not touch Garage Guys stock or job history. */
+export async function replacePartnerStockCounts(input: {
+  partnerId: string;
+  counts: ChampionPaperCount[];
+}): Promise<{ ok: true; set: number; created: number } | { ok: false; error: string }> {
+  if (!input.partnerId) return { ok: false, error: "Partner required" };
+  const state = await loadStockState();
+
+  for (const balance of state.balances) {
+    if (balance.partnerId === input.partnerId && balance.locationType === "tech") {
+      balance.qty = 0;
+    }
+  }
+
+  const touched = new Set<string>();
+  let created = 0;
+
+  for (const row of input.counts) {
+    const qty = Math.max(0, Math.floor(Number(row.qty) || 0));
+    let item = findItemByLooseName(state, row.name);
+    if (!item) {
+      const seed = SEED_STOCK_ITEMS.find((s) => normPartName(s.name) === normPartName(row.name));
+      item = {
+        id: randomUUID(),
+        sku: seed?.sku || `CUS-${randomUUID().slice(0, 8).toUpperCase()}`,
+        name: seed?.name || row.name.trim(),
+        category: seed?.category || "Misc",
+        subcategory: seed?.subcategory,
+        unitCostCents: 0,
+        unit: "ea",
+        reorderAt: 0,
+        active: true,
+      };
+      state.items.push(item);
+      created += 1;
+    } else {
+      item.active = true;
+      item.name = row.name.trim();
+    }
+    setBalanceQty(state, item.id, "partner", qty, undefined, input.partnerId);
+    touched.add(item.id);
+  }
+
+  for (const item of state.items) {
+    if (touched.has(item.id)) continue;
+    setBalanceQty(state, item.id, "partner", 0, undefined, input.partnerId);
+  }
+
+  await saveStockState(state);
+  return { ok: true, set: touched.size, created };
 }
