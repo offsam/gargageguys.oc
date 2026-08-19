@@ -11,14 +11,18 @@
   ];
 
   var LAUNCHER_ICON_SVG =
-    '<svg viewBox="0 0 48 48" width="52" height="52" fill="none" aria-hidden="true">' +
-    '<path d="M7 12.5C7 9.46 9.46 7 12.5 7h23C38.54 7 41 9.46 41 12.5v16c0 3.04-2.46 5.5-5.5 5.5h-12l-7.5 9v-9H12.5C9.46 34 7 31.54 7 28.5v-16z" fill="#fff"/>' +
-    '<rect x="15" y="14.5" width="18" height="13" rx="1.5" fill="#1a3a5c" opacity="0.12"/>' +
-    '<path d="M15 18.5h18M15 22.5h18M15 26.5h12" stroke="#1a3a5c" stroke-width="2" stroke-linecap="round"/>' +
-    '<circle cx="24" cy="25.5" r="1.4" fill="#f59e0b"/>' +
+    '<svg viewBox="0 0 48 48" width="48" height="48" fill="none" aria-hidden="true">' +
+    '<path d="M14 27V21a10 10 0 0 1 20 0v6" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>' +
+    '<rect x="9" y="25" width="9" height="13" rx="3.5" fill="#ffffff"/>' +
+    '<rect x="30" y="25" width="9" height="13" rx="3.5" fill="#ffffff"/>' +
+    '<path d="M13 38c0 3.5 3.5 6 7.5 6h3" stroke="#fcd34d" stroke-width="2.2" stroke-linecap="round"/>' +
+    '<circle cx="23.5" cy="44" r="2.2" fill="#fcd34d"/>' +
     "</svg>";
 
-  var AVATAR_ICON_SVG = LAUNCHER_ICON_SVG.replace('width="44" height="44"', 'width="22" height="22"');
+  var AVATAR_ICON_SVG = LAUNCHER_ICON_SVG.replace(
+    'width="48" height="48"',
+    'width="22" height="22"'
+  );
 
   var THINKING_MIN_MS = 2400;
   var THINKING_STEP_MS = 1600;
@@ -91,8 +95,10 @@
   teaser.type = "button";
   teaser.className = "gg-ai-chat-teaser";
   teaser.innerHTML =
-    '<span class="gg-ai-chat-teaser__label">Free consultation</span>' +
-    '<span class="gg-ai-chat-teaser__text">with our AI specialist</span>';
+    '<span class="gg-ai-chat-teaser__label">Live support</span>' +
+    '<span class="gg-ai-chat-teaser__text">Ask our specialist</span>';
+  teaser.hidden = true;
+  teaserStack.hidden = true;
 
   teaserStack.appendChild(teaser);
 
@@ -109,7 +115,7 @@
   header.className = "gg-ai-chat-header";
   header.innerHTML =
     '<div class="gg-ai-chat-header__brand">' +
-    '<div class="gg-ai-chat-header__avatar" aria-hidden="true">A</div>' +
+    '<div class="gg-ai-chat-header__avatar" aria-hidden="true">' + AVATAR_ICON_SVG + "</div>" +
     '<div class="gg-ai-chat-header__copy">' +
     '<strong class="gg-ai-chat-header__title">Alex · Garage Guys</strong>' +
     '<span class="gg-ai-chat-header__status">' +
@@ -186,7 +192,7 @@
   var launcher = document.createElement("button");
   launcher.type = "button";
   launcher.className = "gg-ai-chat-launcher";
-  launcher.setAttribute("aria-label", "Open garage door repair assistant");
+  launcher.setAttribute("aria-label", "Open live support chat");
   launcher.setAttribute("aria-expanded", "false");
   launcher.innerHTML =
     '<span class="gg-ai-chat-launcher__icon" aria-hidden="true">' + LAUNCHER_ICON_SVG + "</span>";
@@ -327,8 +333,7 @@
   }
 
   function updateTeaser() {
-    var show = !panelOpen && !submittedInboxItemId;
-    root.classList.toggle("gg-ai-chat-root--teaser", show);
+    root.classList.remove("gg-ai-chat-root--teaser");
   }
 
   function setPanelOpen(open) {

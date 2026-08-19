@@ -1,3 +1,5 @@
+@import url("mobile-polish.css");
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -995,16 +997,16 @@ footer {
     flex-shrink: 0;
   }
 
-  .fab-call-label { font-size: 8px; letter-spacing: 0.6px; }
+  .fab-call-label { font-size: 10px; letter-spacing: 0.5px; }
   .fab-call-number,
   .fab-call > span {
-    font-size: 14px;
-    letter-spacing: 0.4px;
+    font-size: 13px;
+    letter-spacing: 0.35px;
     white-space: nowrap;
   }
   .fab-callback { min-width: 0; gap: 2px; }
-  .fab-callback-title { font-size: 14px; letter-spacing: 0.5px; }
-  .fab-callback-label { font-size: 8px; letter-spacing: 0.6px; }
+  .fab-callback-title { font-size: 13px; letter-spacing: 0.4px; }
+  .fab-callback-label { font-size: 10px; letter-spacing: 0.5px; }
 }
 
 @media (max-width: 480px) {
