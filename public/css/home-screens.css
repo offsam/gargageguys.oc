@@ -330,7 +330,28 @@ body.page-home-unified .fab-bar {
     min-height: 100svh;
     padding: calc(var(--nav-h) + 16px) 16px 28px;
     scroll-snap-stop: always;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.page-home-unified .nav-links {
+    flex-wrap: nowrap;
+    gap: 8px;
+    max-width: calc(100% - 168px);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  body.page-home-unified .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.page-home-unified .nav-links a {
+    font-size: 10px;
+    letter-spacing: 0.2px;
+    flex-shrink: 0;
   }
 
   body.page-home-unified .fab-bar {
@@ -348,18 +369,6 @@ body.page-home-unified .fab-bar {
 
   body.page-home-unified .nav-label-full { display: none; }
   body.page-home-unified .nav-label-short { display: inline; }
-
-  body.page-home-unified .nav-links {
-    flex-wrap: nowrap;
-    gap: 8px;
-    max-width: calc(100% - 168px);
-    overflow: visible;
-  }
-
-  body.page-home-unified .nav-links a {
-    font-size: 9px;
-    letter-spacing: 0.15px;
-  }
 
   body.page-home-unified .nav-deals-btn__sub {
     display: none;
