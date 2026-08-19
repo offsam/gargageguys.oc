@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: result.error }, { status: 500 });
   }
 
-  const state = await loadStockState();
+  const state = await loadStockState({ skipRepair: true });
   const checks = ["Chamberlain B3010", "207*27 (red)", "218*28 (black)", "Bottom seal (blk 4\")", "LM 380UT remote"].map(
     (name) => {
       const item = state.items.find((i) => i.name === name);

@@ -674,7 +674,7 @@ export async function replacePartnerStockCounts(input: {
   counts: ChampionPaperCount[];
 }): Promise<{ ok: true; set: number; created: number } | { ok: false; error: string }> {
   if (!input.partnerId) return { ok: false, error: "Partner required" };
-  const state = await loadStockState();
+  const state = await loadStockState({ skipRepair: true });
 
   for (const balance of state.balances) {
     if (balance.partnerId === input.partnerId && balance.locationType === "tech") {

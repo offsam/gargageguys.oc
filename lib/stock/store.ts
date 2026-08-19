@@ -315,6 +315,9 @@ export function stripDuplicatedPartnerWarehouse(state: StockState): number {
         )
         .reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
 
+      // Empty vans: leftover partner warehouse is real (paper count / shop stock).
+      if (van <= 0) continue;
+
       let keep = warehouse;
       if (lastLoadAt) {
         keep = 0;
