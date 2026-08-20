@@ -161,7 +161,8 @@ export default async function FieldReportPage() {
             <ul className="field-report-list">
               {recentJobs.map((job) => {
                 const when = job.scheduled_start
-                  ? new Date(job.scheduled_start).toLocaleString([], {
+                  ? new Date(job.scheduled_start).toLocaleString("en-US", {
+                      timeZone: "America/Los_Angeles",
                       month: "short",
                       day: "numeric",
                       hour: "numeric",

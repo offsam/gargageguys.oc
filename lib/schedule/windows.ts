@@ -1,5 +1,11 @@
 import { parseDayKey, type FieldJob } from "@/lib/field/days";
-import { toDatetimeLocalValue } from "@/lib/datetime";
+import {
+  dayKeyInBusinessTz,
+  parseLocalDateTime,
+  timeHmInBusinessTz,
+  toDatetimeLocalValue,
+  zonedWallTimeToUtc,
+} from "@/lib/datetime";
 
 /** Fixed arrival windows. Slots are independent — overlapping clock ranges can both be booked. */
 export type ScheduleWindow = {
@@ -28,12 +34,10 @@ export type SlotStatus = {
   job?: FieldJob;
 };
 
-function atLocalHour(dayKey: string, hour: number): Date | null {
-  const day = parseDayKey(dayKey);
-  if (!day) return null;
-  const d = new Date(day);
-  d.setHours(hour, 0, 0, 0);
-  return d;
+function atBusinessHour(dayKey: string, hour: number): Date | null {
+  if (!parseDayKey(dayKey)) return null;
+  const [y, m, d] = dayKey.split("-").map(Number);
+  return zonedWallTimeToUtc(y, m, d, hour, 0, 0);
 }
 
 export function windowRange(dayKey: string, window: ScheduleWindow): {
@@ -42,8 +46,8 @@ export function windowRange(dayKey: string, window: ScheduleWindow): {
   startLocal: string;
   endLocal: string;
 } | null {
-  const start = atLocalHour(dayKey, window.startHour);
-  const end = atLocalHour(dayKey, window.endHour);
+  const start = atBusinessHour(dayKey, window.startHour);
+  const end = atBusinessHour(dayKey, window.endHour);
   if (!start || !end) return null;
   return {
     start,
@@ -62,11 +66,9 @@ export function jobMatchesWindow(
   if (job.status === "cancelled" || !job.scheduled_start) return false;
   const start = new Date(job.scheduled_start);
   if (Number.isNaN(start.getTime())) return false;
-  const y = start.getFullYear();
-  const m = String(start.getMonth() + 1).padStart(2, "0");
-  const d = String(start.getDate()).padStart(2, "0");
-  if (`${y}-${m}-${d}` !== dayKey) return false;
-  return start.getHours() === window.startHour && start.getMinutes() === 0;
+  if (dayKeyInBusinessTz(start) !== dayKey) return false;
+  const [hh, mm] = timeHmInBusinessTz(start).split(":").map(Number);
+  return hh === window.startHour && mm === 0;
 }
 
 export function slotStatusForTech(
@@ -78,11 +80,10 @@ export function slotStatusForTech(
   const job = jobs.find(
     (j) =>
       j.technician_id === techId &&
-      j.status !== "cancelled" &&
       jobMatchesWindow(j, dayKey, window),
   );
-  if (job) return { status: "busy", job };
-  return { status: "free" };
+  if (!job) return { status: "free" };
+  return { status: "busy", job };
 }
 
 export function firstFreeWindow(
@@ -98,4 +99,9 @@ export function firstFreeWindow(
 
 export function findWindowById(id: string): ScheduleWindow | undefined {
   return SCHEDULE_WINDOWS.find((w) => w.id === id);
+}
+
+/** Helper for forms that still need a datetime-local string for a window. */
+export function windowStartLocal(dayKey: string, window: ScheduleWindow): string | null {
+  return windowRange(dayKey, window)?.startLocal || null;
 }

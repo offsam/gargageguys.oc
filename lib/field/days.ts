@@ -1,3 +1,5 @@
+import { dayKeyInBusinessTz, formatBusinessTime } from "@/lib/datetime";
+
 export type FieldJob = {
   id: string;
   title: string;
@@ -13,34 +15,31 @@ export type FieldJob = {
 };
 
 export function toDayKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return dayKeyInBusinessTz(d);
 }
 
 export function parseDayKey(key: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
   const [y, m, d] = key.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  date.setHours(0, 0, 0, 0);
-  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) {
+  // Noon UTC avoids DST edge when only the calendar day is needed.
+  const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) {
     return null;
   }
   return date;
 }
 
 export function startOfToday(): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const key = dayKeyInBusinessTz(new Date());
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
 }
 
 export function dayKeyFromIso(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return toDayKey(d);
+  return dayKeyInBusinessTz(d);
 }
 
 /** Counts of jobs per YYYY-MM-DD (excludes cancelled). */
@@ -66,8 +65,7 @@ export function jobsForDay(jobs: FieldJob[], dayKey: string): FieldJob[] {
 }
 
 export function formatTime(iso: string | null): string {
-  if (!iso) return "Anytime";
-  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return formatBusinessTime(iso);
 }
 
 export function statusLabel(status: string): string {
@@ -77,29 +75,37 @@ export function statusLabel(status: string): string {
 export function formatDayHeading(dayKey: string): string {
   const d = parseDayKey(dayKey);
   if (!d) return dayKey;
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString("en-US", {
+    timeZone: "UTC",
     weekday: "long",
     month: "long",
     day: "numeric",
   });
 }
 
-/** Sunday-start week containing dayKey. */
+/** Sunday-start week containing dayKey (Pacific calendar dates). */
 export function weekDayKeys(dayKey: string): string[] {
   const d = parseDayKey(dayKey) || startOfToday();
+  const dow = d.getUTCDay();
   const start = new Date(d);
-  start.setDate(d.getDate() - d.getDay());
+  start.setUTCDate(d.getUTCDate() - dow);
   return Array.from({ length: 7 }, (_, i) => {
     const day = new Date(start);
-    day.setDate(start.getDate() + i);
-    return toDayKey(day);
+    day.setUTCDate(start.getUTCDate() + i);
+    const y = day.getUTCFullYear();
+    const m = String(day.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(day.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
   });
 }
 
 export function shiftDayKey(dayKey: string, delta: number): string {
   const d = parseDayKey(dayKey) || startOfToday();
-  d.setDate(d.getDate() + delta);
-  return toDayKey(d);
+  d.setUTCDate(d.getUTCDate() + delta);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
 }
 
 export function formatWeekHeading(dayKey: string): string {
@@ -107,9 +113,14 @@ export function formatWeekHeading(dayKey: string): string {
   const start = parseDayKey(keys[0]);
   const end = parseDayKey(keys[6]);
   if (!start || !end) return dayKey;
-  const sameMonth = start.getMonth() === end.getMonth();
-  const left = start.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  const right = end.toLocaleDateString(undefined, {
+  const sameMonth = start.getUTCMonth() === end.getUTCMonth();
+  const left = start.toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+  });
+  const right = end.toLocaleDateString("en-US", {
+    timeZone: "UTC",
     month: sameMonth ? undefined : "short",
     day: "numeric",
     year: "numeric",
@@ -119,5 +130,9 @@ export function formatWeekHeading(dayKey: string): string {
 
 export function formatMonthHeading(dayKey: string): string {
   const d = parseDayKey(dayKey) || startOfToday();
-  return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  return d.toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    month: "long",
+    year: "numeric",
+  });
 }

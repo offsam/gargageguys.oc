@@ -120,7 +120,11 @@ export function FieldDayTimeline({ jobs }: { jobs: FieldJob[] }) {
               style={{ top: ((t - rangeStart) / rangeMs) * trackHeight }}
             >
               <span>
-                {new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                {new Date(t).toLocaleTimeString("en-US", {
+                  timeZone: "America/Los_Angeles",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
               </span>
             </div>
           ))}

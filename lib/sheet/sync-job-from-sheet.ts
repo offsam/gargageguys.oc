@@ -4,7 +4,7 @@ import {
   STATUS_TO_JOB_STATUS,
   type SheetStatus,
 } from "@/lib/leads/stage-sync";
-import { parseLocalDateTime } from "@/lib/datetime";
+import { parseLocalDateTime, timeHmInBusinessTz } from "@/lib/datetime";
 
 const DEFAULT_TIME = "09:00";
 
@@ -60,9 +60,7 @@ export function timeFromIso(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  return `${h}:${m}`;
+  return timeHmInBusinessTz(d);
 }
 
 export function shouldSyncSheetStatusToJob(status: string): boolean {

@@ -13,7 +13,7 @@ import {
   completeBlockedReason,
   type SheetStatus,
 } from "@/lib/leads/stage-sync";
-import { parseLocalDateTime } from "@/lib/datetime";
+import { dayKeyInBusinessTz, parseLocalDateTime, timeHmInBusinessTz } from "@/lib/datetime";
 import type { LeadStage } from "@/lib/supabase/types";
 import { deleteSheetRowAction, saveSheetRowAction, type SheetSaveInput } from "@/app/actions/sheet";
 import { ensureJobInvoice } from "@/lib/field/job-invoice";
@@ -31,8 +31,7 @@ function revalidateCrmAndSheet() {
 }
 
 function todayISO(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return dayKeyInBusinessTz(new Date());
 }
 
 function crmSheetInput(formData: FormData, id: string, jobStatus: string): SheetSaveInput {
@@ -248,8 +247,9 @@ export async function scheduleCrmLeadAction(formData: FormData) {
     String(prev.clientAddress || prev.address || "").trim();
   const zip = lead.zip || String(prev.zip || "").trim() || null;
   const title = `${lead.name || "Job"}${zip ? ` — ${zip}` : ""}`.trim();
-  const localDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
-  const localTime = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
+  const localDate = dayKeyInBusinessTz(start);
+  const localTime = timeHmInBusinessTz(start);
+  const startHour = Number(localTime.slice(0, 2));
 
   const { error: leadErr } = await admin
     .from("leads")
@@ -317,7 +317,7 @@ export async function scheduleCrmLeadAction(formData: FormData) {
   }
 
   const windowLabel =
-    SCHEDULE_WINDOWS.find((w) => w.startHour === start.getHours())?.label || localTime;
+    SCHEDULE_WINDOWS.find((w) => w.startHour === startHour)?.label || localTime;
   void notifyTechnicianJobAssigned({
     technicianId,
     clientName: lead.name || String(prev.clientName || "Client"),

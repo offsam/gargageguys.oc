@@ -11,6 +11,11 @@ import { findServiceInList, loadServices, upsertService } from "@/lib/field/serv
 import { parseMoney } from "@/lib/sheet/money";
 import { notifyTechnicianJobAssigned } from "@/lib/notify/tech-job";
 import { SCHEDULE_WINDOWS } from "@/lib/schedule/windows";
+import {
+  dayKeyInBusinessTz,
+  parseLocalDateTime,
+  timeHmInBusinessTz,
+} from "@/lib/datetime";
 
 function revalidateField() {
   revalidatePath("/field");
@@ -19,14 +24,6 @@ function revalidateField() {
   revalidatePath("/sheet");
   revalidatePath("/owner");
   revalidatePath("/finance");
-}
-
-function parseLocalDateTime(value: string): Date | null {
-  const trimmed = String(value || "").trim();
-  if (!trimmed) return null;
-  const d = new Date(trimmed);
-  if (Number.isNaN(d.getTime())) return null;
-  return d;
 }
 
 async function resolveTechnicianId(technicianName: string): Promise<string | undefined> {
@@ -111,8 +108,8 @@ export async function createFieldClientJobAction(formData: FormData) {
       zip,
       jobStatus: "Scheduled",
       technician: technicianName,
-      sheetDate: start.toISOString().slice(0, 10),
-      sheetTime: `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`,
+      sheetDate: dayKeyInBusinessTz(start),
+      sheetTime: timeHmInBusinessTz(start),
       fromField: true,
       workSource,
       partnerName,
@@ -197,10 +194,11 @@ export async function createFieldClientJobAction(formData: FormData) {
     }
   }
 
-  const localDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+  const localDate = dayKeyInBusinessTz(start);
+  const localTime = timeHmInBusinessTz(start);
+  const startHour = Number(localTime.slice(0, 2));
   const windowLabel =
-    SCHEDULE_WINDOWS.find((w) => w.startHour === start.getHours())?.label ||
-    `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
+    SCHEDULE_WINDOWS.find((w) => w.startHour === startHour)?.label || localTime;
   void notifyTechnicianJobAssigned({
     technicianId,
     clientName: name,

@@ -7,6 +7,7 @@ import type { JobStatus } from "@/lib/supabase/types";
 import { JOB_STATUS_TO_SHEET, stageFromSheetStatus } from "@/lib/leads/stage-sync";
 import { notifyTechnicianJobAssigned } from "@/lib/notify/tech-job";
 import { SCHEDULE_WINDOWS } from "@/lib/schedule/windows";
+import { dayKeyInBusinessTz, timeHmInBusinessTz } from "@/lib/datetime";
 
 export async function createJobFromLeadAction(formData: FormData) {
   const leadId = String(formData.get("leadId") || "");
@@ -71,13 +72,13 @@ export async function assignJobAction(formData: FormData) {
     }
     const start = job.scheduled_start ? new Date(job.scheduled_start) : null;
     const localDate =
-      start && !Number.isNaN(start.getTime())
-        ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`
-        : "";
+      start && !Number.isNaN(start.getTime()) ? dayKeyInBusinessTz(start) : "";
+    const localTime =
+      start && !Number.isNaN(start.getTime()) ? timeHmInBusinessTz(start) : "";
+    const startHour = localTime ? Number(localTime.slice(0, 2)) : NaN;
     const windowLabel =
       start && !Number.isNaN(start.getTime())
-        ? SCHEDULE_WINDOWS.find((w) => w.startHour === start.getHours())?.label ||
-          `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`
+        ? SCHEDULE_WINDOWS.find((w) => w.startHour === startHour)?.label || localTime
         : "";
     void notifyTechnicianJobAssigned({
       technicianId,
