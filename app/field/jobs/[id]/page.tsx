@@ -6,7 +6,7 @@ import { FieldInvoiceWizard } from "@/components/bos/FieldInvoiceWizard";
 import { getSessionUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updateJobStatusAction } from "@/app/actions/dispatch";
-import { ensureStockSeeded, techQty } from "@/lib/stock/store";
+import { ensureStockSeeded, techQty, loadStockState } from "@/lib/stock/store";
 import { getFieldAttentionCount } from "@/lib/field/load-attention";
 import { ensureJobInvoice, formatJobNumber } from "@/lib/field/job-invoice";
 import { listPartnersAction } from "@/app/actions/partners";
@@ -15,6 +15,7 @@ import {
   pickLeadWorkMeta,
   resolveJobStockSource,
 } from "@/lib/stock/job-source";
+import { loadPartnerWarehouseOntoTech } from "@/lib/stock/ops";
 import { loadServices } from "@/lib/field/service-store";
 import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 import { sheetServiceFromLead } from "@/lib/sheet/issue-service";
@@ -36,7 +37,7 @@ export default async function FieldJobPage({
   }
 
   const techId = user.role === "technician" ? user.id : job.technician_id || user.id;
-  const [state, partners, leadRow, catalog] = await Promise.all([
+  const [seeded, partners, leadRow, catalog] = await Promise.all([
     ensureStockSeeded(techId),
     listPartnersAction(),
     job.lead_id
@@ -44,6 +45,7 @@ export default async function FieldJobPage({
       : Promise.resolve({ data: null }),
     loadServices().catch(() => FIELD_SERVICES.filter((s) => s.id !== "svc-custom")),
   ]);
+  let state = seeded;
   const leadMeta =
     leadRow.data?.metadata && typeof leadRow.data.metadata === "object"
       ? (leadRow.data.metadata as Record<string, unknown>)
@@ -52,6 +54,16 @@ export default async function FieldJobPage({
   const companyLabel = jobCompanyLabel(workSource, partnerName);
   const isPartnerJob = companyLabel !== "Garage Guys";
   const stockSource = resolveJobStockSource(workSource, partnerName, partners);
+  if (stockSource.from === "partner" && typeof stockSource.owner === "string") {
+    const loaded = await loadPartnerWarehouseOntoTech({
+      partnerId: stockSource.owner,
+      technicianId: techId,
+      createdBy: user.id,
+    });
+    if (loaded.ok && loaded.movedQty > 0) {
+      state = await loadStockState();
+    }
+  }
   const availableParts = state.items
     .map((item) => ({
       id: item.id,

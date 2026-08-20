@@ -4,6 +4,7 @@ import { StockBoard } from "@/components/bos/StockBoard";
 import { requireRouteAccess } from "@/lib/auth/require";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { listPartnersAction } from "@/app/actions/partners";
+import { loadPartnerWarehouseOntoTech } from "@/lib/stock/ops";
 import {
   ensureStockSeeded,
   loadStockState,
@@ -69,10 +70,33 @@ export default async function StockPage({
 
   await ensureStockSeeded(seedTechId);
 
-  const [partners, state] = await Promise.all([listPartnersAction(), loadStockState()]);
+  const partners = await listPartnersAction();
+  let state = await loadStockState();
   const showPrices = user.role === "owner";
   const isTechOnly = user.role === "technician";
   const canManage = !isTechOnly;
+
+  // Paper counts land in partner warehouse; Field only shows/uses van — load them on.
+  if (isTechOnly) {
+    let movedAny = false;
+    for (const partner of partners) {
+      if (!partner.active || partner.id.startsWith("seed-") || !partner.has_own_stock) continue;
+      const hasWarehouse = state.balances.some(
+        (b) =>
+          b.partnerId === partner.id &&
+          b.locationType === "partner" &&
+          (Number(b.qty) || 0) > 0,
+      );
+      if (!hasWarehouse) continue;
+      const loaded = await loadPartnerWarehouseOntoTech({
+        partnerId: partner.id,
+        technicianId: user.id,
+        createdBy: user.id,
+      });
+      if (loaded.ok && loaded.movedQty > 0) movedAny = true;
+    }
+    if (movedAny) state = await loadStockState();
+  }
 
   const partnerIdsWithStock = new Set(
     state.balances.filter((b) => b.partnerId && (Number(b.qty) || 0) > 0).map((b) => b.partnerId as string),
@@ -96,14 +120,20 @@ export default async function StockPage({
     );
   }
   const championOwner = partnerWarehouses.find((p) => /champion/i.test(p.name));
+  const ggVanTotal = state.items.reduce(
+    (sum, item) => sum + techQty(state, item.id, selectedTechId),
+    0,
+  );
   const defaultOwner =
-    ownerTotals.gg === 0 && championOwner ? championOwner.id : "gg";
+    ownerTotals.gg === 0 && championOwner
+      ? championOwner.id
+      : isTechOnly && ggVanTotal === 0 && championOwner
+        ? championOwner.id
+        : "gg";
   const stockOwner =
     params.owner && stockOwners.some((o) => o.id === params.owner)
       ? params.owner
-      : isTechOnly
-        ? "gg"
-        : defaultOwner;
+      : defaultOwner;
 
   const rows = state.items.map((item) => {
     const vans: Record<string, number> = {};

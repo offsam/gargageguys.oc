@@ -256,8 +256,9 @@ export function StockBoard({
           {notice ? <p className="stock-owner-hint">{notice}</p> : null}
           {!notice && isTechOnly && partnerWarehouseCount > 0 ? (
             <p className="stock-owner-hint">
-              Both stocks are on your van. Tabs are just to see counts. On a job you only pick
-              from that client’s stock.
+              Numbers are what is on your van for that company. Partner stock loads onto your van
+              automatically when it was only in their warehouse. On a job you only pick from that
+              client’s stock.
             </p>
           ) : null}
           {!notice && !isTechOnly && partnerWarehouseCount < 1 ? (
