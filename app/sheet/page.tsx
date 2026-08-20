@@ -11,6 +11,7 @@ import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
 import { sheetIssueFromLead, sheetServiceFromLead } from "@/lib/sheet/issue-service";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
+import type { FieldJob } from "@/lib/field/days";
 import type { StockPartOption } from "@/components/bos/SheetTable";
 
 function asMeta(value: unknown): Record<string, unknown> {
@@ -48,8 +49,9 @@ export default async function SheetPage() {
       .order("created_at", { ascending: true }),
     admin
       .from("jobs")
-      .select("id, lead_id, job_number")
-      .not("lead_id", "is", null)
+      .select(
+        "id, lead_id, job_number, title, status, zip, address, notes, scheduled_start, scheduled_end, technician_id, updated_at, created_at",
+      )
       .neq("status", "cancelled")
       .order("created_at", { ascending: false })
       .limit(500),
@@ -192,6 +194,7 @@ export default async function SheetPage() {
         rows={rows}
         technicians={technicianNames}
         scheduleTechnicians={scheduleTechnicians}
+        scheduleJobs={(jobsForNumbers || []) as FieldJob[]}
         stockParts={stockParts}
         partnerStockParts={partnerStockParts}
         partners={partnerOpts}

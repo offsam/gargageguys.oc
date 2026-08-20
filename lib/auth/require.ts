@@ -8,6 +8,7 @@ export const ROUTE_ROLES: Record<string, AppRole[]> = {
   "/employees": ["owner"],
   "/partners": ["owner", "office"],
   "/crm": ["owner", "office", "dispatcher"],
+  "/schedule": ["owner", "office", "dispatcher"],
   "/clients": ["owner", "office", "dispatcher", "accountant"],
   "/sheet": ["owner", "office", "dispatcher"],
   "/stock": ["owner", "office", "dispatcher", "technician"],

@@ -8,6 +8,7 @@ import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
 import { SheetPartsPicker } from "@/components/bos/SheetPartsPicker";
 import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/ScheduleLeadModal";
 import { scheduleCrmLeadAction } from "@/app/actions/crm";
+import type { FieldJob } from "@/lib/field/days";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
 import { SHEET_STATUSES, completeBlockedReason } from "@/lib/leads/stage-sync";
 import { FIELD_SERVICES, FIELD_SERVICE_NAMES, CUSTOM_SERVICE_LABEL, isCustomServiceChoice } from "@/lib/field/services-catalog";
@@ -505,6 +506,7 @@ export function SheetTable({
   rows: initialRows,
   technicians,
   scheduleTechnicians = [],
+  scheduleJobs = [],
   stockParts = [],
   partnerStockParts = {},
   partners = [],
@@ -514,6 +516,7 @@ export function SheetTable({
   technicians: string[];
   /** Profiles with ids — required to schedule onto a tech calendar. */
   scheduleTechnicians?: CrmTechnician[];
+  scheduleJobs?: FieldJob[];
   stockParts?: StockPartOption[];
   /** Parts + on-hand qty keyed by partner display name (own-stock partners). */
   partnerStockParts?: Record<string, StockPartOption[]>;
@@ -1853,6 +1856,7 @@ export function SheetTable({
         <ScheduleLeadModal
           leadName={scheduleRow.clientName || scheduleRow.clientAddress || "this job"}
           technicians={scheduleTechnicians}
+          jobs={scheduleJobs}
           dayKey={scheduleRow.date || undefined}
           pending={schedulePending}
           error={scheduleError}

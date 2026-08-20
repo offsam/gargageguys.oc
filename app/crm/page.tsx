@@ -11,6 +11,7 @@ import { loadStockState } from "@/lib/stock/store";
 import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
 import { loadServices } from "@/lib/field/service-store";
 import { FIELD_SERVICES } from "@/lib/field/services-catalog";
+import type { FieldJob } from "@/lib/field/days";
 
 function asMeta(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -31,7 +32,7 @@ export default async function CrmPage() {
   const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();
 
-  const [{ data: leads }, { data: inbox }, { data: techs }, stockState, catalog] =
+  const [{ data: leads }, { data: inbox }, { data: techs }, { data: jobsRaw }, stockState, catalog] =
     await Promise.all([
       supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(300),
       supabase.from("inbox_items").select("*").order("created_at", { ascending: false }).limit(50),
@@ -40,6 +41,14 @@ export default async function CrmPage() {
         .select("id, full_name, email")
         .eq("role", "technician")
         .order("created_at", { ascending: true }),
+      admin
+        .from("jobs")
+        .select(
+          "id, title, status, zip, address, notes, scheduled_start, scheduled_end, technician_id, updated_at, created_at",
+        )
+        .neq("status", "cancelled")
+        .order("scheduled_start", { ascending: true })
+        .limit(500),
       loadStockState().catch(() => null),
       loadServices().catch(() => FIELD_SERVICES.filter((s) => s.id !== "svc-custom")),
     ]);
@@ -114,6 +123,7 @@ export default async function CrmPage() {
       <CrmBoard
         leads={cards}
         technicians={technicians}
+        scheduleJobs={(jobsRaw || []) as FieldJob[]}
         stockParts={stockParts}
         catalogServices={catalog.map((s) => ({
           name: s.name,

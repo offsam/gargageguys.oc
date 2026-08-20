@@ -17,6 +17,7 @@ import { CUSTOM_SERVICE_LABEL, FIELD_SERVICES, isCustomServiceChoice } from "@/l
 import { applyServicePriceToJobCost, parseMoney } from "@/lib/sheet/money";
 import { CustomServiceModal } from "@/components/bos/CustomServiceModal";
 import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/ScheduleLeadModal";
+import type { FieldJob } from "@/lib/field/days";
 
 export type CrmLeadCard = {
   id: string;
@@ -122,11 +123,13 @@ function formFromLead(lead: CrmLeadCard): typeof EMPTY_FORM {
 export function CrmBoard({
   leads: initialLeads,
   technicians = [],
+  scheduleJobs = [],
   stockParts = [],
   catalogServices = [],
 }: {
   leads: CrmLeadCard[];
   technicians?: CrmTechnician[];
+  scheduleJobs?: FieldJob[];
   stockParts?: string[];
   catalogServices?: CrmServiceOption[];
 }) {
@@ -694,6 +697,7 @@ export function CrmBoard({
         <ScheduleLeadModal
           leadName={scheduleLead.name}
           technicians={technicians}
+          jobs={scheduleJobs}
           pending={pending}
           error={scheduleError}
           onClose={() => setScheduleLead(null)}

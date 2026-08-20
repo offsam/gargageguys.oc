@@ -1,0 +1,101 @@
+import { parseDayKey, type FieldJob } from "@/lib/field/days";
+import { toDatetimeLocalValue } from "@/lib/datetime";
+
+/** Fixed arrival windows. Slots are independent — overlapping clock ranges can both be booked. */
+export type ScheduleWindow = {
+  id: string;
+  label: string;
+  startHour: number;
+  endHour: number;
+};
+
+export const SCHEDULE_WINDOWS: ScheduleWindow[] = [
+  { id: "8-10", label: "8–10", startHour: 8, endHour: 10 },
+  { id: "9-11", label: "9–11", startHour: 9, endHour: 11 },
+  { id: "10-12", label: "10–12", startHour: 10, endHour: 12 },
+  { id: "11-1", label: "11–1", startHour: 11, endHour: 13 },
+  { id: "12-2", label: "12–2", startHour: 12, endHour: 14 },
+  { id: "1-3", label: "1–3", startHour: 13, endHour: 15 },
+  { id: "2-4", label: "2–4", startHour: 14, endHour: 16 },
+  { id: "3-5", label: "3–5", startHour: 15, endHour: 17 },
+  { id: "4-6", label: "4–6", startHour: 16, endHour: 18 },
+  { id: "5-7", label: "5–7", startHour: 17, endHour: 19 },
+  { id: "6-8", label: "6–8", startHour: 18, endHour: 20 },
+];
+
+export type SlotStatus = {
+  status: "free" | "busy";
+  job?: FieldJob;
+};
+
+function atLocalHour(dayKey: string, hour: number): Date | null {
+  const day = parseDayKey(dayKey);
+  if (!day) return null;
+  const d = new Date(day);
+  d.setHours(hour, 0, 0, 0);
+  return d;
+}
+
+export function windowRange(dayKey: string, window: ScheduleWindow): {
+  start: Date;
+  end: Date;
+  startLocal: string;
+  endLocal: string;
+} | null {
+  const start = atLocalHour(dayKey, window.startHour);
+  const end = atLocalHour(dayKey, window.endHour);
+  if (!start || !end) return null;
+  return {
+    start,
+    end,
+    startLocal: toDatetimeLocalValue(start),
+    endLocal: toDatetimeLocalValue(end),
+  };
+}
+
+/** Job is booked into this window when its start matches the window start hour that day. */
+export function jobMatchesWindow(
+  job: Pick<FieldJob, "scheduled_start" | "status">,
+  dayKey: string,
+  window: ScheduleWindow,
+): boolean {
+  if (job.status === "cancelled" || !job.scheduled_start) return false;
+  const start = new Date(job.scheduled_start);
+  if (Number.isNaN(start.getTime())) return false;
+  const y = start.getFullYear();
+  const m = String(start.getMonth() + 1).padStart(2, "0");
+  const d = String(start.getDate()).padStart(2, "0");
+  if (`${y}-${m}-${d}` !== dayKey) return false;
+  return start.getHours() === window.startHour && start.getMinutes() === 0;
+}
+
+export function slotStatusForTech(
+  jobs: FieldJob[],
+  techId: string,
+  dayKey: string,
+  window: ScheduleWindow,
+): SlotStatus {
+  const job = jobs.find(
+    (j) =>
+      j.technician_id === techId &&
+      j.status !== "cancelled" &&
+      jobMatchesWindow(j, dayKey, window),
+  );
+  if (job) return { status: "busy", job };
+  return { status: "free" };
+}
+
+export function firstFreeWindow(
+  jobs: FieldJob[],
+  techId: string,
+  dayKey: string,
+): ScheduleWindow | null {
+  for (const window of SCHEDULE_WINDOWS) {
+    if (slotStatusForTech(jobs, techId, dayKey, window).status === "free") return window;
+  }
+  return null;
+}
+
+export function findWindowById(id: string): ScheduleWindow | undefined {
+  return SCHEDULE_WINDOWS.find((w) => w.id === id);
+}

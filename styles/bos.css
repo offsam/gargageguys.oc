@@ -4751,3 +4751,244 @@ button.bos-btn:disabled {
     justify-content: flex-start;
   }
 }
+
+/* —— Schedule month + arrival windows —— */
+.crm-modal__panel--schedule {
+  width: min(560px, 100%);
+}
+
+.sched-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.2rem, 1fr));
+  gap: 0.45rem;
+}
+
+.sched-slot {
+  appearance: none;
+  border: 1px solid var(--bos-border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.55rem 0.5rem;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font: inherit;
+  color: var(--bos-text);
+}
+
+.sched-slot strong {
+  font-size: 0.92rem;
+}
+
+.sched-slot span {
+  font-size: 0.72rem;
+  color: var(--bos-muted);
+}
+
+.sched-slot.is-free:hover:not(:disabled) {
+  border-color: var(--bos-accent-2);
+  background: #eef5ff;
+}
+
+.sched-slot.is-selected {
+  border-color: var(--bos-accent-2);
+  background: #e8f1ff;
+  box-shadow: inset 0 0 0 1px var(--bos-accent-2);
+}
+
+.sched-slot.is-busy,
+.sched-slot:disabled {
+  background: #f4f4f4;
+  color: var(--bos-muted);
+  cursor: not-allowed;
+}
+
+.sched-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sched-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.sched-filters button {
+  appearance: none;
+  border: 1px solid var(--bos-border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--bos-text);
+}
+
+.sched-filters button.active {
+  background: var(--bos-text);
+  color: #fff;
+  border-color: var(--bos-text);
+}
+
+.sched-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.sched-month-nav,
+.sched-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.sched-day-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.sched-day-head p {
+  margin: 0.2rem 0 0;
+  color: var(--bos-muted);
+  font-size: 0.85rem;
+}
+
+.sched-month-nav button {
+  appearance: none;
+  border: 1px solid var(--bos-border);
+  background: #fff;
+  border-radius: 8px;
+  width: 2rem;
+  height: 2rem;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.sched-weekdays,
+.sched-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.sched-weekdays span {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--bos-muted);
+  padding: 0.2rem 0;
+}
+
+.sched-day-cell {
+  appearance: none;
+  border: 1px solid var(--bos-border);
+  background: #fff;
+  border-radius: 10px;
+  min-height: 3.2rem;
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  cursor: pointer;
+  font: inherit;
+  color: var(--bos-text);
+}
+
+.sched-day-cell.is-empty {
+  border: none;
+  background: transparent;
+  min-height: 0;
+  pointer-events: none;
+}
+
+.sched-day-cell.is-today {
+  border-color: var(--bos-accent-2);
+}
+
+.sched-day-cell.is-selected {
+  background: #eef5ff;
+  border-color: var(--bos-accent-2);
+  box-shadow: inset 0 0 0 1px var(--bos-accent-2);
+}
+
+.sched-day-cell.is-past {
+  opacity: 0.72;
+}
+
+.sched-day-cell.has-jobs .sched-day-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--bos-accent-2);
+}
+
+.sched-day-num {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.sched-day-table-wrap {
+  overflow: auto;
+  max-width: 100%;
+}
+
+.sched-day-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.sched-day-table th,
+.sched-day-table td {
+  border: 1px solid var(--bos-border);
+  padding: 0.55rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.sched-day-table thead th {
+  background: #f7f8fa;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.sched-day-table tbody th {
+  width: 4.5rem;
+  white-space: nowrap;
+  background: #fafbfc;
+  font-weight: 700;
+}
+
+.sched-day-table td.is-free {
+  color: #1f6b3a;
+  background: #f1faf4;
+}
+
+.sched-day-table td.is-busy {
+  background: #fff7e8;
+}
+
+.sched-day-table td.is-busy a {
+  color: #5a3208;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sched-day-table td.is-busy a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .sched-layout {
+    grid-template-columns: 1fr;
+  }
+}

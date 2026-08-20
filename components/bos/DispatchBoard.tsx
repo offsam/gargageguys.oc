@@ -173,6 +173,7 @@ export function DispatchBoard({
         <ScheduleLeadModal
           leadName={scheduleLead.name}
           technicians={technicians}
+          jobs={jobs}
           dayKey={dayKey}
           pending={pending}
           error={scheduleError}
