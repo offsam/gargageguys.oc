@@ -1,5 +1,6 @@
 import { sheetStatusFromLead, type SheetStatus } from "@/lib/leads/stage-sync";
 import type { FieldJob } from "@/lib/field/days";
+import { timeHmInBusinessTz } from "@/lib/datetime";
 import {
   normalizeSheetTime,
   sheetDateTimeToStart,
@@ -130,10 +131,18 @@ export function calendarEntriesFromSheet(input: {
       "Client";
 
     const sheetTime = normalizeSheetTime(pick(meta, "sheetTime", "time"));
-    const fromSheet =
-      !linked?.scheduled_start && sheetTime
-        ? sheetDateTimeToStart(date, sheetTime)
-        : null;
+    const fromSheet = sheetTime ? sheetDateTimeToStart(date, sheetTime) : null;
+    let scheduledStart =
+      linked?.scheduled_start || (fromSheet ? fromSheet.toISOString() : null);
+    if (fromSheet && linked?.scheduled_start) {
+      const linkedStart = new Date(linked.scheduled_start);
+      if (
+        !Number.isNaN(linkedStart.getTime()) &&
+        timeHmInBusinessTz(linkedStart) !== sheetTime
+      ) {
+        scheduledStart = fromSheet.toISOString();
+      }
+    }
 
     out.push({
       id: lead.id,
@@ -149,9 +158,11 @@ export function calendarEntriesFromSheet(input: {
       jobNumber: pick(meta, "jobNumber", "job_number"),
       service: pick(meta, "service"),
       jobId: linked?.id || null,
-      scheduled_start:
-        linked?.scheduled_start || (fromSheet ? fromSheet.toISOString() : null),
-      scheduled_end: linked?.scheduled_end || null,
+      scheduled_start: scheduledStart,
+      scheduled_end:
+        scheduledStart && fromSheet && scheduledStart === fromSheet.toISOString()
+          ? new Date(fromSheet.getTime() + 2 * 60 * 60 * 1000).toISOString()
+          : linked?.scheduled_end || null,
     });
   }
 
@@ -167,7 +178,7 @@ export function entriesForDay(entries: CalendarSheetEntry[], dayKey: string) {
   return entries.filter((e) => e.date === dayKey);
 }
 
-/** Match arrival window by start hour (Sheet times may not be :00). */
+/** Match arrival window by Pacific start hour (Sheet times may not be :00). */
 export function entryMatchesWindow(
   entry: CalendarSheetEntry,
   windowStartHour: number,
@@ -175,7 +186,8 @@ export function entryMatchesWindow(
   if (!entry.scheduled_start) return false;
   const start = new Date(entry.scheduled_start);
   if (Number.isNaN(start.getTime())) return false;
-  return start.getHours() === windowStartHour;
+  const [hh] = timeHmInBusinessTz(start).split(":").map(Number);
+  return hh === windowStartHour;
 }
 
 export function entriesForTechWindow(

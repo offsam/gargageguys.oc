@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { dayKeyInBusinessTz, timeHmInBusinessTz } from "@/lib/datetime";
 import {
   normalizeSheetTime,
   sheetDateTimeToStart,
@@ -28,18 +29,14 @@ describe("sheetDateTimeToStart", () => {
   it("defaults to 09:00 when time missing", () => {
     const d = sheetDateTimeToStart("2026-08-15", "");
     assert.ok(d);
-    assert.equal(d!.getHours(), 9);
-    assert.equal(d!.getMinutes(), 0);
-    assert.equal(d!.getFullYear(), 2026);
-    assert.equal(d!.getMonth(), 7);
-    assert.equal(d!.getDate(), 15);
+    assert.equal(timeHmInBusinessTz(d!), "09:00");
+    assert.equal(dayKeyInBusinessTz(d!), "2026-08-15");
   });
 
   it("uses explicit time", () => {
     const d = sheetDateTimeToStart("2026-08-15", "14:30");
     assert.ok(d);
-    assert.equal(d!.getHours(), 14);
-    assert.equal(d!.getMinutes(), 30);
+    assert.equal(timeHmInBusinessTz(d!), "14:30");
   });
 
   it("rejects bad dates", () => {
@@ -56,8 +53,8 @@ describe("shouldSyncSheetStatusToJob", () => {
 });
 
 describe("timeFromIso", () => {
-  it("extracts local HH:MM", () => {
-    const iso = new Date(2026, 7, 15, 14, 5, 0).toISOString();
-    assert.equal(timeFromIso(iso), "14:05");
+  it("extracts Pacific HH:MM", () => {
+    // 14:05 PDT = 21:05 UTC
+    assert.equal(timeFromIso("2026-08-15T21:05:00.000Z"), "14:05");
   });
 });
