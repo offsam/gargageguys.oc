@@ -12,11 +12,17 @@ import {
 
 export type CrmTechnician = { id: string; name: string };
 
+function formatWindowClock(window: ScheduleWindow) {
+  const pad = (h: number) => `${h > 12 ? h - 12 : h || 12}${h >= 12 ? "pm" : "am"}`;
+  return `${pad(window.startHour)} – ${pad(window.endHour)}`;
+}
+
 export function ScheduleLeadModal({
   leadName,
   technicians,
   jobs = [],
   dayKey,
+  initialTechnicianId,
   pending,
   error,
   onClose,
@@ -26,19 +32,27 @@ export function ScheduleLeadModal({
   technicians: CrmTechnician[];
   jobs?: FieldJob[];
   dayKey?: string;
+  initialTechnicianId?: string;
   pending?: boolean;
   error?: string;
   onClose: () => void;
   onSubmit: (input: { technicianId: string; startAt: string; endAt: string }) => void;
 }) {
   const todayKey = toDayKey(startOfToday());
-  const [technicianId, setTechnicianId] = useState(technicians[0]?.id || "");
-  const [day, setDay] = useState(dayKey && /^\d{4}-\d{2}-\d{2}$/.test(dayKey) ? dayKey : todayKey);
+  const defaultTech =
+    (initialTechnicianId && technicians.some((t) => t.id === initialTechnicianId)
+      ? initialTechnicianId
+      : "") ||
+    technicians[0]?.id ||
+    "";
+  const defaultDay =
+    dayKey && /^\d{4}-\d{2}-\d{2}$/.test(dayKey) ? dayKey : todayKey;
+
+  const [technicianId, setTechnicianId] = useState(defaultTech);
+  const [day, setDay] = useState(defaultDay);
   const [selectedWindowId, setSelectedWindowId] = useState(() => {
-    const techId = technicians[0]?.id || "";
-    const dayValue = dayKey && /^\d{4}-\d{2}-\d{2}$/.test(dayKey) ? dayKey : todayKey;
-    if (!techId) return "";
-    return firstFreeWindow(jobs, techId, dayValue)?.id || "";
+    if (!defaultTech) return "";
+    return firstFreeWindow(jobs, defaultTech, defaultDay)?.id || "";
   });
 
   const slots = useMemo(() => {
@@ -53,6 +67,14 @@ export function ScheduleLeadModal({
     () => SCHEDULE_WINDOWS.find((w) => w.id === selectedWindowId) || null,
     [selectedWindowId],
   );
+
+  const selectedTechName =
+    technicians.find((t) => t.id === technicianId)?.name || "";
+
+  const summary =
+    selectedTechName && selectedWindow
+      ? `${day} · ${selectedWindow.label} · ${selectedTechName}`
+      : "";
 
   function pickTech(nextId: string) {
     setTechnicianId(nextId);
@@ -99,9 +121,8 @@ export function ScheduleLeadModal({
           </button>
         </div>
         <p className="crm-modal__hint">
-          Pick a technician and a free arrival window for{" "}
-          <strong>{leadName || "this lead"}</strong>. Overlapping windows can both be booked — if
-          the tech finishes early they can take the next one.
+          Assign <strong>{leadName || "this lead"}</strong> with date, technician, and a free
+          arrival window. Busy slots come from the tech&apos;s Field schedule and Sheet bookings.
         </p>
         <form className="crm-add-form" onSubmit={submit}>
           <label className="crm-span-2">
@@ -120,7 +141,7 @@ export function ScheduleLeadModal({
             </select>
           </label>
           <label className="crm-span-2">
-            Day
+            Date
             <input
               type="date"
               value={day}
@@ -129,35 +150,47 @@ export function ScheduleLeadModal({
             />
           </label>
 
-          <div className="crm-span-2 sched-slot-grid" role="listbox" aria-label="Arrival windows">
-            {slots.map(({ window, status, job }) => {
-              const selected = selectedWindowId === window.id;
-              const busy = status === "busy";
-              return (
-                <button
-                  key={window.id}
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  disabled={busy || !technicianId || pending}
-                  className={`sched-slot${busy ? " is-busy" : " is-free"}${selected ? " is-selected" : ""}`}
-                  onClick={() => pickWindow(window)}
-                >
-                  <strong>{window.label}</strong>
-                  <span>
-                    {busy
-                      ? job?.title || "Booked"
-                      : selected
-                        ? "Selected"
-                        : "Free"}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="crm-span-2">
+            <div className="sched-slot-label">Free time windows</div>
+            <div className="sched-slot-grid" role="listbox" aria-label="Arrival windows">
+              {slots.map(({ window, status, job }) => {
+                const selected = selectedWindowId === window.id;
+                const busy = status === "busy";
+                return (
+                  <button
+                    key={window.id}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    disabled={busy || !technicianId || pending}
+                    className={`sched-slot${busy ? " is-busy" : " is-free"}${selected ? " is-selected" : ""}`}
+                    onClick={() => pickWindow(window)}
+                  >
+                    <strong>{window.label}</strong>
+                    <span className="sched-slot-clock">{formatWindowClock(window)}</span>
+                    <span>
+                      {busy
+                        ? job?.title || "Booked"
+                        : selected
+                          ? "Selected"
+                          : "Free"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
+          {summary ? (
+            <p className="crm-span-2 sched-slot-summary">
+              Selected: <strong>{summary}</strong>
+            </p>
+          ) : null}
+
           {technicianId && !selectedWindow ? (
-            <p className="crm-form-error crm-span-2">No free windows left this day for that tech.</p>
+            <p className="crm-form-error crm-span-2">
+              No free windows left this day for that tech — pick another date.
+            </p>
           ) : null}
           {error ? <p className="crm-form-error crm-span-2">{error}</p> : null}
           <div className="crm-form-actions crm-span-2">

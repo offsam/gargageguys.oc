@@ -5413,6 +5413,24 @@ button.bos-btn:disabled {
   width: min(560px, 100%);
 }
 
+.sched-slot-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 0.45rem;
+  color: var(--bos-text);
+}
+
+.sched-slot-clock {
+  font-size: 0.68rem !important;
+  color: var(--bos-muted) !important;
+}
+
+.sched-slot-summary {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--bos-muted);
+}
+
 .sched-slot-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(7.2rem, 1fr));

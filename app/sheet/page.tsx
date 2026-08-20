@@ -54,8 +54,8 @@ export default async function SheetPage() {
         "id, lead_id, job_number, title, status, zip, address, notes, scheduled_start, scheduled_end, technician_id, updated_at, created_at",
       )
       .neq("status", "cancelled")
-      .order("created_at", { ascending: false })
-      .limit(500),
+      .order("scheduled_start", { ascending: false, nullsFirst: false })
+      .limit(1500),
     loadStockState().catch(() => null),
     listPartnersAction(),
     loadServices().catch(() => FIELD_SERVICES.filter((s) => s.id !== "svc-custom")),

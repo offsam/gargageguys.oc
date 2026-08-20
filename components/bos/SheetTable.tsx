@@ -32,6 +32,10 @@ import {
 } from "@/lib/sheet/work-source";
 import { normalizeSheetTime } from "@/lib/sheet/sync-job-from-sheet";
 import {
+  busyJobsFromSheetRows,
+  mergeScheduleBusyJobs,
+} from "@/lib/schedule/sheet-busy";
+import {
   applyServicePriceToJobCost,
   bankFeeFor,
   clearProfitFor,
@@ -85,7 +89,7 @@ const LEAD_SOURCES = [
   "Thumbtack",
   "Yelp",
 ] as const;
-const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths-v3";
+const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths-v4";
 const SORT_STORAGE_KEY = "bos-sheet-date-sort";
 const PERIOD_STORAGE_KEY = "bos-sheet-period-v1";
 const LEAD_SOURCE_LIST_ID = "sheet-lead-source-list";
@@ -127,8 +131,6 @@ const COLUMNS: Array<{
   options?: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource" | "partner" | "service";
   money?: boolean;
 }> = [
-  { key: "date", label: "Date", width: 130, kind: "date" },
-  { key: "time", label: "Time", width: 100, kind: "time" },
   { key: "jobNumber", label: "Job #", width: 110 },
   { key: "workSource", label: "Work source", width: 130, kind: "select", options: "workSource" },
   { key: "partnerName", label: "Partner", width: 160, kind: "select", options: "partner" },
@@ -137,6 +139,8 @@ const COLUMNS: Array<{
   { key: "clientName", label: "Client name", width: 150 },
   { key: "clientAddress", label: "Address", width: 200 },
   { key: "jobStatus", label: "Status", width: 140, kind: "select", options: "status" },
+  { key: "date", label: "Date", width: 130, kind: "date" },
+  { key: "time", label: "Time", width: 100, kind: "time" },
   { key: "jobType", label: "Issue", width: 180 },
   { key: "service", label: "Service", width: 200, kind: "combo", options: "service" },
   { key: "parts", label: "Parts", width: 220 },
@@ -545,6 +549,19 @@ export function SheetTable({
   const [customPending, startCustomTransition] = useTransition();
   const [scheduleRow, setScheduleRow] = useState<SheetRow | null>(null);
   const [scheduleError, setScheduleError] = useState("");
+  const scheduleBusyJobs = useMemo(() => {
+    const fromSheet = busyJobsFromSheetRows(
+      rows,
+      scheduleTechnicians,
+      scheduleRow?.id,
+    );
+    return mergeScheduleBusyJobs(scheduleJobs, fromSheet);
+  }, [rows, scheduleJobs, scheduleTechnicians, scheduleRow?.id]);
+  const scheduleInitialTechId = useMemo(() => {
+    if (!scheduleRow?.technician.trim()) return undefined;
+    const name = scheduleRow.technician.trim().toLowerCase();
+    return scheduleTechnicians.find((t) => t.name.trim().toLowerCase() === name)?.id;
+  }, [scheduleRow, scheduleTechnicians]);
   const [headerAside, setHeaderAside] = useState<HTMLElement | null>(null);
   const [freezeOrder, setFreezeOrder] = useState(false);
   const frozenIdsRef = useRef<string[] | null>(null);
@@ -1617,15 +1634,9 @@ export function SheetTable({
                               if (col.key === "jobStatus") {
                                 const nextStatus = e.target.value;
                                 if (nextStatus === "Scheduled") {
-                                  const canInline =
-                                    Boolean(toDateInputValue(row.date)) &&
-                                    Boolean(normalizeSheetTime(row.time)) &&
-                                    Boolean(row.technician.trim());
-                                  if (!canInline) {
-                                    e.target.value = row.jobStatus;
-                                    requestSchedule(row);
-                                    return;
-                                  }
+                                  e.target.value = row.jobStatus;
+                                  requestSchedule(row);
+                                  return;
                                 }
                                 const blocked = completeBlockedReason(nextStatus, row.jobCost);
                                 if (blocked) {
@@ -1890,8 +1901,9 @@ export function SheetTable({
         <ScheduleLeadModal
           leadName={scheduleRow.clientName || scheduleRow.clientAddress || "this job"}
           technicians={scheduleTechnicians}
-          jobs={scheduleJobs}
+          jobs={scheduleBusyJobs}
           dayKey={scheduleRow.date || undefined}
+          initialTechnicianId={scheduleInitialTechId}
           pending={schedulePending}
           error={scheduleError}
           onClose={() => {

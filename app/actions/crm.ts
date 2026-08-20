@@ -246,6 +246,8 @@ export async function scheduleCrmLeadAction(formData: FormData) {
     String(prev.clientAddress || prev.address || "").trim();
   const zip = lead.zip || String(prev.zip || "").trim() || null;
   const title = `${lead.name || "Job"}${zip ? ` — ${zip}` : ""}`.trim();
+  const localDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+  const localTime = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
 
   const { error: leadErr } = await admin
     .from("leads")
@@ -258,8 +260,8 @@ export async function scheduleCrmLeadAction(formData: FormData) {
         ...prev,
         jobStatus: "Scheduled",
         technician: techName,
-        sheetDate: start.toISOString().slice(0, 10),
-        sheetTime: `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`,
+        sheetDate: localDate,
+        sheetTime: localTime,
       },
     })
     .eq("id", leadId);
@@ -317,8 +319,8 @@ export async function scheduleCrmLeadAction(formData: FormData) {
     ok: true as const,
     jobStatus: "Scheduled" as const,
     technician: techName,
-    date: start.toISOString().slice(0, 10),
-    time: `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`,
+    date: localDate,
+    time: localTime,
   };
 }
 
