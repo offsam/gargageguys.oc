@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test lib/finance/summary.test.ts lib/sheet/money.test.ts lib/security/safe-redirect.test.ts lib/seo/insights.test.ts lib/auth/tech-rank.test.ts lib/stock/job-source.test.ts lib/schedule/windows.test.ts lib/sheet/sync-job-from-sheet.test.ts lib/datetime.test.ts",
+    "test": "tsx --test lib/finance/summary.test.ts lib/sheet/money.test.ts lib/security/safe-redirect.test.ts lib/seo/insights.test.ts lib/auth/tech-rank.test.ts lib/stock/job-source.test.ts lib/schedule/windows.test.ts lib/sheet/sync-job-from-sheet.test.ts lib/datetime.test.ts lib/field/job-status.test.ts lib/stock/store-balance.test.ts",
     "smoke": "node scripts/smoke_bos_independence.mjs",
     "ci": "npm run smoke && npm test && npm run typecheck && npm run build"
   },

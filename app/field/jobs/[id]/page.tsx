@@ -3,9 +3,9 @@ import Link from "next/link";
 import { FieldShell } from "@/components/bos/FieldShell";
 import { BosShell } from "@/components/bos/BosShell";
 import { FieldInvoiceWizard } from "@/components/bos/FieldInvoiceWizard";
+import { FieldJobStatusSteps } from "@/components/bos/FieldJobStatusSteps";
 import { getSessionUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { updateJobStatusAction } from "@/app/actions/dispatch";
 import { ensureStockSeeded, techQty, loadStockState } from "@/lib/stock/store";
 import { getFieldAttentionCount } from "@/lib/field/load-attention";
 import { ensureJobInvoice, formatJobNumber } from "@/lib/field/job-invoice";
@@ -19,6 +19,7 @@ import { loadPartnerWarehouseOntoTech } from "@/lib/stock/ops";
 import { loadServices } from "@/lib/field/service-store";
 import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 import { sheetServiceFromLead } from "@/lib/sheet/issue-service";
+import { canAddJobItems } from "@/lib/field/job-status";
 
 export default async function FieldJobPage({
   params,
@@ -142,30 +143,23 @@ export default async function FieldJobPage({
           {job.notes || "—"}
         </p>
 
-        <form action={updateJobStatusAction} className="field-job-actions field-job-actions--block">
-          <input type="hidden" name="jobId" value={job.id} />
-          <select name="status" defaultValue={job.status}>
-            {["assigned", "en_route", "on_site", "done", "cancelled"].map((s) => (
-              <option key={s} value={s}>
-                {s.replace(/_/g, " ")}
-              </option>
-            ))}
-          </select>
-          <button type="submit">Update status</button>
-        </form>
+        <FieldJobStatusSteps jobId={job.id} status={String(job.status || "queued")} />
       </section>
 
       {invoice ? (
-        <FieldInvoiceWizard
-          jobId={job.id}
-          technicianId={techId}
-          vanParts={availableParts}
-          stockSourceLabel={stockSource.label}
-          stockFrom={stockSource.from}
-          invoice={invoice}
-          defaultServiceName={sheetServiceFromLead(leadMeta)}
-          services={catalog}
-        />
+        <div id="field-job-items">
+          <FieldInvoiceWizard
+            jobId={job.id}
+            technicianId={techId}
+            vanParts={availableParts}
+            stockSourceLabel={stockSource.label}
+            stockFrom={stockSource.from}
+            invoice={invoice}
+            defaultServiceName={sheetServiceFromLead(leadMeta)}
+            services={catalog}
+            itemsUnlocked={canAddJobItems(String(job.status || ""))}
+          />
+        </div>
       ) : (
         <section className="field-section">
           <div className="field-detail-card">

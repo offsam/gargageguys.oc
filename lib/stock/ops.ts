@@ -30,7 +30,8 @@ function applyDelta(
   if (next < 0) {
     return `Insufficient stock (have ${current}, need ${Math.abs(delta)})`;
   }
-  setBalanceQty(state, itemId, locationType, next, technicianId, partnerId);
+  // Never persist negative — belt and suspenders with get/set clamps.
+  setBalanceQty(state, itemId, locationType, Math.max(0, next), technicianId, partnerId);
   return null;
 }
 

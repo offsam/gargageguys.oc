@@ -217,10 +217,11 @@ export function getBalanceQty(
   technicianId?: string,
   partnerId?: string,
 ): number {
-  const row = state.balances.find((b) =>
-    matchBalance(b, itemId, locationType, technicianId, partnerId),
-  );
-  return row?.qty ?? 0;
+  // Sum matching rows so duplicate balance lines cannot oversell / go negative.
+  const total = state.balances
+    .filter((b) => matchBalance(b, itemId, locationType, technicianId, partnerId))
+    .reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
+  return Math.max(0, total);
 }
 
 export function setBalanceQty(
@@ -231,18 +232,25 @@ export function setBalanceQty(
   technicianId?: string,
   partnerId?: string,
 ): void {
-  const idx = state.balances.findIndex((b) =>
-    matchBalance(b, itemId, locationType, technicianId, partnerId),
-  );
-  if (idx >= 0) {
-    state.balances[idx] = {
-      ...state.balances[idx],
-      qty,
+  const safeQty = Math.max(0, Number(qty) || 0);
+  const matches = state.balances
+    .map((b, idx) => ({ b, idx }))
+    .filter(({ b }) => matchBalance(b, itemId, locationType, technicianId, partnerId));
+
+  if (matches.length > 0) {
+    const [first, ...dupes] = matches;
+    state.balances[first.idx] = {
+      ...state.balances[first.idx],
+      qty: safeQty,
       partnerId:
         locationType === "partner" || (locationType === "tech" && partnerId)
           ? partnerId
           : undefined,
     };
+    // Drop duplicate buckets for the same key so qty cannot drift to -1.
+    for (const d of dupes.reverse()) {
+      state.balances.splice(d.idx, 1);
+    }
     return;
   }
   state.balances.push({
@@ -253,7 +261,7 @@ export function setBalanceQty(
       locationType === "partner" || (locationType === "tech" && partnerId)
         ? partnerId
         : undefined,
-    qty,
+    qty: safeQty,
   });
 }
 

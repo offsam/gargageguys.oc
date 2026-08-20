@@ -52,6 +52,7 @@ export function FieldInvoiceWizard({
   invoice: initial,
   defaultServiceName = "",
   services = FIELD_SERVICES,
+  itemsUnlocked = true,
 }: {
   jobId: string;
   technicianId: string;
@@ -61,6 +62,8 @@ export function FieldInvoiceWizard({
   invoice: JobInvoice;
   defaultServiceName?: string;
   services?: FieldService[];
+  /** Only after On site (step 3) — tech must follow status buttons first. */
+  itemsUnlocked?: boolean;
 }) {
   const router = useRouter();
   const [invoice, setInvoice] = useState(initial);
@@ -89,6 +92,21 @@ export function FieldInvoiceWizard({
   const drawing = useRef(false);
   const [hasInk, setHasInk] = useState(false);
   const SIGN_PAD_HEIGHT = 280;
+
+  const selectedPart = vanParts.find((p) => p.id === partId) || null;
+  const maxPartQty = selectedPart ? Math.max(0, selectedPart.qty) : 0;
+  const canAddPart =
+    itemsUnlocked &&
+    Boolean(partId) &&
+    maxPartQty > 0 &&
+    partQty >= 1 &&
+    partQty <= maxPartQty &&
+    !pending;
+
+  useEffect(() => {
+    if (!selectedPart) return;
+    if (partQty > selectedPart.qty) setPartQty(Math.max(1, selectedPart.qty));
+  }, [selectedPart, partQty]);
 
   useEffect(() => {
     setInvoice(initial);
@@ -285,16 +303,31 @@ export function FieldInvoiceWizard({
 
       {(invoice.status === "draft" || invoice.status === "estimate_ready") && (
         <div className="field-detail-card inv-build">
+          {!itemsUnlocked ? (
+            <p className="inv-locked">
+              Finish steps 1–3 (Confirm → En route → On site). Then you can add parts and
+              services here.
+            </p>
+          ) : null}
           <h3>Add parts · {stockSourceLabel}</h3>
           <div className="inv-row">
-            <select value={partId} onChange={(e) => setPartId(e.target.value)}>
+            <select
+              value={partId}
+              disabled={!itemsUnlocked || pending}
+              onChange={(e) => {
+                const id = e.target.value;
+                setPartId(id);
+                const part = vanParts.find((p) => p.id === id);
+                setPartQty(part && part.qty > 0 ? 1 : 0);
+              }}
+            >
               <option value="">
                 {stockFrom === "partner"
                   ? `Part from ${stockSourceLabel} on van…`
                   : "Part from Garage Guys van…"}
               </option>
               {vanParts.map((p) => (
-                <option key={p.id} value={p.id}>
+                <option key={p.id} value={p.id} disabled={p.qty <= 0}>
                   {p.name} ({p.qty}) · {money(p.unitCostCents)}
                 </option>
               ))}
@@ -302,24 +335,36 @@ export function FieldInvoiceWizard({
             <input
               type="number"
               min={1}
+              max={maxPartQty || 1}
               value={partQty}
-              onChange={(e) => setPartQty(Number(e.target.value) || 1)}
+              disabled={!itemsUnlocked || pending || !partId}
+              onChange={(e) => {
+                const raw = Number(e.target.value) || 1;
+                const capped = maxPartQty > 0 ? Math.min(raw, maxPartQty) : 1;
+                setPartQty(Math.max(1, capped));
+              }}
             />
             <button
               type="button"
-              disabled={pending || !partId}
+              disabled={!canAddPart}
               onClick={() => {
+                if (!canAddPart || !selectedPart) return;
                 const fd = new FormData();
                 fd.set("jobId", jobId);
                 fd.set("technicianId", technicianId);
                 fd.set("itemId", partId);
-                fd.set("qty", String(partQty));
+                fd.set("qty", String(Math.min(partQty, selectedPart.qty)));
                 run(() => addPartToInvoiceAction(fd));
+                setPartId("");
+                setPartQty(1);
               }}
             >
               Add part
             </button>
           </div>
+          {itemsUnlocked && selectedPart && partQty > selectedPart.qty ? (
+            <p className="inv-error">Only {selectedPart.qty} on the van.</p>
+          ) : null}
           {vanParts.length === 0 ? (
             <p className="field-muted">
               {stockFrom === "partner"
@@ -332,6 +377,7 @@ export function FieldInvoiceWizard({
           <div className="inv-row">
             <select
               value={serviceId === "svc-custom" ? "" : serviceId}
+              disabled={!itemsUnlocked || pending}
               onChange={(e) => {
                 const next = e.target.value;
                 if (next === "svc-custom") {
@@ -357,11 +403,12 @@ export function FieldInvoiceWizard({
               type="number"
               min={1}
               value={serviceQty}
+              disabled={!itemsUnlocked || pending}
               onChange={(e) => setServiceQty(Number(e.target.value) || 1)}
             />
             <button
               type="button"
-              disabled={pending || !serviceId || serviceId === "svc-custom"}
+              disabled={!itemsUnlocked || pending || !serviceId || serviceId === "svc-custom"}
               onClick={() => {
                 const fd = new FormData();
                 fd.set("jobId", jobId);
@@ -375,7 +422,7 @@ export function FieldInvoiceWizard({
             <button
               type="button"
               className="inv-custom-btn"
-              disabled={pending}
+              disabled={!itemsUnlocked || pending}
               onClick={() => {
                 setCustomError("");
                 setCustomOpen(true);

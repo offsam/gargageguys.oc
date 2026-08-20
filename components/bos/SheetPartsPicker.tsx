@@ -65,8 +65,11 @@ export function SheetPartsPicker({
     [qtyByName],
   );
 
-  function setQty(name: string, qty: number) {
-    const next = Math.max(0, Math.floor(qty));
+  function setQty(name: string, qty: number, stock?: number) {
+    let next = Math.max(0, Math.floor(qty));
+    if (typeof stock === "number" && Number.isFinite(stock)) {
+      next = Math.min(next, Math.max(0, stock));
+    }
     setQtyByName((prev) => {
       const copy = { ...prev };
       if (next <= 0) delete copy[name];
@@ -136,7 +139,7 @@ export function SheetPartsPicker({
                           <div className="sheet-parts-qty">
                             <button
                               type="button"
-                              onClick={() => setQty(part.name, qty - 1)}
+                              onClick={() => setQty(part.name, qty - 1, stock)}
                               disabled={qty <= 0}
                               aria-label={`Decrease ${part.name}`}
                             >
@@ -145,13 +148,17 @@ export function SheetPartsPicker({
                             <input
                               type="number"
                               min={0}
+                              max={stock ?? undefined}
                               value={qty}
-                              onChange={(e) => setQty(part.name, Number(e.target.value) || 0)}
+                              onChange={(e) =>
+                                setQty(part.name, Number(e.target.value) || 0, stock)
+                              }
                               aria-label={`${part.name} quantity`}
                             />
                             <button
                               type="button"
-                              onClick={() => setQty(part.name, qty + 1)}
+                              onClick={() => setQty(part.name, qty + 1, stock)}
+                              disabled={stock != null && qty >= stock}
                               aria-label={`Increase ${part.name}`}
                             >
                               +
