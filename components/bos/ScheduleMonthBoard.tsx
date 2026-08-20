@@ -8,10 +8,12 @@ import {
   toDayKey,
   type FieldJob,
 } from "@/lib/field/days";
+import { SCHEDULE_WINDOWS, slotStatusForTech } from "@/lib/schedule/windows";
 import {
-  SCHEDULE_WINDOWS,
-  slotStatusForTech,
-} from "@/lib/schedule/windows";
+  entriesForDay,
+  untimedEntriesForDay,
+  type CalendarSheetEntry,
+} from "@/lib/schedule/sheet-entries";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
 
 export type ScheduleTech = { id: string; name: string };
@@ -29,28 +31,25 @@ function monthCells(year: number, month: number) {
   return out;
 }
 
-function bookedCountForDay(jobs: FieldJob[], dayKey: string, techId: string | "all") {
-  return jobs.filter((j) => {
-    if (j.status === "cancelled" || !j.scheduled_start) return false;
-    if (techId !== "all" && j.technician_id !== techId) return false;
-    const d = new Date(j.scheduled_start);
-    if (Number.isNaN(d.getTime())) return false;
-    return toDayKey(d) === dayKey;
-  }).length;
+function entryHref(entry: CalendarSheetEntry) {
+  if (entry.jobId) return `/field/jobs/${entry.jobId}`;
+  return `/crm`;
 }
 
 export function ScheduleMonthBoard({
   technicians,
   jobs,
+  entries,
   initialDay,
   initialTech = "all",
 }: {
   technicians: ScheduleTech[];
   jobs: FieldJob[];
+  entries: CalendarSheetEntry[];
   initialDay: string;
   initialTech?: string;
 }) {
-  useBosLiveRefresh(["jobs"]);
+  useBosLiveRefresh(["leads", "jobs"]);
   const todayKey = toDayKey(startOfToday());
   const initial = parseDayKey(initialDay) || startOfToday();
   const [cursor, setCursor] = useState(() => new Date(initial.getFullYear(), initial.getMonth(), 1));
@@ -77,12 +76,26 @@ export function ScheduleMonthBoard({
     return technicians.filter((t) => t.id === techFilter);
   }, [technicians, techFilter]);
 
+  const daySheetEntries = useMemo(() => {
+    const list = entriesForDay(entries, selectedDay);
+    if (techFilter === "all") return list;
+    return list.filter((e) => e.technicianId === techFilter);
+  }, [entries, selectedDay, techFilter]);
+
+  const untimed = useMemo(
+    () => untimedEntriesForDay(entries, selectedDay, techFilter === "all" ? "all" : techFilter),
+    [entries, selectedDay, techFilter],
+  );
+
   function shiftMonth(delta: number) {
     setCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
   }
 
   return (
     <div className="sched-board">
+      <p className="sched-source">
+        Synced from <strong>Sheet</strong> by work date — past Completed stay visible.
+      </p>
       <div className="sched-filters">
         <button
           type="button"
@@ -124,7 +137,9 @@ export function ScheduleMonthBoard({
               if (!cell) {
                 return <div key={`e-${idx}`} className="sched-day-cell is-empty" />;
               }
-              const count = bookedCountForDay(jobs, cell.key, techFilter === "all" ? "all" : techFilter);
+              const count = entriesForDay(entries, cell.key).filter((e) =>
+                techFilter === "all" ? true : e.technicianId === techFilter,
+              ).length;
               const isToday = cell.key === todayKey;
               const isSelected = cell.key === selectedDay;
               const isPast = cell.key < todayKey;
@@ -149,8 +164,8 @@ export function ScheduleMonthBoard({
               <h2>{dayHeading}</h2>
               <p>
                 {techFilter === "all"
-                  ? "All technicians · overlapping windows can both be booked"
-                  : `${visibleTechs[0]?.name || "Technician"} · synced with Field`}
+                  ? "All technicians · Sheet date + arrival windows"
+                  : `${visibleTechs[0]?.name || "Technician"} · synced with Sheet`}
               </p>
             </div>
             {selectedDay !== todayKey ? (
@@ -159,6 +174,26 @@ export function ScheduleMonthBoard({
               </button>
             ) : null}
           </div>
+
+          {daySheetEntries.length > 0 ? (
+            <div className="sched-sheet-list">
+              <h3>On Sheet this day ({daySheetEntries.length})</h3>
+              <ul>
+                {daySheetEntries.map((entry) => (
+                  <li key={entry.id}>
+                    <Link href={entryHref(entry)}>
+                      <strong>{entry.title}</strong>
+                      <span>{entry.status}</span>
+                      {entry.technicianName ? <em>{entry.technicianName}</em> : null}
+                      {entry.scheduled_start ? <em>timed</em> : untimed.some((u) => u.id === entry.id) ? <em>date only</em> : null}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="kanban-empty">No Sheet work on this day.</p>
+          )}
 
           {visibleTechs.length === 0 ? (
             <p className="kanban-empty">No technicians yet.</p>

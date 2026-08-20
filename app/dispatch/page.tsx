@@ -1,7 +1,7 @@
 import { BosShell } from "@/components/bos/BosShell";
 import { DispatchCalendar } from "@/components/bos/DispatchCalendar";
 import { requireRouteAccess } from "@/lib/auth/require";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   parseDayKey,
   startOfToday,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/field/days";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
 import { ensureInvoicesForScheduledJobs } from "@/lib/field/job-invoice";
+import { calendarEntriesFromSheet } from "@/lib/schedule/sheet-entries";
 
 function asMeta(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -38,34 +39,50 @@ export default async function DispatchPage({
       ? params.view
       : "week";
 
-  const supabase = await createSupabaseServerClient();
+  const admin = getSupabaseAdmin();
   try {
     await ensureInvoicesForScheduledJobs(user.id);
   } catch (err) {
     console.error("[dispatch] ensure invoices", err);
   }
-  const [{ data: jobsRaw }, { data: queueRaw }, { data: techs }] = await Promise.all([
-    supabase.from("jobs").select("*").order("scheduled_start", { ascending: true }).limit(800),
-    supabase
+  const [{ data: jobsRaw }, { data: leadsRaw }, { data: techs }] = await Promise.all([
+    admin
+      .from("jobs")
+      .select(
+        "id, lead_id, title, status, zip, address, notes, scheduled_start, scheduled_end, technician_id, updated_at, created_at, job_number",
+      )
+      .neq("status", "cancelled")
+      .order("scheduled_start", { ascending: true })
+      .limit(1500),
+    admin
       .from("leads")
-      .select("*")
-      .in("stage", ["qualified", "new"])
+      .select(
+        "id, name, phone, zip, address, stage, source, message, created_at, deal_title, deal_price, lead_type, metadata, assigned_to",
+      )
       .order("created_at", { ascending: false })
-      .limit(80),
-    supabase
+      .limit(1500),
+    admin
       .from("profiles")
       .select("id, full_name, email, role")
       .eq("role", "technician")
       .order("created_at", { ascending: true }),
   ]);
 
-  const jobs = (jobsRaw || []) as FieldJob[];
+  const jobs = (jobsRaw || []) as Array<
+    FieldJob & { lead_id?: string | null; job_number?: number | string | null }
+  >;
   const technicians = (techs || []).map((t) => ({
     id: t.id,
     name: t.full_name || t.email || "Technician",
   }));
 
-  const queue = (queueRaw || [])
+  const entries = calendarEntriesFromSheet({
+    leads: leadsRaw || [],
+    jobs,
+    technicians,
+  });
+
+  const queue = (leadsRaw || [])
     .map((lead) => {
       const meta = asMeta(lead.metadata);
       const jobStatus = sheetStatusFromLead({ stage: lead.stage, metadata: lead.metadata });
@@ -90,13 +107,14 @@ export default async function DispatchPage({
       user={user}
       active="/dispatch"
       title="Dispatch"
-      subtitle="Full calendar · Month / Week / Day · same jobs as Field"
+      subtitle="Calendar from Sheet · Month / Week / Day · includes past Completed"
     >
       <DispatchCalendar
         dayKey={selectedDay}
         view={view}
         technicians={technicians}
         jobs={jobs}
+        entries={entries}
         queue={queue}
       />
     </BosShell>

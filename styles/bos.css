@@ -4478,6 +4478,17 @@ button.bos-btn:disabled {
   text-align: center;
 }
 
+.dispatch-cal__source,
+.sched-source {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  color: var(--bos-muted);
+}
+
+.dispatch-cal__mcell.is-past {
+  opacity: 0.72;
+}
+
 .dispatch-cal__pill {
   display: flex;
   gap: 0.3rem;
@@ -4489,6 +4500,61 @@ button.bos-btn:disabled {
   text-decoration: none;
   color: var(--bos-text);
   line-height: 1.2;
+}
+
+.dispatch-cal__pill.is-done {
+  background: #eef8f1;
+}
+
+.dispatch-cal__pill.is-cancelled {
+  background: #f4f4f5;
+  color: #6b7280;
+}
+
+.dispatch-cal__pill.is-active {
+  background: #eef5ff;
+}
+
+.dispatch-cal__untimed-row td {
+  background: #fafbfc;
+  vertical-align: top;
+}
+
+.sched-sheet-list {
+  margin: 0 0 1rem;
+}
+
+.sched-sheet-list h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.88rem;
+}
+
+.sched-sheet-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.sched-sheet-list a {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  align-items: baseline;
+  text-decoration: none;
+  color: var(--bos-text);
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  background: #f7f8fa;
+  border: 1px solid var(--bos-border);
+}
+
+.sched-sheet-list span,
+.sched-sheet-list em {
+  font-size: 0.78rem;
+  color: var(--bos-muted);
+  font-style: normal;
 }
 
 .dispatch-cal__pill strong {
