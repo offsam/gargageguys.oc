@@ -3,7 +3,14 @@ import { CreateEmployeeForm } from "@/components/bos/CreateEmployeeForm";
 import { requireRouteAccess } from "@/lib/auth/require";
 import { EMPLOYEE_SECTIONS, ROLE_HOME, ROLE_LABELS } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { updateEmployeeRoleAction, updateEmployeeTechRankAction, loadTechRanks, ensureDefaultSeniorTechs } from "@/app/actions/employees";
+import {
+  updateEmployeeRoleAction,
+  updateEmployeeTechRankAction,
+  updateEmployeeTelegramAction,
+  loadTechRanks,
+  loadTelegramChatIds,
+  ensureDefaultSeniorTechs,
+} from "@/app/actions/employees";
 import { techRankLabel, type TechRank } from "@/lib/auth/tech-rank";
 import type { AppRole } from "@/lib/supabase/types";
 import Link from "next/link";
@@ -13,9 +20,13 @@ export default async function EmployeesPage() {
 
   const supabase = await createSupabaseServerClient();
   await ensureDefaultSeniorTechs().catch(() => null);
-  const [{ data: profiles }, techRanks] = await Promise.all([
-    supabase.from("profiles").select("id, email, full_name, role, created_at").order("created_at", { ascending: true }),
+  const [{ data: profiles }, techRanks, telegramIds] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, email, full_name, role, created_at")
+      .order("created_at", { ascending: true }),
     loadTechRanks().catch(() => ({} as Record<string, TechRank>)),
+    loadTelegramChatIds().catch(() => ({} as Record<string, string>)),
   ]);
 
   const staff = profiles || [];
@@ -30,6 +41,12 @@ export default async function EmployeesPage() {
       <div className="emp-toolbar">
         <CreateEmployeeForm />
       </div>
+
+      <p className="emp-telegram-hint bos-card">
+        <strong>Telegram for techs:</strong> each technician opens your Garage Guys bot and sends{" "}
+        <code>/start</code>. Then paste their numeric chat id here (from @userinfobot or BotFather
+        getUpdates). When a job is Scheduled to them, they get a Telegram message.
+      </p>
 
       <div className="emp-sections">
         {EMPLOYEE_SECTIONS.map((section) => {
@@ -57,6 +74,7 @@ export default async function EmployeesPage() {
                       <th>Email / login</th>
                       <th>Cabinet</th>
                       <th>Role</th>
+                      {section.role === "technician" ? <th>Telegram chat id</th> : null}
                     </tr>
                   </thead>
                   <tbody>
@@ -100,6 +118,28 @@ export default async function EmployeesPage() {
                             </form>
                           ) : null}
                         </td>
+                        {section.role === "technician" ? (
+                          <td>
+                            <form action={updateEmployeeTelegramAction} className="emp-role-form emp-telegram-form">
+                              <input type="hidden" name="id" value={person.id} />
+                              <input
+                                name="telegramChatId"
+                                defaultValue={telegramIds[person.id] || ""}
+                                placeholder="e.g. 728807017"
+                                inputMode="numeric"
+                                autoComplete="off"
+                              />
+                              <button type="submit">
+                                {telegramIds[person.id] ? "Update" : "Link"}
+                              </button>
+                            </form>
+                            {telegramIds[person.id] ? (
+                              <div className="emp-rank emp-telegram-ok">Linked</div>
+                            ) : (
+                              <div className="emp-rank emp-telegram-miss">Not linked</div>
+                            )}
+                          </td>
+                        ) : null}
                       </tr>
                     ))}
                   </tbody>

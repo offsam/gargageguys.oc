@@ -18,6 +18,24 @@ update profiles set role = 'owner' where email = 'you@example.com';
    - Marketing site: `/`  
    - Login: `/login` → role home
 
+## Telegram job alerts for technicians
+
+1. Keep `TELEGRAM_BOT_TOKEN` set (same bot as lead alerts).
+2. Each tech opens the bot and sends `/start`.
+3. Owner → **Employees** → paste the tech’s numeric Telegram chat id and Save.
+4. When a job is **Scheduled** (Sheet / CRM / Dispatch / Field assign), that tech gets a Telegram message.
+
+Office lead alerts still use `TELEGRAM_CHAT_ID`.
+
+## Telegram job alerts for technicians
+
+1. Keep `TELEGRAM_BOT_TOKEN` set (same bot as lead alerts).
+2. Each tech opens the bot and sends `/start`.
+3. Owner → **Employees** → paste the tech’s numeric Telegram chat id and Save.
+4. When a job is **Scheduled** (Sheet / CRM / Dispatch / Field assign), that tech gets a Telegram message.
+
+Office lead alerts still use `TELEGRAM_CHAT_ID`.
+
 ## Routes
 
 | Path | Who |

@@ -9,6 +9,8 @@ import { isSeniorTechnician } from "@/lib/auth/tech-rank";
 import { addServiceToInvoiceAction } from "@/app/actions/job-invoice";
 import { findServiceInList, loadServices, upsertService } from "@/lib/field/service-store";
 import { parseMoney } from "@/lib/sheet/money";
+import { notifyTechnicianJobAssigned } from "@/lib/notify/tech-job";
+import { SCHEDULE_WINDOWS } from "@/lib/schedule/windows";
 
 function revalidateField() {
   revalidatePath("/field");
@@ -194,6 +196,21 @@ export async function createFieldClientJobAction(formData: FormData) {
       console.error("[createFieldClientJobAction] service", err);
     }
   }
+
+  const localDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+  const windowLabel =
+    SCHEDULE_WINDOWS.find((w) => w.startHour === start.getHours())?.label ||
+    `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
+  void notifyTechnicianJobAssigned({
+    technicianId,
+    clientName: name,
+    address,
+    zip,
+    phone,
+    date: localDate,
+    timeLabel: windowLabel,
+    service,
+  }).catch((err) => console.error("[createFieldClientJobAction] telegram", err));
 
   revalidateField();
   return { ok: true as const, jobId: job.id };

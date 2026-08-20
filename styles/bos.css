@@ -1234,6 +1234,38 @@ textarea {
   align-items: center;
 }
 
+.emp-telegram-hint {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--bos-muted);
+}
+
+.emp-telegram-hint code {
+  font-size: 0.82rem;
+  background: var(--bos-accent-soft);
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+}
+
+.emp-telegram-form input {
+  width: 9.5rem;
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--bos-border);
+  border-radius: 6px;
+}
+
+.emp-telegram-ok {
+  color: #1f6b3a;
+}
+
+.emp-telegram-miss {
+  color: #9a6700;
+}
+
 .emp-rank {
   margin-top: 0.15rem;
   font-size: 0.72rem;

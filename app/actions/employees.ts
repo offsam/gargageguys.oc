@@ -80,6 +80,47 @@ export async function loadTechRanks(): Promise<Record<string, TechRank>> {
   return ranks;
 }
 
+/** Telegram chat ids from auth app_metadata (numeric chat id after tech /start). */
+export async function loadTelegramChatIds(): Promise<Record<string, string>> {
+  const admin = getSupabaseAdmin();
+  const { data } = await admin.auth.admin.listUsers({ perPage: 200, page: 1 });
+  const out: Record<string, string> = {};
+  for (const user of data.users || []) {
+    const raw = (user.app_metadata as { telegram_chat_id?: unknown } | undefined)
+      ?.telegram_chat_id;
+    if (typeof raw === "string" && raw.trim()) out[user.id] = raw.trim();
+  }
+  return out;
+}
+
+export async function updateEmployeeTelegramAction(formData: FormData) {
+  const session = await getSessionUser();
+  if (!session || session.role !== "owner") return;
+
+  const id = String(formData.get("id") || "").trim();
+  const chatId = String(formData.get("telegramChatId") || "").trim();
+  if (!id) return;
+  if (chatId && !/^-?\d{5,20}$/.test(chatId)) return;
+
+  const admin = getSupabaseAdmin();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id, role")
+    .eq("id", id)
+    .maybeSingle();
+  if (!profile || profile.role !== "technician") return;
+
+  const { data: authUser } = await admin.auth.admin.getUserById(id);
+  await admin.auth.admin.updateUserById(id, {
+    app_metadata: mergeAppMeta(
+      authUser.user?.app_metadata as Record<string, unknown> | undefined,
+      { telegram_chat_id: chatId || null },
+    ),
+  });
+
+  revalidatePath("/employees");
+}
+
 export type CreateEmployeeState = {
   ok?: boolean;
   error?: string;

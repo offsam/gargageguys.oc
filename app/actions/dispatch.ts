@@ -2,8 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { JobStatus } from "@/lib/supabase/types";
 import { JOB_STATUS_TO_SHEET, stageFromSheetStatus } from "@/lib/leads/stage-sync";
+import { notifyTechnicianJobAssigned } from "@/lib/notify/tech-job";
+import { SCHEDULE_WINDOWS } from "@/lib/schedule/windows";
 
 export async function createJobFromLeadAction(formData: FormData) {
   const leadId = String(formData.get("leadId") || "");
@@ -32,6 +35,12 @@ export async function assignJobAction(formData: FormData) {
   const technicianId = String(formData.get("technicianId") || "") || null;
   if (!jobId) return;
   const supabase = await createSupabaseServerClient();
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("id, lead_id, title, address, zip, scheduled_start, scheduled_end")
+    .eq("id", jobId)
+    .maybeSingle();
+
   await supabase
     .from("jobs")
     .update({
@@ -40,6 +49,48 @@ export async function assignJobAction(formData: FormData) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", jobId);
+
+  if (technicianId && job) {
+    let phone = "";
+    let clientName = job.title || "Client";
+    let service = "";
+    if (job.lead_id) {
+      const admin = getSupabaseAdmin();
+      const { data: lead } = await admin
+        .from("leads")
+        .select("name, phone, metadata")
+        .eq("id", job.lead_id)
+        .maybeSingle();
+      if (lead?.name) clientName = lead.name;
+      if (lead?.phone) phone = lead.phone;
+      const meta =
+        lead?.metadata && typeof lead.metadata === "object"
+          ? (lead.metadata as Record<string, unknown>)
+          : {};
+      if (typeof meta.service === "string") service = meta.service;
+    }
+    const start = job.scheduled_start ? new Date(job.scheduled_start) : null;
+    const localDate =
+      start && !Number.isNaN(start.getTime())
+        ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`
+        : "";
+    const windowLabel =
+      start && !Number.isNaN(start.getTime())
+        ? SCHEDULE_WINDOWS.find((w) => w.startHour === start.getHours())?.label ||
+          `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`
+        : "";
+    void notifyTechnicianJobAssigned({
+      technicianId,
+      clientName,
+      address: job.address,
+      zip: job.zip,
+      phone,
+      date: localDate,
+      timeLabel: windowLabel,
+      service,
+    }).catch((err) => console.error("[assignJobAction] telegram", err));
+  }
+
   revalidatePath("/dispatch");
   revalidatePath("/field");
 }
@@ -85,7 +136,6 @@ export async function updateJobStatusAction(formData: FormData) {
 
   revalidatePath("/dispatch");
   revalidatePath("/field");
-  revalidatePath("/owner");
   revalidatePath("/crm");
   revalidatePath("/sheet");
 }

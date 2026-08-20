@@ -17,6 +17,8 @@ import { parseLocalDateTime } from "@/lib/datetime";
 import type { LeadStage } from "@/lib/supabase/types";
 import { deleteSheetRowAction, saveSheetRowAction, type SheetSaveInput } from "@/app/actions/sheet";
 import { ensureJobInvoice } from "@/lib/field/job-invoice";
+import { notifyTechnicianJobAssigned } from "@/lib/notify/tech-job";
+import { SCHEDULE_WINDOWS } from "@/lib/schedule/windows";
 
 function revalidateCrmAndSheet() {
   revalidatePath("/crm");
@@ -313,6 +315,19 @@ export async function scheduleCrmLeadAction(formData: FormData) {
   } catch (err) {
     console.error("[scheduleCrmLeadAction] invoice", err);
   }
+
+  const windowLabel =
+    SCHEDULE_WINDOWS.find((w) => w.startHour === start.getHours())?.label || localTime;
+  void notifyTechnicianJobAssigned({
+    technicianId,
+    clientName: lead.name || String(prev.clientName || "Client"),
+    address,
+    zip,
+    phone: lead.phone || String(prev.phone || ""),
+    date: localDate,
+    timeLabel: windowLabel,
+    service: String(prev.service || ""),
+  }).catch((err) => console.error("[scheduleCrmLeadAction] telegram", err));
 
   revalidateCrmAndSheet();
   return {

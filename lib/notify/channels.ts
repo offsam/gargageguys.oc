@@ -1,6 +1,9 @@
-export async function sendTelegram(text: string): Promise<boolean> {
+export async function sendTelegram(
+  text: string,
+  options?: { chatId?: string },
+): Promise<boolean> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const chatId = options?.chatId || process.env.TELEGRAM_CHAT_ID;
   if (!botToken || !chatId) return false;
 
   const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
