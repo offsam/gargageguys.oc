@@ -3804,6 +3804,41 @@ button.bos-btn:disabled {
   font-weight: 600;
 }
 
+.field-job-owner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0 0 0.85rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid var(--bos-border);
+}
+
+.field-job-owner__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.field-job-owner__name {
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.field-job-owner--gg {
+  background: #eef5ff;
+  border-color: #c7dbf5;
+  color: #0f2340;
+}
+
+.field-job-owner--partner {
+  background: #fff4e8;
+  border-color: #f0d0a8;
+  color: #5a3208;
+}
+
 .field-parts-form {
   display: flex;
   flex-direction: column;

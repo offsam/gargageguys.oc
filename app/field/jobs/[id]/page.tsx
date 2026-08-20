@@ -10,7 +10,11 @@ import { ensureStockSeeded, techQty } from "@/lib/stock/store";
 import { getFieldAttentionCount } from "@/lib/field/load-attention";
 import { ensureJobInvoice, formatJobNumber } from "@/lib/field/job-invoice";
 import { listPartnersAction } from "@/app/actions/partners";
-import { pickLeadWorkMeta, resolveJobStockSource } from "@/lib/stock/job-source";
+import {
+  jobCompanyLabel,
+  pickLeadWorkMeta,
+  resolveJobStockSource,
+} from "@/lib/stock/job-source";
 import { loadServices } from "@/lib/field/service-store";
 import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 import { sheetServiceFromLead } from "@/lib/sheet/issue-service";
@@ -45,6 +49,8 @@ export default async function FieldJobPage({
       ? (leadRow.data.metadata as Record<string, unknown>)
       : {};
   const { workSource, partnerName } = pickLeadWorkMeta(leadMeta);
+  const companyLabel = jobCompanyLabel(workSource, partnerName);
+  const isPartnerJob = companyLabel !== "Garage Guys";
   const stockSource = resolveJobStockSource(workSource, partnerName, partners);
   const availableParts = state.items
     .map((item) => ({
@@ -82,6 +88,14 @@ export default async function FieldJobPage({
       <p className="field-back">
         <Link href="/field">← Today</Link>
       </p>
+
+      <div
+        className={`field-job-owner${isPartnerJob ? " field-job-owner--partner" : " field-job-owner--gg"}`}
+        role="status"
+      >
+        <span className="field-job-owner__label">Job for</span>
+        <strong className="field-job-owner__name">{companyLabel}</strong>
+      </div>
 
       <section className="field-detail-card">
         <p className="field-detail-when">{when}</p>
@@ -158,6 +172,7 @@ export default async function FieldJobPage({
       <FieldShell
         user={user}
         title={job.title}
+        subtitle={companyLabel}
         active="schedule"
         attentionCount={attentionCount}
       >
@@ -167,7 +182,12 @@ export default async function FieldJobPage({
   }
 
   return (
-    <BosShell user={user} active="/field" title={job.title} subtitle="Job detail + invoice">
+    <BosShell
+      user={user}
+      active="/field"
+      title={job.title}
+      subtitle={`${companyLabel} · Job detail + invoice`}
+    >
       {body}
     </BosShell>
   );

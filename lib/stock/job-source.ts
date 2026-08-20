@@ -26,3 +26,9 @@ export function pickLeadWorkMeta(meta: Record<string, unknown>) {
   const partnerName = String(meta.partnerName || meta.partner_name || meta.partner || "");
   return { workSource, partnerName };
 }
+
+/** Company the job belongs to — partner name, or Garage Guys for own work. */
+export function jobCompanyLabel(workSource: string, partnerName: string): string {
+  if (isPartnerWork(workSource) && partnerName.trim()) return partnerName.trim();
+  return "Garage Guys";
+}
