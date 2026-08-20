@@ -16,6 +16,7 @@ import {
   toDayKey,
   type FieldJob,
 } from "@/lib/field/days";
+import { ensureTechFieldJobsFromSheet } from "@/lib/sheet/sync-job-from-sheet";
 
 export default async function FieldPage({
   searchParams,
@@ -29,11 +30,27 @@ export default async function FieldPage({
   const selectedDay = params.day && parseDayKey(params.day) ? params.day : todayKey;
 
   const supabase = await createSupabaseServerClient();
-  let query = supabase.from("jobs").select("*").order("scheduled_start", { ascending: true });
+
+  if (user.role === "technician") {
+    try {
+      await ensureTechFieldJobsFromSheet({
+        technicianId: user.id,
+        technicianName: user.fullName || user.email || "",
+      });
+    } catch (err) {
+      console.error("[field] sheet→job backfill", err);
+    }
+  }
+
+  let query = supabase
+    .from("jobs")
+    .select("*")
+    .not("scheduled_start", "is", null)
+    .order("scheduled_start", { ascending: false });
   if (user.role === "technician") {
     query = query.eq("technician_id", user.id);
   }
-  const { data: jobsRaw } = await query.limit(500);
+  const { data: jobsRaw } = await query.limit(800);
   const jobs = (jobsRaw || []) as FieldJob[];
 
   const counts = jobCountsByDay(jobs);

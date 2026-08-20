@@ -110,6 +110,7 @@ export async function createFieldClientJobAction(formData: FormData) {
       jobStatus: "Scheduled",
       technician: technicianName,
       sheetDate: start.toISOString().slice(0, 10),
+      sheetTime: `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`,
       fromField: true,
       workSource,
       partnerName,

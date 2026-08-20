@@ -21,6 +21,7 @@ function asSaveInput(body: unknown): SheetSaveInput | null {
     leadSource: str(record, "leadSource"),
     leadCost: str(record, "leadCost"),
     date: str(record, "date"),
+    time: str(record, "time"),
     clientName: str(record, "clientName"),
     clientAddress: str(record, "clientAddress"),
     jobStatus: str(record, "jobStatus"),

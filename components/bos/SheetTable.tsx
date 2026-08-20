@@ -30,6 +30,7 @@ import {
   type SheetColumnKey,
   type SheetPartner,
 } from "@/lib/sheet/work-source";
+import { normalizeSheetTime } from "@/lib/sheet/sync-job-from-sheet";
 import {
   applyServicePriceToJobCost,
   bankFeeFor,
@@ -49,6 +50,7 @@ export type SheetRow = {
   leadSource: string;
   leadCost: string;
   date: string;
+  time: string;
   clientName: string;
   clientAddress: string;
   jobStatus: string;
@@ -83,7 +85,7 @@ const LEAD_SOURCES = [
   "Thumbtack",
   "Yelp",
 ] as const;
-const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths-v2";
+const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths-v3";
 const SORT_STORAGE_KEY = "bos-sheet-date-sort";
 const PERIOD_STORAGE_KEY = "bos-sheet-period-v1";
 const LEAD_SOURCE_LIST_ID = "sheet-lead-source-list";
@@ -121,11 +123,12 @@ const COLUMNS: Array<{
   key: SheetColumnKey;
   label: string;
   width: number;
-  kind?: "text" | "select" | "date" | "combo";
+  kind?: "text" | "select" | "date" | "time" | "combo";
   options?: "payment" | "status" | "technician" | "parts" | "leadSource" | "workSource" | "partner" | "service";
   money?: boolean;
 }> = [
   { key: "date", label: "Date", width: 130, kind: "date" },
+  { key: "time", label: "Time", width: 100, kind: "time" },
   { key: "jobNumber", label: "Job #", width: 110 },
   { key: "workSource", label: "Work source", width: 130, kind: "select", options: "workSource" },
   { key: "partnerName", label: "Partner", width: 160, kind: "select", options: "partner" },
@@ -271,6 +274,7 @@ function emptyRow(index: number): SheetRow {
     leadSource: "",
     leadCost: "",
     date: todayISO(),
+    time: "",
     clientName: "",
     clientAddress: "",
     jobStatus: "",
@@ -445,6 +449,7 @@ function withClientKeys(rows: SheetRow[]): SheetRow[] {
     clientKey: r.clientKey || r.id,
     workSource: normalizeWorkSource(r.workSource) || r.workSource || "",
     date: toDateInputValue(r.date),
+    time: normalizeSheetTime(r.time),
   }));
 }
 
@@ -842,12 +847,13 @@ export function SheetTable({
           if (rowKey(r) !== rowKey(rowSnapshot) && r.id !== rowSnapshot.id && r.id !== leadId) {
             return r;
           }
-          return {
+            return {
             ...r,
             id: leadId,
             jobStatus: "Scheduled",
             technician: techName || r.technician,
             date: sheetDate || r.date,
+            time: normalizeSheetTime(input.startAt.slice(11, 16)) || r.time,
           };
         });
         rowsRef.current = next;
@@ -1611,9 +1617,15 @@ export function SheetTable({
                               if (col.key === "jobStatus") {
                                 const nextStatus = e.target.value;
                                 if (nextStatus === "Scheduled") {
-                                  e.target.value = row.jobStatus;
-                                  requestSchedule(row);
-                                  return;
+                                  const canInline =
+                                    Boolean(toDateInputValue(row.date)) &&
+                                    Boolean(normalizeSheetTime(row.time)) &&
+                                    Boolean(row.technician.trim());
+                                  if (!canInline) {
+                                    e.target.value = row.jobStatus;
+                                    requestSchedule(row);
+                                    return;
+                                  }
                                 }
                                 const blocked = completeBlockedReason(nextStatus, row.jobCost);
                                 if (blocked) {
@@ -1698,6 +1710,28 @@ export function SheetTable({
                             onChange={(e) => {
                               if (!editable) return;
                               patchRow(row.id, { date: e.target.value || todayISO() }, true);
+                            }}
+                          />
+                        </td>
+                      );
+                    }
+
+                    if (col.kind === "time") {
+                      return (
+                        <td key={col.key} className={cellClass}>
+                          <input
+                            className="sheet-cell sheet-time"
+                            type="time"
+                            value={normalizeSheetTime(row.time)}
+                            disabled={!editable}
+                            tabIndex={editable ? 0 : -1}
+                            onChange={(e) => {
+                              if (!editable) return;
+                              patchRow(
+                                row.id,
+                                { time: normalizeSheetTime(e.target.value) },
+                                true,
+                              );
                             }}
                           />
                         </td>

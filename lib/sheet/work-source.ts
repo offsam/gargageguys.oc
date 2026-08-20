@@ -15,6 +15,7 @@ export type SheetColumnKey =
   | "workSource"
   | "partnerName"
   | "date"
+  | "time"
   | "clientName"
   | "clientAddress"
   | "jobStatus"
@@ -40,6 +41,7 @@ const ALWAYS: SheetColumnKey[] = ["workSource", "jobNumber"];
 
 const SHARED: SheetColumnKey[] = [
   "date",
+  "time",
   "clientName",
   "clientAddress",
   "jobStatus",

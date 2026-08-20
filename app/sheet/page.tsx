@@ -12,6 +12,7 @@ import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
 import { sheetIssueFromLead, sheetServiceFromLead } from "@/lib/sheet/issue-service";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
 import type { FieldJob } from "@/lib/field/days";
+import { normalizeSheetTime, timeFromIso } from "@/lib/sheet/sync-job-from-sheet";
 import type { StockPartOption } from "@/components/bos/SheetTable";
 
 function asMeta(value: unknown): Record<string, unknown> {
@@ -61,6 +62,7 @@ export default async function SheetPage() {
   ]);
 
   const jobNumberByLead = new Map<string, string>();
+  const jobStartByLead = new Map<string, string>();
   for (const job of jobsForNumbers || []) {
     const leadId = String(job.lead_id || "");
     if (!leadId || jobNumberByLead.has(leadId)) continue;
@@ -68,6 +70,7 @@ export default async function SheetPage() {
       job.job_number == null || job.job_number === "" ? null : Number(job.job_number),
     );
     if (label !== "—") jobNumberByLead.set(leadId, label);
+    if (job.scheduled_start) jobStartByLead.set(leadId, String(job.scheduled_start));
   }
 
   const stockParts: StockPartOption[] = (() => {
@@ -159,6 +162,9 @@ export default async function SheetPage() {
           : lead.source || pick(meta, "leadSource", "lead_source") || "",
       leadCost: pick(meta, "leadCost", "lead_cost"),
       date: pick(meta, "sheetDate", "date") || new Date(lead.created_at).toISOString().slice(0, 10),
+      time:
+        normalizeSheetTime(pick(meta, "sheetTime", "time")) ||
+        timeFromIso(jobStartByLead.get(lead.id) || null),
       clientName: lead.name || pick(meta, "clientName", "client_name") || "",
       clientAddress:
         lead.address ||

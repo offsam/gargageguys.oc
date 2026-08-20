@@ -41,6 +41,7 @@ function crmSheetInput(formData: FormData, id: string, jobStatus: string): Sheet
     leadSource: String(formData.get("leadSource") || "").trim(),
     leadCost: String(formData.get("leadCost") || "").trim(),
     date: String(formData.get("date") || "").trim() || todayISO(),
+    time: String(formData.get("time") || "").trim(),
     clientName: String(formData.get("clientName") || "").trim(),
     clientAddress: String(formData.get("clientAddress") || "").trim(),
     jobStatus,
@@ -258,6 +259,7 @@ export async function scheduleCrmLeadAction(formData: FormData) {
         jobStatus: "Scheduled",
         technician: techName,
         sheetDate: start.toISOString().slice(0, 10),
+        sheetTime: `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`,
       },
     })
     .eq("id", leadId);
@@ -316,6 +318,7 @@ export async function scheduleCrmLeadAction(formData: FormData) {
     jobStatus: "Scheduled" as const,
     technician: techName,
     date: start.toISOString().slice(0, 10),
+    time: `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`,
   };
 }
 

@@ -11,6 +11,11 @@ import { parseInvoiceLines } from "@/lib/field/job-invoice-types";
 import { parsePartsLines } from "@/lib/sheet/parts-lines";
 import { ensureLeadWorkOrder } from "@/lib/field/job-invoice";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
+import {
+  normalizeSheetTime,
+  shouldSyncSheetStatusToJob,
+  syncSheetLeadToFieldJob,
+} from "@/lib/sheet/sync-job-from-sheet";
 
 export type SheetSaveInput = {
   id: string;
@@ -19,6 +24,7 @@ export type SheetSaveInput = {
   leadSource: string;
   leadCost: string;
   date: string;
+  time: string;
   clientName: string;
   clientAddress: string;
   jobStatus: string;
@@ -43,6 +49,7 @@ function sheetMeta(input: SheetSaveInput) {
     leadSource: input.leadSource,
     leadCost: input.leadCost,
     sheetDate: input.date,
+    sheetTime: normalizeSheetTime(input.time),
     clientName: input.clientName,
     clientAddress: input.clientAddress,
     jobStatus: input.jobStatus,
@@ -206,6 +213,38 @@ async function workOrderNumber(leadId: string): Promise<string> {
   }
 }
 
+async function syncFieldJobFromSheetSave(
+  leadId: string,
+  input: SheetSaveInput,
+  assignedTo: string | null | undefined,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!shouldSyncSheetStatusToJob(input.jobStatus)) return { ok: true };
+  if (!input.date.trim()) return { ok: true };
+
+  const admin = getSupabaseAdmin();
+  const { data: lead } = await admin
+    .from("leads")
+    .select("id, name, address, zip, message, customer_id")
+    .eq("id", leadId)
+    .maybeSingle();
+
+  const result = await syncSheetLeadToFieldJob({
+    leadId,
+    date: input.date,
+    time: input.time,
+    technicianId: assignedTo || undefined,
+    technicianName: input.technician,
+    jobStatus: input.jobStatus,
+    clientName: input.clientName || lead?.name || "",
+    clientAddress: input.clientAddress || lead?.address || "",
+    zip: lead?.zip || null,
+    notes: lead?.message || input.description || null,
+    customerId: lead?.customer_id || null,
+  });
+  if (!result.ok) return result;
+  return { ok: true };
+}
+
 export async function saveSheetRowAction(
   input: SheetSaveInput,
   opts?: { silent?: boolean },
@@ -249,11 +288,17 @@ export async function saveSheetRowAction(
 
   const requestedStatus = normalizeSheetStatus(input.jobStatus);
   if (requestedStatus === "Scheduled" && isTempId(input.id)) {
-    return {
-      ok: false,
-      error: "Pick time and technician to schedule",
-      jobStatus: "Waiting",
-    };
+    const canInlineSchedule =
+      Boolean(input.date.trim()) &&
+      Boolean(normalizeSheetTime(input.time)) &&
+      Boolean(input.technician.trim());
+    if (!canInlineSchedule) {
+      return {
+        ok: false,
+        error: "Pick time and technician to schedule",
+        jobStatus: "Waiting",
+      };
+    }
   }
 
   try {
@@ -322,6 +367,10 @@ export async function saveSheetRowAction(
           error: err instanceof Error ? err.message : "Stock update failed",
         };
       }
+      const fieldSync = await syncFieldJobFromSheetSave(data!.id, input, assignedTo);
+      if (!fieldSync.ok) {
+        return { ok: false, id: data!.id, error: fieldSync.error };
+      }
       const jobNumber = await workOrderNumber(data!.id);
       if (!opts?.silent) revalidateRelatedSurfaces();
       return { ok: true, id: data!.id, jobNumber };
@@ -340,11 +389,17 @@ export async function saveSheetRowAction(
       metadata: existing.metadata,
     });
     if (requestedStatus === "Scheduled" && prevStatus !== "Scheduled") {
-      return {
-        ok: false,
-        error: "Pick time and technician to schedule",
-        jobStatus: prevStatus,
-      };
+      const canInlineSchedule =
+        Boolean(input.date.trim()) &&
+        Boolean(normalizeSheetTime(input.time)) &&
+        Boolean(input.technician.trim());
+      if (!canInlineSchedule) {
+        return {
+          ok: false,
+          error: "Pick time and technician to schedule",
+          jobStatus: prevStatus,
+        };
+      }
     }
 
     const prev =
@@ -411,6 +466,10 @@ export async function saveSheetRowAction(
         id: input.id,
         error: err instanceof Error ? err.message : "Stock update failed",
       };
+    }
+    const fieldSync = await syncFieldJobFromSheetSave(input.id, input, assignedTo);
+    if (!fieldSync.ok) {
+      return { ok: false, id: input.id, error: fieldSync.error };
     }
     const jobNumber = await workOrderNumber(input.id);
     if (!opts?.silent) revalidateRelatedSurfaces();
