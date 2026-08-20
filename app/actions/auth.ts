@@ -10,6 +10,9 @@ export async function signInAction(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
   const next = String(formData.get("next") || "").trim();
+  // Persist is the default: durable cookies are always written via authCookieOptions.
+  // FieldSessionKeeper keeps the JWT fresh on phones while Field is open.
+  void formData.get("persist");
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -36,4 +39,16 @@ export async function signOutAction() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+/** Soft refresh used so server cookies stay warm alongside the browser client. */
+export async function refreshSessionAction(): Promise<{ ok: boolean }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) return { ok: false };
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
 }

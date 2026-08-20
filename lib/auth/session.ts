@@ -15,7 +15,15 @@ export type SessionUser = {
 export async function getSessionUser(): Promise<SessionUser | null> {
   try {
     const supabase = await createSupabaseServerClient();
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth, error } = await supabase.auth.getUser();
+    if (error) {
+      // Transient network / refresh failures should not look identical to a
+      // missing profile, but without a session we still treat as logged out.
+      if (!/session|jwt|auth/i.test(error.message)) {
+        console.error("[getSessionUser]", error.message);
+      }
+      return null;
+    }
     if (!auth.user) return null;
 
     const { data: profile } = await supabase
@@ -36,7 +44,8 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       techRank: resolveTechRank({ role, email, storedRank }),
       homePath: homeForRole(role),
     };
-  } catch {
+  } catch (err) {
+    console.error("[getSessionUser]", err instanceof Error ? err.message : err);
     return null;
   }
 }

@@ -16,9 +16,25 @@ const PROTECTED = [
   "/serm",
   "/ads",
   "/reviews",
+  "/schedule",
 ];
 
+function canonicalHostRedirect(request: NextRequest): NextResponse | null {
+  const host = request.headers.get("host")?.toLowerCase() || "";
+  // Keep auth cookies on one host — www and apex are otherwise separate sessions.
+  if (host === "www.garageguysoc.com") {
+    const url = request.nextUrl.clone();
+    url.host = "garageguysoc.com";
+    url.protocol = "https:";
+    return NextResponse.redirect(url, 308);
+  }
+  return null;
+}
+
 export async function middleware(request: NextRequest) {
+  const hostRedirect = canonicalHostRedirect(request);
+  if (hostRedirect) return hostRedirect;
+
   const { pathname } = request.nextUrl;
   const isProtected = PROTECTED.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
@@ -39,19 +55,35 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/owner",
     "/owner/:path*",
+    "/employees",
     "/employees/:path*",
+    "/partners",
     "/partners/:path*",
+    "/sheet",
     "/sheet/:path*",
+    "/stock",
     "/stock/:path*",
+    "/services",
     "/services/:path*",
+    "/dispatch",
     "/dispatch/:path*",
+    "/finance",
     "/finance/:path*",
+    "/field",
     "/field/:path*",
+    "/crm",
     "/crm/:path*",
+    "/clients",
     "/clients/:path*",
+    "/serm",
     "/serm/:path*",
+    "/ads",
     "/ads/:path*",
+    "/reviews",
     "/reviews/:path*",
+    "/schedule",
+    "/schedule/:path*",
   ],
 };

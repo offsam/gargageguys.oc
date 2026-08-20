@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { User } from "@supabase/supabase-js";
 import { safeInternalPath } from "@/lib/security/safe-redirect";
+import { authCookieOptions } from "@/lib/supabase/cookie-options";
 
 /**
  * Refresh auth cookies and validate the user JWT (not just cookie presence).
@@ -19,6 +20,7 @@ export async function updateSession(request: NextRequest): Promise<{
   }
 
   const supabase = createServerClient(url, key, {
+    cookieOptions: authCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();

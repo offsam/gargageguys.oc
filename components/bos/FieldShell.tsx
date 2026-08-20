@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { SessionUser } from "@/lib/auth/session";
 import { techRankLabel } from "@/lib/auth/tech-rank";
 import { signOutAction } from "@/app/actions/auth";
+import { FieldSessionKeeper } from "@/components/bos/FieldSessionKeeper";
 
 type TabId = "schedule" | "report" | "stock" | "attention";
 
@@ -40,6 +41,7 @@ export function FieldShell({
 
   return (
     <div className={`field-app${wide ? " field-app--wide" : ""}`}>
+      <FieldSessionKeeper />
       <header className="field-top">
         <div>
           <p className="field-brand">Garage Guys</p>

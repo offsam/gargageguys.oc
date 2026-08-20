@@ -1042,6 +1042,22 @@ textarea {
   border-color: var(--bos-accent-2);
 }
 
+.login-card .login-stay {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 1rem;
+  font-size: 0.92rem;
+  color: var(--bos-text);
+  cursor: pointer;
+}
+
+.login-card .login-stay input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--bos-accent-2);
+}
+
 .login-card button {
   width: 100%;
   padding: 0.75rem;
