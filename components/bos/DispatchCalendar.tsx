@@ -30,12 +30,6 @@ import type { DispatchQueueLead } from "@/components/bos/DispatchBoard";
 
 export type DispatchCalView = "month" | "week" | "day";
 
-function techShort(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  return name.slice(0, 2).toUpperCase() || "?";
-}
-
 function monthCells(year: number, month: number) {
   const first = new Date(year, month, 1);
   const startPad = first.getDay();
@@ -60,6 +54,14 @@ function statusClass(status: string) {
   return "is-active";
 }
 
+function filterByTech(
+  list: CalendarSheetEntry[],
+  techFilter: string,
+): CalendarSheetEntry[] {
+  if (techFilter === "all") return list;
+  return list.filter((e) => e.technicianId === techFilter);
+}
+
 export function DispatchCalendar({
   dayKey: initialDay,
   view: initialView = "week",
@@ -80,6 +82,7 @@ export function DispatchCalendar({
   const todayKey = toDayKey(startOfToday());
   const [view, setView] = useState<DispatchCalView>(initialView);
   const [selectedDay, setSelectedDay] = useState(initialDay);
+  const [techFilter, setTechFilter] = useState("all");
   const [pending, startTransition] = useTransition();
   const [scheduleLead, setScheduleLead] = useState<DispatchQueueLead | null>(null);
   const [scheduleError, setScheduleError] = useState("");
@@ -89,6 +92,21 @@ export function DispatchCalendar({
   const monthGrid = useMemo(
     () => monthCells(selectedDate.getFullYear(), selectedDate.getMonth()),
     [selectedDate],
+  );
+
+  const visibleEntries = useMemo(
+    () => filterByTech(entries, techFilter),
+    [entries, techFilter],
+  );
+
+  const visibleTechs = useMemo(() => {
+    if (techFilter === "all") return technicians;
+    return technicians.filter((t) => t.id === techFilter);
+  }, [technicians, techFilter]);
+
+  const dayEntries = useMemo(
+    () => filterByTech(entriesForDay(entries, selectedDay), techFilter),
+    [entries, selectedDay, techFilter],
   );
 
   const heading =
@@ -175,8 +193,32 @@ export function DispatchCalendar({
         </div>
       </div>
 
+      <div className="dispatch-cal__techs" role="tablist" aria-label="Technician filter">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={techFilter === "all"}
+          className={techFilter === "all" ? "active" : undefined}
+          onClick={() => setTechFilter("all")}
+        >
+          All technicians
+        </button>
+        {technicians.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={techFilter === t.id}
+            className={techFilter === t.id ? "active" : undefined}
+            onClick={() => setTechFilter(t.id)}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
+
       <p className="dispatch-cal__source">
-        Synced from <strong>Sheet</strong> by work date — past Completed jobs stay on the calendar.
+        Synced from <strong>Sheet</strong> · client names in order · filter by technician
       </p>
 
       {queue.length > 0 ? (
@@ -211,38 +253,31 @@ export function DispatchCalendar({
           <div className="dispatch-cal__month-grid">
             {monthGrid.map((cell, idx) => {
               if (!cell) return <div key={`e-${idx}`} className="dispatch-cal__mcell is-empty" />;
-              const dayEntries = entriesForDay(entries, cell.key);
+              const dayList = filterByTech(entriesForDay(entries, cell.key), techFilter);
               const isToday = cell.key === todayKey;
               const isSelected = cell.key === selectedDay;
               const isPast = cell.key < todayKey;
-              const techs = [
-                ...new Set(
-                  dayEntries
-                    .map((e) => e.technicianName)
-                    .filter(Boolean),
-                ),
-              ].slice(0, 4);
+              const shown = dayList.slice(0, 5);
+              const more = dayList.length - shown.length;
               return (
                 <button
                   key={cell.key}
                   type="button"
-                  className={`dispatch-cal__mcell${isToday ? " is-today" : ""}${isSelected ? " is-selected" : ""}${isPast ? " is-past" : ""}${dayEntries.length ? " has-jobs" : ""}`}
+                  className={`dispatch-cal__mcell${isToday ? " is-today" : ""}${isSelected ? " is-selected" : ""}${isPast ? " is-past" : ""}${dayList.length ? " has-jobs" : ""}`}
                   onClick={() => openDay(cell.key)}
                 >
                   <span className="dispatch-cal__mnum">{cell.day}</span>
-                  {dayEntries.length > 0 ? (
-                    <span className="dispatch-cal__mcount">{dayEntries.length}</span>
-                  ) : null}
-                  <div className="dispatch-cal__mchips">
-                    {techs.map((name) => (
-                      <i key={name} title={name}>
-                        {techShort(name)}
-                      </i>
+                  <ul className="dispatch-cal__mnames">
+                    {shown.map((entry) => (
+                      <li key={entry.id} title={`${entry.title} · ${entry.technicianName || "—"}`}>
+                        <span className="dispatch-cal__mclient">{entry.title}</span>
+                        {techFilter === "all" && entry.technicianName ? (
+                          <span className="dispatch-cal__mtech">{entry.technicianName}</span>
+                        ) : null}
+                      </li>
                     ))}
-                    {dayEntries.length > techs.length ? (
-                      <i>+{dayEntries.length - techs.length}</i>
-                    ) : null}
-                  </div>
+                    {more > 0 ? <li className="dispatch-cal__mmore">+{more} more</li> : null}
+                  </ul>
                 </button>
               );
             })}
@@ -258,7 +293,7 @@ export function DispatchCalendar({
                 <th>Time</th>
                 {weekKeys.map((key) => {
                   const d = parseDayKey(key)!;
-                  const dayCount = entriesForDay(entries, key).length;
+                  const names = filterByTech(entriesForDay(entries, key), techFilter);
                   return (
                     <th key={key}>
                       <button type="button" onClick={() => openDay(key)}>
@@ -266,8 +301,30 @@ export function DispatchCalendar({
                         <strong className={key === todayKey ? "is-today" : undefined}>
                           {d.getDate()}
                         </strong>
-                        {dayCount > 0 ? <em>{dayCount}</em> : null}
                       </button>
+                      {names.length > 0 ? (
+                        <ul className="dispatch-cal__week-names">
+                          {names.slice(0, 4).map((entry) => (
+                            <li key={entry.id}>
+                              <Link
+                                href={entryHref(entry)}
+                                onClick={(e) => e.stopPropagation()}
+                                title={`${entry.title} · ${entry.technicianName || "—"}`}
+                              >
+                                {entry.title}
+                                {techFilter === "all" && entry.technicianName
+                                  ? ` · ${entry.technicianName}`
+                                  : ""}
+                              </Link>
+                            </li>
+                          ))}
+                          {names.length > 4 ? (
+                            <li className="dispatch-cal__week-names-more">
+                              +{names.length - 4}
+                            </li>
+                          ) : null}
+                        </ul>
+                      ) : null}
                     </th>
                   );
                 })}
@@ -277,14 +334,14 @@ export function DispatchCalendar({
               <tr className="dispatch-cal__untimed-row">
                 <th scope="row">Sheet</th>
                 {weekKeys.map((key) => {
-                  const untimed = untimedEntriesForDay(entries, key);
+                  const untimed = filterByTech(untimedEntriesForDay(entries, key), techFilter);
                   return (
                     <td
                       key={key}
                       className={untimed.length ? "has-jobs" : undefined}
                       onClick={() => openDay(key)}
                     >
-                      {untimed.slice(0, 4).map((entry) => (
+                      {untimed.slice(0, 5).map((entry) => (
                         <Link
                           key={entry.id}
                           href={entryHref(entry)}
@@ -292,16 +349,16 @@ export function DispatchCalendar({
                           onClick={(e) => e.stopPropagation()}
                           title={`${entry.title} · ${entry.status} · ${entry.technicianName || "—"}`}
                         >
-                          <strong>
-                            {entry.technicianName
-                              ? techShort(entry.technicianName)
-                              : "?"}
-                          </strong>
-                          <span>{entry.title}</span>
+                          <span className="dispatch-cal__pill-client">{entry.title}</span>
+                          {techFilter === "all" ? (
+                            <em className="dispatch-cal__pill-tech">
+                              {entry.technicianName || "—"}
+                            </em>
+                          ) : null}
                         </Link>
                       ))}
-                      {untimed.length > 4 ? (
-                        <span className="dispatch-cal__more">+{untimed.length - 4}</span>
+                      {untimed.length > 5 ? (
+                        <span className="dispatch-cal__more">+{untimed.length - 5}</span>
                       ) : null}
                       {untimed.length === 0 ? (
                         <span className="dispatch-cal__free">·</span>
@@ -314,8 +371,11 @@ export function DispatchCalendar({
                 <tr key={window.id}>
                   <th scope="row">{window.label}</th>
                   {weekKeys.map((key) => {
-                    const cellEntries = entriesForDay(entries, key).filter((e) =>
-                      entryMatchesWindow(e, window.startHour),
+                    const cellEntries = filterByTech(
+                      entriesForDay(entries, key).filter((e) =>
+                        entryMatchesWindow(e, window.startHour),
+                      ),
+                      techFilter,
                     );
                     return (
                       <td
@@ -326,7 +386,7 @@ export function DispatchCalendar({
                         {cellEntries.length === 0 ? (
                           <span className="dispatch-cal__free">·</span>
                         ) : (
-                          cellEntries.slice(0, 3).map((entry) => (
+                          cellEntries.slice(0, 4).map((entry) => (
                             <Link
                               key={entry.id}
                               href={entryHref(entry)}
@@ -334,17 +394,17 @@ export function DispatchCalendar({
                               onClick={(e) => e.stopPropagation()}
                               title={`${entry.title} · ${entry.status}`}
                             >
-                              <strong>
-                                {entry.technicianName
-                                  ? techShort(entry.technicianName)
-                                  : "?"}
-                              </strong>
-                              <span>{entry.title}</span>
+                              <span className="dispatch-cal__pill-client">{entry.title}</span>
+                              {techFilter === "all" ? (
+                                <em className="dispatch-cal__pill-tech">
+                                  {entry.technicianName || "—"}
+                                </em>
+                              ) : null}
                             </Link>
                           ))
                         )}
-                        {cellEntries.length > 3 ? (
-                          <span className="dispatch-cal__more">+{cellEntries.length - 3}</span>
+                        {cellEntries.length > 4 ? (
+                          <span className="dispatch-cal__more">+{cellEntries.length - 4}</span>
                         ) : null}
                       </td>
                     );
@@ -358,15 +418,45 @@ export function DispatchCalendar({
 
       {view === "day" ? (
         <div className="dispatch-cal__day">
+          <div className="dispatch-cal__day-list dispatch-cal__day-roster">
+            <h3>
+              {techFilter === "all"
+                ? `Jobs this day (${dayEntries.length})`
+                : `${visibleTechs[0]?.name || "Technician"} · ${dayEntries.length}`}
+            </h3>
+            {dayEntries.length === 0 ? (
+              <p className="kanban-empty">No Sheet work on this day.</p>
+            ) : (
+              <ol className="dispatch-cal__roster">
+                {dayEntries.map((entry, i) => (
+                  <li key={entry.id} className={statusClass(entry.status)}>
+                    <span className="dispatch-cal__roster-n">{i + 1}</span>
+                    <Link href={entryHref(entry)} className="dispatch-cal__roster-client">
+                      {entry.title}
+                    </Link>
+                    <span className="dispatch-cal__roster-tech">
+                      {entry.technicianName || "Unassigned"}
+                    </span>
+                    <span className="dispatch-cal__roster-meta">
+                      {entry.scheduled_start
+                        ? formatTime(entry.scheduled_start)
+                        : entry.status}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+
           <div className="dispatch-cal__day-table-wrap">
             <table className="dispatch-cal__day-table">
               <thead>
                 <tr>
                   <th>Window</th>
-                  {technicians.map((t) => (
+                  {visibleTechs.map((t) => (
                     <th key={t.id}>{t.name}</th>
                   ))}
-                  <th>Unassigned</th>
+                  {techFilter === "all" ? <th>Unassigned</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -380,9 +470,9 @@ export function DispatchCalendar({
                         </span>
                       </div>
                     </th>
-                    {technicians.map((tech) => {
+                    {visibleTechs.map((tech) => {
                       const cell = entriesForTechWindow(
-                        entries,
+                        visibleEntries,
                         selectedDay,
                         tech.id,
                         window.startHour,
@@ -403,6 +493,9 @@ export function DispatchCalendar({
                               className={`dispatch-cal__jobcard ${statusClass(entry.status)}`}
                             >
                               <strong>{entry.title}</strong>
+                              <span className="dispatch-cal__jobcard-tech">
+                                {entry.technicianName || "—"}
+                              </span>
                               <span>
                                 {entry.scheduled_start
                                   ? `${formatTime(entry.scheduled_start)}${
@@ -412,117 +505,46 @@ export function DispatchCalendar({
                                     }`
                                   : entry.status}
                               </span>
-                              <span>
-                                {[entry.address, entry.zip].filter(Boolean).join(", ") ||
-                                  entry.service ||
-                                  "—"}
-                              </span>
-                              <em>{entry.status}</em>
                             </Link>
                           ))}
                         </td>
                       );
                     })}
-                    <td
-                      className={
-                        entriesForTechWindow(entries, selectedDay, null, window.startHour).length
-                          ? "is-busy"
-                          : "is-free"
-                      }
-                    >
-                      {(() => {
-                        const unassigned = entriesForTechWindow(
-                          entries,
-                          selectedDay,
-                          null,
-                          window.startHour,
-                        );
-                        if (!unassigned.length) return "—";
-                        return unassigned.map((entry) => (
-                          <Link
-                            key={entry.id}
-                            href={entryHref(entry)}
-                            className="dispatch-cal__jobcard"
-                          >
-                            <strong>{entry.title}</strong>
-                            <span>{entry.status}</span>
-                          </Link>
-                        ));
-                      })()}
-                    </td>
+                    {techFilter === "all" ? (
+                      <td
+                        className={
+                          entriesForTechWindow(entries, selectedDay, null, window.startHour)
+                            .length
+                            ? "is-busy"
+                            : "is-free"
+                        }
+                      >
+                        {(() => {
+                          const unassigned = entriesForTechWindow(
+                            entries,
+                            selectedDay,
+                            null,
+                            window.startHour,
+                          );
+                          if (!unassigned.length) return "—";
+                          return unassigned.map((entry) => (
+                            <Link
+                              key={entry.id}
+                              href={entryHref(entry)}
+                              className="dispatch-cal__jobcard"
+                            >
+                              <strong>{entry.title}</strong>
+                              <span>Unassigned</span>
+                            </Link>
+                          ));
+                        })()}
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-
-          {untimedEntriesForDay(entries, selectedDay).length > 0 ? (
-            <div className="dispatch-cal__day-list">
-              <h3>Sheet rows this day (no timed window)</h3>
-              <table className="bos-table">
-                <thead>
-                  <tr>
-                    <th>Client</th>
-                    <th>Tech</th>
-                    <th>Status</th>
-                    <th>Service</th>
-                    <th>Address</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {untimedEntriesForDay(entries, selectedDay).map((entry) => (
-                    <tr key={entry.id}>
-                      <td>
-                        <Link href={entryHref(entry)}>{entry.title}</Link>
-                      </td>
-                      <td>{entry.technicianName || "—"}</td>
-                      <td>{entry.status}</td>
-                      <td>{entry.service || "—"}</td>
-                      <td>{[entry.address, entry.zip].filter(Boolean).join(", ") || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-
-          {entriesForDay(entries, selectedDay).length > 0 ? (
-            <div className="dispatch-cal__day-list">
-              <h3>All Sheet work this day</h3>
-              <table className="bos-table">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Client</th>
-                    <th>Tech</th>
-                    <th>Status</th>
-                    <th>Address</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entriesForDay(entries, selectedDay).map((entry) => (
-                    <tr key={entry.id} className={statusClass(entry.status)}>
-                      <td>
-                        {entry.scheduled_start
-                          ? `${formatTime(entry.scheduled_start)}${
-                              entry.scheduled_end ? ` – ${formatTime(entry.scheduled_end)}` : ""
-                            }`
-                          : "—"}
-                      </td>
-                      <td>
-                        <Link href={entryHref(entry)}>{entry.title}</Link>
-                      </td>
-                      <td>{entry.technicianName || "—"}</td>
-                      <td>{entry.status}</td>
-                      <td>{[entry.address, entry.zip].filter(Boolean).join(", ") || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="kanban-empty">No Sheet work on this day.</p>
-          )}
         </div>
       ) : null}
 

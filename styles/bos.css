@@ -4333,9 +4333,34 @@ button.bos-btn:disabled {
   min-height: 0;
 }
 
+.dispatch-cal__techs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.85rem;
+}
+
+.dispatch-cal__techs button {
+  appearance: none;
+  border: 1px solid var(--bos-border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--bos-text);
+}
+
+.dispatch-cal__techs button.active {
+  background: var(--bos-text);
+  color: #fff;
+  border-color: var(--bos-text);
+}
+
 .dispatch-cal__month-grid {
   flex: 1;
-  grid-auto-rows: minmax(5.5rem, 1fr);
+  grid-auto-rows: minmax(7.5rem, 1fr);
 }
 
 .dispatch-cal__mcell {
@@ -4343,7 +4368,7 @@ button.bos-btn:disabled {
   border: 1px solid var(--bos-border);
   background: #fff;
   border-radius: 10px;
-  min-height: 5.5rem;
+  min-height: 7.5rem;
   padding: 0.4rem;
   display: flex;
   flex-direction: column;
@@ -4380,27 +4405,157 @@ button.bos-btn:disabled {
   font-size: 0.9rem;
 }
 
-.dispatch-cal__mcount {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--bos-accent-2);
-}
-
-.dispatch-cal__mchips {
+.dispatch-cal__mnames {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.2rem;
-  margin-top: auto;
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 100%;
+  text-align: left;
 }
 
-.dispatch-cal__mchips i {
-  font-style: normal;
-  font-size: 0.65rem;
+.dispatch-cal__mnames li {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.dispatch-cal__mclient {
+  font-size: 0.68rem;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dispatch-cal__mtech {
+  font-size: 0.6rem;
+  color: var(--bos-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dispatch-cal__mmore {
+  font-size: 0.62rem;
   font-weight: 700;
-  background: #e8eef8;
-  color: #314968;
-  border-radius: 4px;
-  padding: 0.1rem 0.25rem;
+  color: var(--bos-muted);
+}
+
+.dispatch-cal__week-names {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  text-align: left;
+}
+
+.dispatch-cal__week-names a {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--bos-text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+.dispatch-cal__week-names-more {
+  font-size: 0.62rem;
+  color: var(--bos-muted);
+  font-weight: 700;
+}
+
+.dispatch-cal__pill-client {
+  font-size: 0.72rem;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.dispatch-cal__pill-tech {
+  font-size: 0.62rem;
+  font-style: normal;
+  color: var(--bos-muted);
+}
+
+.dispatch-cal__day-roster {
+  background: #fff;
+  border: 1px solid var(--bos-border);
+  border-radius: 14px;
+  box-shadow: var(--bos-shadow);
+  padding: 0.85rem 1rem;
+}
+
+.dispatch-cal__roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.dispatch-cal__roster li {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: baseline;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  background: #f7f8fa;
+  border: 1px solid var(--bos-border);
+}
+
+.dispatch-cal__roster li.is-done {
+  background: #eef8f1;
+}
+
+.dispatch-cal__roster li.is-cancelled {
+  background: #f4f4f5;
+  opacity: 0.85;
+}
+
+.dispatch-cal__roster-n {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--bos-muted);
+}
+
+.dispatch-cal__roster-client {
+  font-weight: 700;
+  color: var(--bos-text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dispatch-cal__roster-tech {
+  font-size: 0.85rem;
+  color: var(--bos-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dispatch-cal__roster-meta {
+  font-size: 0.75rem;
+  color: var(--bos-muted);
+  white-space: nowrap;
+}
+
+.dispatch-cal__jobcard-tech {
+  font-weight: 600;
+  color: #5a3208;
 }
 
 .dispatch-cal__week-wrap {
@@ -4491,8 +4646,9 @@ button.bos-btn:disabled {
 
 .dispatch-cal__pill {
   display: flex;
-  gap: 0.3rem;
-  align-items: baseline;
+  flex-direction: column;
+  gap: 0.05rem;
+  align-items: flex-start;
   background: #eef5ff;
   border-radius: 6px;
   padding: 0.2rem 0.35rem;
@@ -4668,10 +4824,18 @@ button.bos-btn:disabled {
 
 @media (max-width: 800px) {
   .dispatch-cal__mcell {
-    min-height: 4rem;
+    min-height: 5rem;
   }
-  .dispatch-cal__mchips {
+  .dispatch-cal__mtech {
     display: none;
+  }
+  .dispatch-cal__roster li {
+    grid-template-columns: 1.25rem minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+  .dispatch-cal__roster-tech,
+  .dispatch-cal__roster-meta {
+    grid-column: 2;
   }
 }
 
