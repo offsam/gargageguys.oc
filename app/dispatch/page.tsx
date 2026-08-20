@@ -1,12 +1,8 @@
-import Link from "next/link";
 import { BosShell } from "@/components/bos/BosShell";
-import { DispatchBoard } from "@/components/bos/DispatchBoard";
-import { FieldCalendar } from "@/components/bos/FieldCalendar";
+import { DispatchCalendar } from "@/components/bos/DispatchCalendar";
 import { requireRouteAccess } from "@/lib/auth/require";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
-  formatDayHeading,
-  jobCountsByDay,
   parseDayKey,
   startOfToday,
   toDayKey,
@@ -27,23 +23,20 @@ function pick(meta: Record<string, unknown>, ...keys: string[]): string {
   return "";
 }
 
-function shiftDay(dayKey: string, delta: number): string {
-  const d = parseDayKey(dayKey) || startOfToday();
-  d.setDate(d.getDate() + delta);
-  return toDayKey(d);
-}
-
 export default async function DispatchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ day?: string }>;
+  searchParams: Promise<{ day?: string; view?: string }>;
 }) {
   const user = await requireRouteAccess("/dispatch");
 
   const params = await searchParams;
   const todayKey = toDayKey(startOfToday());
   const selectedDay = params.day && parseDayKey(params.day) ? params.day : todayKey;
-  const isToday = selectedDay === todayKey;
+  const view =
+    params.view === "month" || params.view === "week" || params.view === "day"
+      ? params.view
+      : "week";
 
   const supabase = await createSupabaseServerClient();
   try {
@@ -52,7 +45,7 @@ export default async function DispatchPage({
     console.error("[dispatch] ensure invoices", err);
   }
   const [{ data: jobsRaw }, { data: queueRaw }, { data: techs }] = await Promise.all([
-    supabase.from("jobs").select("*").order("scheduled_start", { ascending: true }).limit(500),
+    supabase.from("jobs").select("*").order("scheduled_start", { ascending: true }).limit(800),
     supabase
       .from("leads")
       .select("*")
@@ -92,34 +85,20 @@ export default async function DispatchPage({
     })
     .filter((lead) => lead.jobStatus === "Waiting" || lead.jobStatus === "No answer");
 
-  const counts = jobCountsByDay(jobs);
-  const heading = isToday ? "Today" : formatDayHeading(selectedDay);
-
   return (
     <BosShell
       user={user}
       active="/dispatch"
       title="Dispatch"
-      subtitle="Schedule technicians by day — Waiting leads need time + tech"
+      subtitle="Full calendar · Month / Week / Day · same jobs as Field"
     >
-      <div className="dispatch-day-nav">
-        <Link href={`/dispatch?day=${shiftDay(selectedDay, -1)}`}>‹ Prev</Link>
-        <strong>{heading}</strong>
-        <Link href={`/dispatch?day=${shiftDay(selectedDay, 1)}`}>Next ›</Link>
-        {!isToday ? <Link href="/dispatch">Jump to today</Link> : null}
-      </div>
-
-      <DispatchBoard
+      <DispatchCalendar
         dayKey={selectedDay}
+        view={view}
         technicians={technicians}
         jobs={jobs}
         queue={queue}
       />
-
-      <section>
-        <h2>Calendar</h2>
-        <FieldCalendar counts={counts} selectedDay={selectedDay} basePath="/dispatch" />
-      </section>
     </BosShell>
   );
 }

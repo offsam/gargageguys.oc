@@ -83,3 +83,41 @@ export function formatDayHeading(dayKey: string): string {
     day: "numeric",
   });
 }
+
+/** Sunday-start week containing dayKey. */
+export function weekDayKeys(dayKey: string): string[] {
+  const d = parseDayKey(dayKey) || startOfToday();
+  const start = new Date(d);
+  start.setDate(d.getDate() - d.getDay());
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + i);
+    return toDayKey(day);
+  });
+}
+
+export function shiftDayKey(dayKey: string, delta: number): string {
+  const d = parseDayKey(dayKey) || startOfToday();
+  d.setDate(d.getDate() + delta);
+  return toDayKey(d);
+}
+
+export function formatWeekHeading(dayKey: string): string {
+  const keys = weekDayKeys(dayKey);
+  const start = parseDayKey(keys[0]);
+  const end = parseDayKey(keys[6]);
+  if (!start || !end) return dayKey;
+  const sameMonth = start.getMonth() === end.getMonth();
+  const left = start.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const right = end.toLocaleDateString(undefined, {
+    month: sameMonth ? undefined : "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  return `${left} – ${right}`;
+}
+
+export function formatMonthHeading(dayKey: string): string {
+  const d = parseDayKey(dayKey) || startOfToday();
+  return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+}
