@@ -200,14 +200,11 @@ export function CrmBoard({
     return collapsedIds.has(lead.id);
   }
 
-  function setColumnCollapsed(status: SheetStatus, collapse: boolean) {
-    const ids = leads.filter((l) => l.jobStatus === status).map((l) => l.id);
+  function toggleCardCollapsed(leadId: string) {
     setCollapsedIds((prev) => {
       const next = new Set(prev);
-      for (const id of ids) {
-        if (collapse) next.add(id);
-        else next.delete(id);
-      }
+      if (next.has(leadId)) next.delete(leadId);
+      else next.add(leadId);
       return next;
     });
   }
@@ -437,41 +434,17 @@ export function CrmBoard({
               <h3>
                 {col.status} ({col.items.length})
               </h3>
-              <div className="kanban-col-actions">
-                {col.items.length > 0 ? (
-                  <>
-                    <button
-                      type="button"
-                      className="crm-col-fold"
-                      onClick={() => setColumnCollapsed(col.status, false)}
-                      title="Expand all cards"
-                      aria-label={`Expand all in ${col.status}`}
-                    >
-                      +
-                    </button>
-                    <button
-                      type="button"
-                      className="crm-col-fold"
-                      onClick={() => setColumnCollapsed(col.status, true)}
-                      title="Collapse all cards"
-                      aria-label={`Collapse all in ${col.status}`}
-                    >
-                      −
-                    </button>
-                  </>
-                ) : null}
-                {col.status === "Waiting" ? (
-                  <button
-                    type="button"
-                    className="crm-add-btn"
-                    onClick={() => openAddModal("Waiting")}
-                    aria-label="Add client"
-                    title="Add client"
-                  >
-                    +
-                  </button>
-                ) : null}
-              </div>
+              {col.status === "Waiting" ? (
+                <button
+                  type="button"
+                  className="crm-add-btn"
+                  onClick={() => openAddModal("Waiting")}
+                  aria-label="Add client"
+                  title="Add client"
+                >
+                  +
+                </button>
+              ) : null}
             </div>
             {col.items.length === 0 ? (
               <p className="kanban-empty">No clients</p>
@@ -489,20 +462,36 @@ export function CrmBoard({
               >
                 <div className="kanban-card-top">
                   <strong>{lead.name || "Unknown"}</strong>
-                  <button
-                    type="button"
-                    className="crm-card-delete"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteLead(lead);
-                    }}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                    disabled={pending}
-                    title="Delete lead"
-                    aria-label="Delete lead"
-                  >
-                    ×
-                  </button>
+                  <div className="crm-card-actions">
+                    <button
+                      type="button"
+                      className="crm-card-toggle"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleCardCollapsed(lead.id);
+                      }}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      title={collapsed ? "Expand card" : "Collapse card"}
+                      aria-label={collapsed ? "Expand card" : "Collapse card"}
+                      aria-expanded={!collapsed}
+                    >
+                      {collapsed ? "+" : "−"}
+                    </button>
+                    <button
+                      type="button"
+                      className="crm-card-delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteLead(lead);
+                      }}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      disabled={pending}
+                      title="Delete lead"
+                      aria-label="Delete lead"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
                 {!collapsed ? (
                   <>

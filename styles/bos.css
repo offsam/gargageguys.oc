@@ -653,6 +653,14 @@ textarea {
   margin-bottom: 0;
 }
 
+.crm-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.crm-card-toggle,
 .crm-card-delete {
   flex-shrink: 0;
   width: 1.45rem;
@@ -671,6 +679,12 @@ textarea {
   padding: 0 !important;
 }
 
+.crm-card-toggle:hover {
+  color: var(--bos-text);
+  background: #f1f5f9 !important;
+  border-color: var(--bos-border) !important;
+}
+
 .crm-card-delete:hover {
   color: #dc2626;
   background: #fef2f2 !important;
@@ -687,33 +701,6 @@ textarea {
 
 .kanban-card--collapsed .kanban-move {
   margin-top: 0.25rem;
-}
-
-.kanban-col-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-}
-
-.crm-col-fold {
-  width: 1.35rem;
-  height: 1.35rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--bos-border) !important;
-  border-radius: 6px !important;
-  background: var(--bos-panel) !important;
-  color: var(--bos-muted);
-  font-size: 0.85rem;
-  line-height: 1;
-  padding: 0 !important;
-  cursor: pointer;
-}
-
-.crm-col-fold:hover {
-  color: var(--bos-text);
-  border-color: var(--bos-accent-2) !important;
 }
 
 .crm-sync-bar {
