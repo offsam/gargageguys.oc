@@ -147,6 +147,9 @@ export function CrmBoard({
   const [extraServices, setExtraServices] = useState<CrmServiceOption[]>([]);
   const [customOpen, setCustomOpen] = useState(false);
   const [customError, setCustomError] = useState("");
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(
+    () => new Set(initialLeads.filter((l) => l.jobStatus === "Completed").map((l) => l.id)),
+  );
   const seenIds = useRef(new Set(initialLeads.map((l) => l.id)));
   const firstSync = useRef(true);
 
@@ -154,6 +157,15 @@ export function CrmBoard({
 
   useEffect(() => {
     setLeads(initialLeads);
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      for (const lead of initialLeads) {
+        if (lead.jobStatus === "Completed" && !prev.has(lead.id) && !seenIds.current.has(lead.id)) {
+          next.add(lead.id);
+        }
+      }
+      return next;
+    });
     if (firstSync.current) {
       firstSync.current = false;
       for (const lead of initialLeads) seenIds.current.add(lead.id);
@@ -167,6 +179,13 @@ export function CrmBoard({
         .slice(0, 3)
         .join(", ");
       setLiveNotice(`New lead in Waiting: ${names}`);
+      setCollapsedIds((prev) => {
+        const next = new Set(prev);
+        for (const lead of fresh) {
+          if (lead.jobStatus === "Completed") next.add(lead.id);
+        }
+        return next;
+      });
     }
   }, [initialLeads]);
 
@@ -176,6 +195,31 @@ export function CrmBoard({
       items: leads.filter((l) => l.jobStatus === status),
     }));
   }, [leads]);
+
+  function isCollapsed(lead: CrmLeadCard) {
+    return collapsedIds.has(lead.id);
+  }
+
+  function toggleCardCollapsed(leadId: string) {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(leadId)) next.delete(leadId);
+      else next.add(leadId);
+      return next;
+    });
+  }
+
+  function setColumnCollapsed(status: SheetStatus, collapse: boolean) {
+    const ids = leads.filter((l) => l.jobStatus === status).map((l) => l.id);
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (collapse) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  }
 
   function requestStatus(lead: CrmLeadCard, jobStatus: SheetStatus) {
     if (jobStatus === "Scheduled") {
@@ -187,6 +231,15 @@ export function CrmBoard({
     if (blocked) {
       setError(blocked);
       return;
+    }
+    if (jobStatus === "Completed") {
+      setCollapsedIds((prev) => new Set(prev).add(lead.id));
+    } else {
+      setCollapsedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(lead.id);
+        return next;
+      });
     }
     moveLead(lead.id, jobStatus);
   }
@@ -393,51 +446,103 @@ export function CrmBoard({
               <h3>
                 {col.status} ({col.items.length})
               </h3>
-              {col.status === "Waiting" ? (
-                <button
-                  type="button"
-                  className="crm-add-btn"
-                  onClick={() => openAddModal("Waiting")}
-                  aria-label="Add client"
-                  title="Add client"
-                >
-                  +
-                </button>
-              ) : null}
+              <div className="kanban-col-actions">
+                {col.items.length > 0 ? (
+                  <>
+                    <button
+                      type="button"
+                      className="crm-col-fold"
+                      onClick={() => setColumnCollapsed(col.status, false)}
+                      title="Expand all cards"
+                      aria-label={`Expand all in ${col.status}`}
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      className="crm-col-fold"
+                      onClick={() => setColumnCollapsed(col.status, true)}
+                      title="Collapse all cards"
+                      aria-label={`Collapse all in ${col.status}`}
+                    >
+                      −
+                    </button>
+                  </>
+                ) : null}
+                {col.status === "Waiting" ? (
+                  <button
+                    type="button"
+                    className="crm-add-btn"
+                    onClick={() => openAddModal("Waiting")}
+                    aria-label="Add client"
+                    title="Add client"
+                  >
+                    +
+                  </button>
+                ) : null}
+              </div>
             </div>
             {col.items.length === 0 ? (
               <p className="kanban-empty">No clients</p>
             ) : null}
-            {col.items.map((lead) => (
+            {col.items.map((lead) => {
+              const collapsed = isCollapsed(lead);
+              return (
               <div
                 key={lead.id}
-                className="kanban-card"
+                className={["kanban-card", collapsed ? "kanban-card--collapsed" : ""]
+                  .filter(Boolean)
+                  .join(" ")}
                 title="Double-click to open full details"
                 onDoubleClick={() => openDetail(lead)}
               >
                 <div className="kanban-card-top">
                   <strong>{lead.name || "Unknown"}</strong>
-                  <button
-                    type="button"
-                    className="crm-card-delete"
-                    onClick={() => deleteLead(lead)}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                    disabled={pending}
-                    title="Delete lead"
-                  >
-                    Delete
-                  </button>
+                  <div className="crm-card-actions">
+                    <button
+                      type="button"
+                      className="crm-card-toggle"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleCardCollapsed(lead.id);
+                      }}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      title={collapsed ? "Expand card" : "Collapse card"}
+                      aria-label={collapsed ? "Expand card" : "Collapse card"}
+                      aria-expanded={!collapsed}
+                    >
+                      {collapsed ? "+" : "−"}
+                    </button>
+                    <button
+                      type="button"
+                      className="crm-card-delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteLead(lead);
+                      }}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      disabled={pending}
+                      title="Delete lead"
+                      aria-label="Delete lead"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
-                {lead.address ? <span>{lead.address}</span> : null}
-                {lead.phone ? <span>{lead.phone}</span> : null}
-                {lead.description ? (
-                  <span className="kanban-card-note">{lead.description}</span>
+                {!collapsed ? (
+                  <>
+                    {lead.address ? <span>{lead.address}</span> : null}
+                    {lead.phone ? <span>{lead.phone}</span> : null}
+                    {lead.description ? (
+                      <span className="kanban-card-note">{lead.description}</span>
+                    ) : null}
+                    <div className="kanban-card-meta">
+                      {[lead.source, lead.jobType, lead.service, lead.technician]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </div>
+                  </>
                 ) : null}
-                <div className="kanban-card-meta">
-                  {[lead.source, lead.jobType, lead.service, lead.technician]
-                    .filter(Boolean)
-                    .join(" · ") || "—"}
-                </div>
                 <label className="kanban-move" onDoubleClick={(e) => e.stopPropagation()}>
                   <span className="sr-only">Move status</span>
                   <select
@@ -453,7 +558,8 @@ export function CrmBoard({
                   </select>
                 </label>
               </div>
-            ))}
+              );
+            })}
           </div>
         ))}
       </div>

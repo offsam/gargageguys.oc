@@ -653,23 +653,81 @@ textarea {
   margin-bottom: 0;
 }
 
+.crm-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.crm-card-toggle,
 .crm-card-delete {
   flex-shrink: 0;
-  border: 0;
-  background: transparent;
+  width: 1.45rem;
+  height: 1.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  background: transparent !important;
   color: #94a3b8;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
   cursor: pointer;
-  padding: 0.1rem 0.2rem;
+  padding: 0 !important;
+}
+
+.crm-card-toggle:hover {
+  color: var(--bos-text);
+  background: #f1f5f9 !important;
+  border-color: var(--bos-border) !important;
 }
 
 .crm-card-delete:hover {
   color: #dc2626;
-  background: #fef2f2;
-  border-radius: 4px;
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+}
+
+.kanban-card--collapsed {
+  padding: 0.45rem 0.65rem;
+}
+
+.kanban-card--collapsed .kanban-card-top {
+  margin-bottom: 0.15rem;
+}
+
+.kanban-card--collapsed .kanban-move {
+  margin-top: 0.25rem;
+}
+
+.kanban-col-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.crm-col-fold {
+  width: 1.35rem;
+  height: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--bos-border) !important;
+  border-radius: 6px !important;
+  background: var(--bos-panel) !important;
+  color: var(--bos-muted);
+  font-size: 0.7rem;
+  line-height: 1;
+  padding: 0 !important;
+  cursor: pointer;
+}
+
+.crm-col-fold:hover {
+  color: var(--bos-text);
+  border-color: var(--bos-accent-2) !important;
 }
 
 .crm-sync-bar {
