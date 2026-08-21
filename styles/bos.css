@@ -653,14 +653,6 @@ textarea {
   margin-bottom: 0;
 }
 
-.crm-card-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.15rem;
-  flex-shrink: 0;
-}
-
-.crm-card-toggle,
 .crm-card-delete {
   flex-shrink: 0;
   width: 1.45rem;
@@ -677,12 +669,6 @@ textarea {
   line-height: 1;
   cursor: pointer;
   padding: 0 !important;
-}
-
-.crm-card-toggle:hover {
-  color: var(--bos-text);
-  background: #f1f5f9 !important;
-  border-color: var(--bos-border) !important;
 }
 
 .crm-card-delete:hover {
@@ -719,7 +705,7 @@ textarea {
   border-radius: 6px !important;
   background: var(--bos-panel) !important;
   color: var(--bos-muted);
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   line-height: 1;
   padding: 0 !important;
   cursor: pointer;
