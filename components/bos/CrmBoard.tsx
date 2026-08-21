@@ -505,22 +505,22 @@ export function CrmBoard({
                         .filter(Boolean)
                         .join(" · ") || "—"}
                     </div>
+                    <label className="kanban-move" onDoubleClick={(e) => e.stopPropagation()}>
+                      <span className="sr-only">Move status</span>
+                      <select
+                        value={lead.jobStatus}
+                        disabled={pending}
+                        onChange={(e) => requestStatus(lead, e.target.value as SheetStatus)}
+                      >
+                        {SHEET_STATUSES.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                   </>
                 ) : null}
-                <label className="kanban-move" onDoubleClick={(e) => e.stopPropagation()}>
-                  <span className="sr-only">Move status</span>
-                  <select
-                    value={lead.jobStatus}
-                    disabled={pending}
-                    onChange={(e) => requestStatus(lead, e.target.value as SheetStatus)}
-                  >
-                    {SHEET_STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </label>
               </div>
               );
             })}
