@@ -188,8 +188,8 @@ export default async function StockPage({
         title="Stock"
         subtitle={
           stockOwner === "gg"
-            ? "Your Garage Guys van · no prices"
-            : `${stockOwners.find((o) => o.id === stockOwner)?.name || "Partner"} on your van · no prices`
+            ? "Your Garage Guys van · tap + when you receive parts"
+            : `${stockOwners.find((o) => o.id === stockOwner)?.name || "Partner"} on your van · tap + when you receive parts`
         }
         active="stock"
         attentionCount={attentionCount}

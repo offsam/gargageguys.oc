@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   createStockItemAction,
   issueToTechAction,
+  receiveOntoMyVanAction,
   receivePartnerStockAction,
   receiveStockAction,
   saveItemCostAction,
@@ -152,6 +153,7 @@ export function StockBoard({
   const [openActionId, setOpenActionId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState("");
+  const [receiveError, setReceiveError] = useState("");
   const [costs, setCosts] = useState<Record<string, number>>(() =>
     Object.fromEntries(rows.map((r) => [r.id, r.unitCostCents])),
   );
@@ -201,6 +203,19 @@ export function StockBoard({
     });
   }
 
+  function receiveOntoVan(fd: FormData) {
+    setReceiveError("");
+    startTransition(async () => {
+      const result = await receiveOntoMyVanAction(fd);
+      if (!result.ok) {
+        setReceiveError(result.error || "Could not add to van");
+        return;
+      }
+      setOpenActionId(null);
+      router.refresh();
+    });
+  }
+
   function ownerHref(ownerId: string) {
     const qs = new URLSearchParams();
     qs.set("owner", ownerId);
@@ -224,8 +239,9 @@ export function StockBoard({
     });
   }
 
+  const canReceiveVan = isTechOnly;
   const colSpan = isTechOnly
-    ? 2 + (showPrices ? 1 : 0)
+    ? 2 + (showPrices ? 1 : 0) + (canReceiveVan ? 1 : 0)
     : 2 +
       (view === "master" || view === "warehouse" ? 1 : 0) +
       (view === "master" || view === "tech" ? 1 : 0) +
@@ -332,9 +348,16 @@ export function StockBoard({
         <span className="stock-meta">
           {filtered.length}/{rows.length}
           {showPrices ? ` · value $${money(inventoryValue)}` : ""}
+          {isTechOnly ? " · tap + to receive" : ""}
           {pending ? " · saving…" : ""}
         </span>
       </div>
+
+      {receiveError && isTechOnly ? (
+        <p className="stock-add-error" role="alert">
+          {receiveError}
+        </p>
+      ) : null}
 
       {addOpen && canManage ? (
         <form
@@ -398,7 +421,7 @@ export function StockBoard({
                 <th className="stock-col-num">Van</th>
               ) : null}
               {showPrices ? <th className="stock-col-cost">Cost</th> : null}
-              {canManage ? <th className="stock-col-act" /> : null}
+              {canManage || canReceiveVan ? <th className="stock-col-act" /> : null}
             </tr>
           </thead>
           <tbody>
@@ -463,7 +486,10 @@ export function StockBoard({
                             type="button"
                             className="stock-act-toggle"
                             aria-expanded={open}
-                            onClick={() => setOpenActionId(open ? null : row.id)}
+                            onClick={() => {
+                              setReceiveError("");
+                              setOpenActionId(open ? null : row.id);
+                            }}
                           >
                             ±
                           </button>
@@ -516,6 +542,62 @@ export function StockBoard({
                                   </form>
                                 </>
                               )}
+                            </div>
+                          ) : null}
+                        </td>
+                      ) : canReceiveVan ? (
+                        <td className="stock-col-act">
+                          <button
+                            type="button"
+                            className="stock-act-toggle stock-act-toggle--plus"
+                            aria-label={`Receive ${row.name} onto van`}
+                            aria-expanded={open}
+                            disabled={pending}
+                            onClick={() => {
+                              setReceiveError("");
+                              setOpenActionId(open ? null : row.id);
+                            }}
+                          >
+                            +
+                          </button>
+                          {open ? (
+                            <div className="stock-act-pop stock-act-pop--tech">
+                              <form
+                                action={(fd) => {
+                                  if (partnerMode) fd.set("partnerId", stockOwner);
+                                  fd.set("technicianId", techId);
+                                  receiveOntoVan(fd);
+                                }}
+                              >
+                                <input type="hidden" name="itemId" value={row.id} />
+                                <input
+                                  name="qty"
+                                  type="number"
+                                  min={1}
+                                  max={500}
+                                  defaultValue={1}
+                                  inputMode="numeric"
+                                  aria-label="Quantity received"
+                                />
+                                <button type="submit" disabled={pending}>
+                                  {pending ? "…" : "Add to van"}
+                                </button>
+                              </form>
+                              <button
+                                type="button"
+                                className="stock-act-quick"
+                                disabled={pending}
+                                onClick={() => {
+                                  const fd = new FormData();
+                                  fd.set("itemId", row.id);
+                                  fd.set("qty", "1");
+                                  fd.set("technicianId", techId);
+                                  if (partnerMode) fd.set("partnerId", stockOwner);
+                                  receiveOntoVan(fd);
+                                }}
+                              >
+                                +1 quick
+                              </button>
                             </div>
                           ) : null}
                         </td>

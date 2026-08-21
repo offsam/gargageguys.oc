@@ -2523,6 +2523,43 @@ body.sheet-col-resizing * {
   border-color: var(--bos-accent-2);
 }
 
+.stock-act-toggle--plus {
+  font-size: 1.15rem;
+  font-weight: 800;
+  background: #166534;
+  color: #fff;
+  border-color: #166534;
+}
+
+.stock-act-toggle--plus:hover,
+.stock-act-toggle--plus[aria-expanded="true"] {
+  background: #14532d;
+  color: #fff;
+  border-color: #14532d;
+}
+
+.stock-act-pop--tech {
+  min-width: 9.5rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.stock-act-quick {
+  appearance: none;
+  border: 1px solid var(--bos-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--bos-text);
+  font: inherit;
+  font-weight: 700;
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+}
+
+.stock-act-quick:hover {
+  background: #f8fafc;
+}
+
 .stock-act-pop {
   position: absolute;
   right: 0;

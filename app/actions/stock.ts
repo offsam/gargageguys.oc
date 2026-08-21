@@ -83,6 +83,57 @@ export async function receiveStockAction(formData: FormData) {
     partnerId,
   });
   revalidatePath("/stock");
+  revalidatePath("/field");
+}
+
+/**
+ * Technician receives parts onto their own van.
+ * Writes the shared stock.json — desktop Stock sees the same qty after refresh.
+ */
+export async function receiveOntoMyVanAction(formData: FormData): Promise<{
+  ok: boolean;
+  error?: string;
+  qty?: number;
+}> {
+  const session = await requireStaff();
+  if (!session) return { ok: false, error: "Not signed in" };
+  if (session.role !== "technician" && session.role !== "owner") {
+    return { ok: false, error: "Only technicians can receive onto their van here" };
+  }
+
+  const itemId = String(formData.get("itemId") || "").trim();
+  const qty = Math.floor(Number(formData.get("qty") || 0));
+  const partnerId = String(formData.get("partnerId") || "").trim() || undefined;
+  const technicianId =
+    session.role === "technician"
+      ? session.id
+      : String(formData.get("technicianId") || session.id).trim() || session.id;
+
+  if (!itemId) return { ok: false, error: "Pick a part" };
+  if (!Number.isFinite(qty) || qty < 1) return { ok: false, error: "Qty must be at least 1" };
+  if (qty > 500) return { ok: false, error: "Qty too large" };
+
+  if (session.role === "technician" && technicianId !== session.id) {
+    return { ok: false, error: "You can only receive onto your own van" };
+  }
+
+  const result = await receiveSupplier({
+    itemId,
+    qty,
+    destination: "tech",
+    technicianId,
+    createdBy: session.id,
+    partnerId,
+    note: partnerId
+      ? "Tech received partner parts onto van"
+      : "Tech received parts onto van",
+  });
+  if (!result.ok) return { ok: false, error: result.error };
+
+  revalidatePath("/stock");
+  revalidatePath("/field");
+  revalidatePath("/field/jobs");
+  return { ok: true, qty };
 }
 
 export async function receivePartnerStockAction(formData: FormData) {
