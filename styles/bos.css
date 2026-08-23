@@ -1747,6 +1747,50 @@ textarea {
   min-width: 42px;
   width: 42px;
   font-weight: 600;
+  padding: 0;
+}
+
+.sheet-row-sel,
+.sheet-row-del {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 34px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sheet-row-sel:hover {
+  background: #e2e8f0;
+  color: var(--bos-text);
+}
+
+.sheet-row-del.is-armed {
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.sheet-row-del.is-armed:hover {
+  background: #fee2e2;
+}
+
+.sheet-row-num:has(.sheet-row-del.is-armed) {
+  background: #fef2f2;
+}
+
+.sheet-del-head,
+.sheet-del-cell,
+.sheet-del-btn {
+  display: none;
 }
 
 .sheet-grid thead th {

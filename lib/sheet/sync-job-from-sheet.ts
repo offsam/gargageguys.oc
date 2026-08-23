@@ -5,6 +5,7 @@ import {
   type SheetStatus,
 } from "@/lib/leads/stage-sync";
 import { parseLocalDateTime, timeHmInBusinessTz } from "@/lib/datetime";
+import { SCHEDULE_WINDOWS } from "@/lib/schedule/windows";
 
 const DEFAULT_TIME = "09:00";
 
@@ -40,6 +41,15 @@ export function normalizeSheetTime(raw: string | null | undefined): string {
     if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
       return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
     }
+  }
+
+  // Arrival window labels from Schedule ("9–11" / "9-11") → window start clock
+  const compact = v.replace(/\s/g, "").replace(/–/g, "-");
+  const fromLabel = SCHEDULE_WINDOWS.find(
+    (w) => w.id === compact || w.label.replace(/\s/g, "").replace(/–/g, "-") === compact,
+  );
+  if (fromLabel) {
+    return `${String(fromLabel.startHour).padStart(2, "0")}:00`;
   }
 
   return "";

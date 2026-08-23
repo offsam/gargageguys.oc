@@ -9,6 +9,7 @@ import { listPartnersAction } from "@/app/actions/partners";
 import { parseSheetStockPulls, syncSheetPartStock } from "@/lib/stock/ops";
 import { parseInvoiceLines } from "@/lib/field/job-invoice-types";
 import { parsePartsLines } from "@/lib/sheet/parts-lines";
+import { formatServiceLines, parseServiceLines } from "@/lib/sheet/service-lines";
 import { ensureLeadWorkOrder } from "@/lib/field/job-invoice";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
 import {
@@ -43,6 +44,8 @@ export type SheetSaveInput = {
 
 function sheetMeta(input: SheetSaveInput) {
   const partsLines = parsePartsLines(undefined, input.parts);
+  const serviceLines = parseServiceLines(undefined, input.service);
+  const service = formatServiceLines(serviceLines) || input.service;
   return {
     workSource: input.workSource,
     partnerName: input.partnerName,
@@ -55,7 +58,8 @@ function sheetMeta(input: SheetSaveInput) {
     jobStatus: input.jobStatus,
     jobType: input.jobType,
     issue: input.jobType,
-    service: input.service,
+    service,
+    serviceLines,
     parts: input.parts,
     partsLines,
     paymentType: input.paymentType,
@@ -346,6 +350,11 @@ export async function saveSheetRowAction(
       }
 
       if (error) return { ok: false, error: error.message };
+
+      // Row is already in DB — never fail the create after insert, or the UI drops a
+      // real lead and it "vanishes" until a full reload (and even then period filters
+      // may hide it). Stock / Field sync errors are soft warnings.
+      let warning: string | undefined;
       try {
         const stock = await syncPartnerSheetStock({
           leadId: data!.id,
@@ -357,23 +366,17 @@ export async function saveSheetRowAction(
           prevMeta: {},
           createdBy: session.id,
         });
-        if (!stock.ok) {
-          return { ok: false, error: stock.error, id: data!.id };
-        }
+        if (!stock.ok) warning = stock.error;
       } catch (err) {
-        return {
-          ok: false,
-          id: data!.id,
-          error: err instanceof Error ? err.message : "Stock update failed",
-        };
+        warning = err instanceof Error ? err.message : "Stock update failed";
       }
-      const fieldSync = await syncFieldJobFromSheetSave(data!.id, input, assignedTo);
-      if (!fieldSync.ok) {
-        return { ok: false, id: data!.id, error: fieldSync.error };
+      if (!warning) {
+        const fieldSync = await syncFieldJobFromSheetSave(data!.id, input, assignedTo);
+        if (!fieldSync.ok) warning = fieldSync.error;
       }
       const jobNumber = await workOrderNumber(data!.id);
       if (!opts?.silent) revalidateRelatedSurfaces();
-      return { ok: true, id: data!.id, jobNumber };
+      return { ok: true, id: data!.id, jobNumber, ...(warning ? { error: warning } : {}) };
     }
 
     const { data: existing } = await admin
@@ -468,11 +471,12 @@ export async function saveSheetRowAction(
       };
     }
     const fieldSync = await syncFieldJobFromSheetSave(input.id, input, assignedTo);
-    if (!fieldSync.ok) {
-      return { ok: false, id: input.id, error: fieldSync.error };
-    }
     const jobNumber = await workOrderNumber(input.id);
     if (!opts?.silent) revalidateRelatedSurfaces();
+    if (!fieldSync.ok) {
+      // Lead/Sheet row already saved — don't make the UI treat this as a lost edit.
+      return { ok: true, id: input.id, jobNumber, error: fieldSync.error };
+    }
     return { ok: true, id: input.id, jobNumber };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Save failed" };

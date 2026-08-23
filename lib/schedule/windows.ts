@@ -101,6 +101,40 @@ export function findWindowById(id: string): ScheduleWindow | undefined {
   return SCHEDULE_WINDOWS.find((w) => w.id === id);
 }
 
+/** Sheet Time column value for a window (start clock, e.g. 09:00). */
+export function sheetTimeForWindow(window: ScheduleWindow): string {
+  return `${String(window.startHour).padStart(2, "0")}:00`;
+}
+
+/** Match a stored Sheet time (09:00 or label 9–11) to an arrival window. */
+export function findWindowForSheetTime(raw: string): ScheduleWindow | null {
+  const v = String(raw || "").trim();
+  if (!v) return null;
+
+  const compact = v.replace(/\s/g, "").replace(/–/g, "-").toLowerCase();
+  const byLabel = SCHEDULE_WINDOWS.find(
+    (w) =>
+      w.id === compact ||
+      w.label.replace(/\s/g, "").replace(/–/g, "-").toLowerCase() === compact,
+  );
+  if (byLabel) return byLabel;
+
+  const hm = v.match(/^(\d{1,2}):(\d{2})/);
+  if (hm) {
+    const hour = Number(hm[1]);
+    return SCHEDULE_WINDOWS.find((w) => w.startHour === hour) || null;
+  }
+
+  return null;
+}
+
+export function sheetTimeSelectOptions(): Array<{ value: string; label: string }> {
+  return SCHEDULE_WINDOWS.map((w) => ({
+    value: sheetTimeForWindow(w),
+    label: w.label,
+  }));
+}
+
 /** Helper for forms that still need a datetime-local string for a window. */
 export function windowStartLocal(dayKey: string, window: ScheduleWindow): string | null {
   return windowRange(dayKey, window)?.startLocal || null;

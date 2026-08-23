@@ -32,7 +32,16 @@ export function sheetIssueFromLead(input: {
   return firstText(input.message);
 }
 
+import { formatServiceLines, parseServiceLines } from "@/lib/sheet/service-lines";
+
 export function sheetServiceFromLead(metadata: Record<string, unknown>): string {
+  const fromLines = formatServiceLines(
+    parseServiceLines(
+      metadata.serviceLines,
+      typeof metadata.service === "string" ? metadata.service : "",
+    ),
+  );
+  if (fromLines) return fromLines;
   const v = metadata.service;
   return typeof v === "string" ? v.trim() : "";
 }

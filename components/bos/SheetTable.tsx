@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
 import { SheetPartsPicker } from "@/components/bos/SheetPartsPicker";
+import { SheetServicesPicker } from "@/components/bos/SheetServicesPicker";
 import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/ScheduleLeadModal";
 import { scheduleCrmLeadAction } from "@/app/actions/crm";
 import type { FieldJob } from "@/lib/field/days";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
 import { SHEET_STATUSES, completeBlockedReason } from "@/lib/leads/stage-sync";
-import { FIELD_SERVICES, FIELD_SERVICE_NAMES, CUSTOM_SERVICE_LABEL, isCustomServiceChoice } from "@/lib/field/services-catalog";
+import { FIELD_SERVICES, findFieldServiceByName, isCustomServiceChoice } from "@/lib/field/services-catalog";
 import { CustomServiceModal } from "@/components/bos/CustomServiceModal";
 import {
   formatPartsLines,
@@ -32,11 +33,22 @@ import {
 } from "@/lib/sheet/work-source";
 import { normalizeSheetTime } from "@/lib/sheet/sync-job-from-sheet";
 import {
+  findWindowForSheetTime,
+  sheetTimeForWindow,
+  sheetTimeSelectOptions,
+} from "@/lib/schedule/windows";
+import {
   busyJobsFromSheetRows,
   mergeScheduleBusyJobs,
 } from "@/lib/schedule/sheet-busy";
 import {
-  applyServicePriceToJobCost,
+  formatServiceLines,
+  mergeServiceLines,
+  parseServiceLines,
+  type SheetServiceLine,
+} from "@/lib/sheet/service-lines";
+import {
+  applyServicesPriceToJobCost,
   bankFeeFor,
   clearProfitFor,
   effectiveTechPay,
@@ -94,7 +106,6 @@ const SORT_STORAGE_KEY = "bos-sheet-date-sort";
 const PERIOD_STORAGE_KEY = "bos-sheet-period-v1";
 const LEAD_SOURCE_LIST_ID = "sheet-lead-source-list";
 const PARTNER_LIST_ID = "sheet-partner-list";
-const SERVICE_LIST_ID = "sheet-service-list";
 
 type SheetPeriod =
   | "week"
@@ -142,7 +153,7 @@ const COLUMNS: Array<{
   { key: "date", label: "Date", width: 130, kind: "date" },
   { key: "time", label: "Time", width: 100, kind: "time" },
   { key: "jobType", label: "Issue", width: 180 },
-  { key: "service", label: "Service", width: 200, kind: "combo", options: "service" },
+  { key: "service", label: "Service", width: 200 },
   { key: "parts", label: "Parts", width: 220 },
   { key: "jobCost", label: "Job cost", width: 100, money: true },
   { key: "paymentType", label: "Payment type", width: 140, kind: "select", options: "payment" },
@@ -400,8 +411,44 @@ function rowHasWork(row: SheetRow): boolean {
   ].some((v) => String(v || "").trim());
 }
 
-function dateSortValue(row: SheetRow): string {
-  return toDateInputValue(row.date) || "";
+/** Sort key: date + time (empty time sorts as start of day). */
+function dateTimeSortValue(row: SheetRow): string {
+  const date = toDateInputValue(row.date) || "";
+  if (!date) return "";
+  const time = normalizeSheetTime(row.time) || "00:00";
+  return `${date}T${time}`;
+}
+
+/** Arrival windows — same slots as Schedule (9–11, etc.). */
+const SHEET_TIME_OPTIONS = sheetTimeSelectOptions();
+
+function timeOptionsForValue(current: string): Array<{ value: string; label: string }> {
+  const normalized = normalizeSheetTime(current);
+  const window = findWindowForSheetTime(normalized || current);
+  const value = window ? sheetTimeForWindow(window) : normalized;
+  if (value && !SHEET_TIME_OPTIONS.some((o) => o.value === value)) {
+    return [{ value: "", label: "—" }, { value, label: value }, ...SHEET_TIME_OPTIONS];
+  }
+  return [{ value: "", label: "—" }, ...SHEET_TIME_OPTIONS];
+}
+
+/** Pull HH:mm from Schedule startAt (datetime-local Pacific, not UTC ISO). */
+function sheetTimeFromScheduleStart(startAt: string, endAt?: string): string {
+  const start = String(startAt || "").trim();
+  const end = String(endAt || "").trim();
+  const startHm = normalizeSheetTime(start.includes("T") ? start.slice(11, 16) : start);
+  const endHm = normalizeSheetTime(end.includes("T") ? end.slice(11, 16) : end);
+  if (startHm && endHm) {
+    const sh = Number(startHm.slice(0, 2));
+    const eh = Number(endHm.slice(0, 2));
+    const hit = SHEET_TIME_OPTIONS.find((o) => {
+      const w = findWindowForSheetTime(o.value);
+      return w && w.startHour === sh && w.endHour === eh;
+    });
+    if (hit) return hit.value;
+  }
+  const w = findWindowForSheetTime(startHm);
+  return w ? sheetTimeForWindow(w) : startHm;
 }
 
 function rowKey(row: Pick<SheetRow, "id" | "clientKey">): string {
@@ -409,8 +456,8 @@ function rowKey(row: Pick<SheetRow, "id" | "clientKey">): string {
 }
 
 type SheetSaveResult =
-  | { ok: true; id?: string; jobNumber?: string }
-  | { ok: false; error: string; jobStatus?: string };
+  | { ok: true; id?: string; jobNumber?: string; error?: string }
+  | { ok: false; error: string; id?: string; jobNumber?: string; jobStatus?: string };
 
 async function postSheetRow(row: SheetRow): Promise<SheetSaveResult> {
   const res = await fetch("/api/sheet/row", {
@@ -429,10 +476,17 @@ async function postSheetRow(row: SheetRow): Promise<SheetSaveResult> {
     return {
       ok: false,
       error: data?.error || `Save failed (${res.status})`,
+      id: data?.id,
+      jobNumber: data?.jobNumber || "",
       jobStatus: data?.jobStatus,
     };
   }
-  return { ok: true, id: data.id, jobNumber: data.jobNumber || "" };
+  return {
+    ok: true,
+    id: data.id,
+    jobNumber: data.jobNumber || "",
+    error: data.error,
+  };
 }
 
 async function deleteSheetRow(id: string): Promise<{ ok: boolean; error?: string }> {
@@ -464,7 +518,9 @@ function mergeLiveRows(live: SheetRow[], server: SheetRow[]): SheetRow[] {
   const out: SheetRow[] = [];
   for (const row of live) {
     if (row.id.startsWith("new-")) {
-      if (rowHasWork(row)) out.push(row);
+      // Always keep in-progress drafts across live refresh — dropping them mid-edit
+      // is what made rows "vanish" after autosave/realtime updates.
+      out.push(row);
       continue;
     }
     const fromServer = serverById.get(row.id);
@@ -543,6 +599,9 @@ export function SheetTable({
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [partsPickerRowId, setPartsPickerRowId] = useState<string | null>(null);
+  const [servicesPickerRowId, setServicesPickerRowId] = useState<string | null>(null);
+  const [armedDeleteKey, setArmedDeleteKey] = useState<string | null>(null);
+  const pendingServiceLinesRef = useRef<SheetServiceLine[]>([]);
   const [extraServices, setExtraServices] = useState<SheetServiceOption[]>([]);
   const [customRowId, setCustomRowId] = useState<string | null>(null);
   const [customError, setCustomError] = useState("");
@@ -572,16 +631,54 @@ export function SheetTable({
   const inFlightRef = useRef(0);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const savingIdsRef = useRef<Set<string>>(new Set());
+  /** Keep freshly created rows visible even if the active period filter would hide them. */
+  const pinnedKeysRef = useRef<Set<string>>(new Set());
+  const [pinVersion, setPinVersion] = useState(0);
 
   const persistTimersRef = useRef<Map<string, number>>(new Map());
   const pendingDrainRef = useRef<Set<string>>(new Set());
   const releaseQueuedRef = useRef(false);
   const initialRowsRef = useRef(initialRows);
 
+  function pinRowKey(key: string) {
+    if (!key || pinnedKeysRef.current.has(key)) return;
+    pinnedKeysRef.current.add(key);
+    setPinVersion((n) => n + 1);
+  }
+
+  function isPinnedRow(row: SheetRow) {
+    const key = rowKey(row);
+    return (
+      pinnedKeysRef.current.has(key) ||
+      pinnedKeysRef.current.has(row.id) ||
+      dirtyIdsRef.current.has(key) ||
+      dirtyIdsRef.current.has(row.id)
+    );
+  }
+
   useEffect(() => {
     rowsRef.current = rows;
     rememberRows(rows);
   }, [rows]);
+
+  useEffect(() => {
+    if (!armedDeleteKey) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setArmedDeleteKey(null);
+    }
+    function onPointerDown(e: PointerEvent) {
+      const target = e.target as Element | null;
+      if (target?.closest(".sheet-row-num")) return;
+      setArmedDeleteKey(null);
+    }
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [armedDeleteKey]);
+
 
   useEffect(() => {
     // Soft-merge server snapshot (Meta/website inserts, other tabs) without wiping edits.
@@ -683,12 +780,10 @@ export function SheetTable({
   }, [partnerStockParts]);
 
   const profitColIndex = COLUMNS.length;
-  const deleteColWidth = 44;
   const tableWidth =
     ROW_NUM_WIDTH +
     COLUMNS.reduce((sum, col) => sum + (widths[col.key] || col.width), 0) +
-    (widths.__profit || PROFIT_DEFAULT_WIDTH) +
-    deleteColWidth;
+    (widths.__profit || PROFIT_DEFAULT_WIDTH);
 
   function persistWidths(next: Record<string, number>) {
     try {
@@ -766,6 +861,7 @@ export function SheetTable({
 
     if (isTemp && !hasContent) {
       dirtyIdsRef.current.delete(key);
+      setArmedDeleteKey(null);
       setRows((prev) => prev.filter((r) => rowKey(r) !== key));
       return;
     }
@@ -774,9 +870,13 @@ export function SheetTable({
     const msg = isTemp
       ? `Remove this unsaved row?`
       : `Delete ${label} from Sheet and the whole system?\n\nThis removes the lead, related jobs, invoices, inbox items, and chat. Cannot be undone.`;
-    if (!window.confirm(msg)) return;
+    if (!window.confirm(msg)) {
+      setArmedDeleteKey(null);
+      return;
+    }
 
     dirtyIdsRef.current.delete(key);
+    setArmedDeleteKey(null);
     setRows((prev) => prev.filter((r) => rowKey(r) !== key));
     if (isTemp) return;
 
@@ -859,27 +959,37 @@ export function SheetTable({
       }
 
       const sheetDate = input.startAt.slice(0, 10);
+      const sheetTime = sheetTimeFromScheduleStart(input.startAt, input.endAt);
+      const scheduledRow: SheetRow = {
+        ...rowSnapshot,
+        id: leadId,
+        jobStatus: "Scheduled",
+        technician: techName || rowSnapshot.technician,
+        date: sheetDate || rowSnapshot.date,
+        time: sheetTime || rowSnapshot.time,
+      };
+      pinRowKey(rowKey(scheduledRow));
+      if (!leadId.startsWith("new-")) pinRowKey(leadId);
       setRows((prev) => {
         const next = prev.map((r) => {
           if (rowKey(r) !== rowKey(rowSnapshot) && r.id !== rowSnapshot.id && r.id !== leadId) {
             return r;
           }
-            return {
-            ...r,
-            id: leadId,
-            jobStatus: "Scheduled",
-            technician: techName || r.technician,
-            date: sheetDate || r.date,
-            time: normalizeSheetTime(input.startAt.slice(11, 16)) || r.time,
-          };
+          return scheduledRow;
         });
         rowsRef.current = next;
         rememberRows(next);
         return next;
       });
+      // Persist through Sheet save so Time/Date/Tech survive refresh (not only CRM metadata).
+      await writeRow(scheduledRow);
       setScheduleRow(null);
-      setStatus("Scheduled");
-      window.setTimeout(() => setStatus(""), 1200);
+      setStatus(
+        sheetTime
+          ? `Scheduled · ${findWindowForSheetTime(sheetTime)?.label || sheetTime}`
+          : "Scheduled",
+      );
+      window.setTimeout(() => setStatus(""), 1600);
       router.refresh();
     });
   }
@@ -909,6 +1019,8 @@ export function SheetTable({
       const nextId = result.id || row.id;
       const nextJob = result.jobNumber || "";
       if (nextId !== row.id || (nextJob && nextJob !== row.jobNumber)) {
+        pinRowKey(rowKey(row));
+        if (!String(nextId).startsWith("new-")) pinRowKey(nextId);
         setRows((prev) => {
           const next = prev.map((r) => {
             if (rowKey(r) !== rowKey(row) && r.id !== row.id) return r;
@@ -925,8 +1037,12 @@ export function SheetTable({
         }
       }
       const completed = row.jobStatus.trim() === "Completed" && Boolean(row.parts.trim());
-      setStatus(completed ? "Saved · stock updated" : "Saved");
-      window.setTimeout(() => setStatus(""), 1200);
+      if (result.error) {
+        setStatus(`Saved with warning: ${result.error}`);
+      } else {
+        setStatus(completed ? "Saved · stock updated" : "Saved");
+      }
+      window.setTimeout(() => setStatus(""), result.error ? 2800 : 1200);
       return { ok: true as const, id: nextId, jobNumber: nextJob };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Save failed";
@@ -1011,23 +1127,37 @@ export function SheetTable({
     }).catch(() => {});
   }
 
-  function commitService(rowId: string, rawName: string, save: boolean, priceOverride?: number) {
+  function applyServiceLines(
+    rowId: string,
+    lines: SheetServiceLine[],
+    row: SheetRow,
+    priceOverrides?: Map<string, number>,
+  ) {
+    const value = formatServiceLines(lines);
+    const prevLines = parseServiceLines(undefined, row.service);
+    const prices = new Map(servicePriceByName);
+    if (priceOverrides) {
+      for (const [key, amount] of priceOverrides) prices.set(key, amount);
+    }
+    const jobCost = applyServicesPriceToJobCost(row.jobCost, prevLines, lines, prices);
+    patchRow(rowId, { service: value, jobCost }, true);
+    for (const line of lines) rememberService(line.name);
+  }
+
+  function appendCustomService(
+    rowId: string,
+    name: string,
+    unitPrice?: string,
+    pendingLines: SheetServiceLine[] = [],
+  ) {
     const row = rowsRef.current.find((r) => rowKey(r) === rowId || r.id === rowId);
     if (!row) return;
-    if (isCustomServiceChoice(rawName)) {
-      setCustomError("");
-      setCustomRowId(rowKey(row));
-      patchRow(row.id, { service: row.service === rawName ? "" : row.service }, false);
-      return;
-    }
-    const name = save ? rawName.trim() : rawName;
-    const prices = new Map(servicePriceByName);
-    if (priceOverride && priceOverride > 0) {
-      prices.set(name.trim().toLowerCase(), priceOverride);
-    }
-    const jobCost = applyServicePriceToJobCost(row.jobCost, row.service, name.trim(), prices);
-    patchRow(row.id, { service: name, jobCost }, save);
-    if (save && name.trim()) rememberService(name.trim());
+    const prev = parseServiceLines(undefined, row.service);
+    const lines = mergeServiceLines([...prev, ...pendingLines, { name, qty: 1 }]);
+    const overrides = new Map<string, number>();
+    const price = Number(unitPrice);
+    if (price > 0) overrides.set(name.trim().toLowerCase(), price);
+    applyServiceLines(rowId, lines, row, overrides);
   }
 
   function patchRow(rowId: string, patch: Partial<SheetRow>, save: boolean) {
@@ -1084,6 +1214,10 @@ export function SheetTable({
     ? rows.find((r) => r.id === partsPickerRowId || rowKey(r) === partsPickerRowId) || null
     : null;
 
+  const servicesPickerRow = servicesPickerRowId
+    ? rows.find((r) => r.id === servicesPickerRowId || rowKey(r) === servicesPickerRowId) || null
+    : null;
+
   async function addNewRow() {
     if (pending) return;
     const draft: SheetRow = {
@@ -1092,6 +1226,12 @@ export function SheetTable({
       jobStatus: "Waiting",
       date: todayISO(),
     };
+    // New rows use today's date — if the period filter excludes today, the row
+    // would vanish the moment it gets a real id. Jump to "all" so it stays visible.
+    if (!rowInPeriod(draft, activeRange.from, activeRange.to) && period !== "all") {
+      changePeriod("all");
+    }
+    pinRowKey(rowKey(draft));
     releaseQueuedRef.current = false;
     frozenIdsRef.current = null;
     setFreezeOrder(false);
@@ -1106,7 +1246,10 @@ export function SheetTable({
     setStatus("Creating…");
     try {
       const result = await postSheetRow(draft);
-      if (!result.ok) {
+      const nextId = result.id || draft.id;
+      const savedToDb = Boolean(nextId) && !String(nextId).startsWith("new-");
+
+      if (!result.ok && !savedToDb) {
         setStatus(result.error || "Could not create row");
         setRows((prev) => {
           const next = prev.filter((r) => rowKey(r) !== rowKey(draft));
@@ -1115,10 +1258,13 @@ export function SheetTable({
           return next;
         });
         dirtyIdsRef.current.delete(rowKey(draft));
+        pinnedKeysRef.current.delete(rowKey(draft));
         return;
       }
-      const nextId = result.id || draft.id;
+
       const nextJob = result.jobNumber || "";
+      pinRowKey(rowKey(draft));
+      if (savedToDb) pinRowKey(nextId);
       setRows((prev) => {
         const next = prev.map((r) =>
           rowKey(r) === rowKey(draft)
@@ -1130,8 +1276,12 @@ export function SheetTable({
         return next;
       });
       dirtyIdsRef.current.delete(rowKey(draft));
-      setStatus(nextJob ? `Saved · ${nextJob}` : "Saved");
-      window.setTimeout(() => setStatus(""), 1600);
+      if (result.error) {
+        setStatus(`Saved with warning: ${result.error}`);
+      } else {
+        setStatus(nextJob ? `Saved · ${nextJob}` : "Saved");
+      }
+      window.setTimeout(() => setStatus(""), 2200);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not create row";
       setStatus(message);
@@ -1142,6 +1292,7 @@ export function SheetTable({
         return next;
       });
       dirtyIdsRef.current.delete(rowKey(draft));
+      pinnedKeysRef.current.delete(rowKey(draft));
     } finally {
       setPending(false);
     }
@@ -1155,13 +1306,6 @@ export function SheetTable({
     if (kind === "status") return [...JOB_STATUSES];
     if (kind === "technician") return techOptions;
     if (kind === "parts") return [];
-    if (kind === "service") {
-      const set = new Set<string>(FIELD_SERVICE_NAMES);
-      for (const row of rows) {
-        if (row.service.trim()) set.add(row.service.trim());
-      }
-      return ["", ...[...set].sort((a, b) => a.localeCompare(b))];
-    }
     if (kind === "leadSource") return ["", ...LEAD_SOURCES];
     if (kind === "partner") {
       const set = new Set<string>(partners.map((p) => p.name).filter(Boolean));
@@ -1204,12 +1348,27 @@ export function SheetTable({
       map.set(name.toLowerCase(), { name, unitPrice: svc.unitPrice || "" });
     }
     for (const row of rows) {
-      const name = row.service.trim();
-      if (!name) continue;
-      if (!map.has(name.toLowerCase())) map.set(name.toLowerCase(), { name, unitPrice: "" });
+      for (const line of parseServiceLines(undefined, row.service)) {
+        const name = line.name.trim();
+        if (!name) continue;
+        if (!map.has(name.toLowerCase())) map.set(name.toLowerCase(), { name, unitPrice: "" });
+      }
     }
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [catalogServices, extraServices, rows]);
+
+  const serviceCatalog = useMemo(
+    () =>
+      allCatalogServices.map((svc) => {
+        const field = findFieldServiceByName(svc.name);
+        return {
+          name: svc.name,
+          unitPrice: svc.unitPrice,
+          category: field?.category || "Custom",
+        };
+      }),
+    [allCatalogServices],
+  );
 
   const servicePriceByName = useMemo(() => {
     const map = new Map<string, number>();
@@ -1220,11 +1379,6 @@ export function SheetTable({
     return map;
   }, [allCatalogServices]);
 
-  const serviceSuggestions = useMemo(
-    () => [CUSTOM_SERVICE_LABEL, ...allCatalogServices.map((s) => s.name)],
-    [allCatalogServices],
-  );
-
   const activeRange = useMemo(
     () => periodRange(period, customFrom, customTo),
     [period, customFrom, customTo],
@@ -1234,9 +1388,11 @@ export function SheetTable({
     () =>
       rows.filter(
         (row) =>
-          row.id.startsWith("new-") || rowInPeriod(row, activeRange.from, activeRange.to),
+          row.id.startsWith("new-") ||
+          isPinnedRow(row) ||
+          rowInPeriod(row, activeRange.from, activeRange.to),
       ),
-    [rows, activeRange],
+    [rows, activeRange, pinVersion],
   );
 
   const sheetTotals = useMemo(() => {
@@ -1283,8 +1439,8 @@ export function SheetTable({
   const sortedRows = useMemo(() => {
     const next = [...periodRows];
     next.sort((a, b) => {
-      const da = dateSortValue(a);
-      const db = dateSortValue(b);
+      const da = dateTimeSortValue(a);
+      const db = dateTimeSortValue(b);
       if (da === db) return 0;
       return dateSort === "newest" ? (da < db ? 1 : -1) : da < db ? -1 : 1;
     });
@@ -1397,11 +1553,6 @@ export function SheetTable({
           <option key={opt} value={opt} />
         ))}
       </datalist>
-      <datalist id={SERVICE_LIST_ID}>
-        {serviceSuggestions.map((opt) => (
-          <option key={opt} value={opt} />
-        ))}
-      </datalist>
       <div className="sheet-top-row">
         <div className="sheet-top-actions">
           <button
@@ -1459,7 +1610,7 @@ export function SheetTable({
           </div>
         </div>
         <label className="sheet-sort">
-          Date
+          Date / time
           <select
             value={dateSort}
             onChange={(e) =>
@@ -1479,11 +1630,10 @@ export function SheetTable({
               <col key={col.key} style={{ width: widths[col.key] || col.width }} />
             ))}
             <col style={{ width: widths.__profit || PROFIT_DEFAULT_WIDTH }} />
-            <col style={{ width: deleteColWidth }} />
           </colgroup>
           <thead>
             <tr>
-              <th className="sheet-corner" />
+              <th className="sheet-corner" title="Click a row number to delete" />
               {COLUMNS.map((col, idx) => (
                 <th key={col.key} style={{ width: widths[col.key] || col.width }}>
                   {col.key === "date" ? (
@@ -1501,7 +1651,7 @@ export function SheetTable({
                     >
                       <span className="sheet-col-letter">{String.fromCharCode(65 + idx)}</span>
                       <span className="sheet-col-label">
-                        Date {dateSort === "newest" ? "↓" : "↑"}
+                        Date / time {dateSort === "newest" ? "↓" : "↑"}
                       </span>
                     </button>
                   ) : (
@@ -1534,7 +1684,6 @@ export function SheetTable({
                   aria-label="Resize Clear profit"
                 />
               </th>
-              <th className="sheet-del-head" style={{ width: deleteColWidth }} aria-label="Delete" />
             </tr>
           </thead>
           <tbody>
@@ -1571,7 +1720,32 @@ export function SheetTable({
                     }, 200);
                   }}
                 >
-                  <th className="sheet-row-num">{rowIndex + 1}</th>
+                  <th className="sheet-row-num">
+                    {armedDeleteKey === rowKey(row) ? (
+                      <button
+                        type="button"
+                        className="sheet-row-del is-armed"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeRow(row);
+                        }}
+                        aria-label={`Delete ${row.clientName || `row ${rowIndex + 1}`}`}
+                        title="Delete row"
+                      >
+                        ×
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="sheet-row-sel"
+                        onClick={() => setArmedDeleteKey(rowKey(row))}
+                        aria-label={`Select row ${rowIndex + 1} to delete`}
+                        title="Click to show delete"
+                      >
+                        {rowIndex + 1}
+                      </button>
+                    )}
+                  </th>
                   {COLUMNS.map((col) => {
                     const editable = isColumnEditable(row.workSource, col.key, colOpts);
                     const needBankEmpty =
@@ -1591,6 +1765,26 @@ export function SheetTable({
                               : undefined,
                       colOpts,
                     );
+
+                    if (col.key === "service") {
+                      return (
+                        <td key={col.key} className={cellClass}>
+                          <button
+                            type="button"
+                            className="sheet-cell sheet-parts-trigger"
+                            disabled={!editable}
+                            tabIndex={editable ? 0 : -1}
+                            title={row.service || "Pick services"}
+                            onClick={() => {
+                              if (!editable) return;
+                              setServicesPickerRowId(rowKey(row));
+                            }}
+                          >
+                            {row.service.trim() || "Pick services…"}
+                          </button>
+                        </td>
+                      );
+                    }
 
                     if (col.key === "parts") {
                       return (
@@ -1666,42 +1860,21 @@ export function SheetTable({
                             list={
                               col.key === "partnerName"
                                 ? PARTNER_LIST_ID
-                                : col.key === "service"
-                                  ? SERVICE_LIST_ID
-                                  : col.options === "leadSource"
-                                    ? LEAD_SOURCE_LIST_ID
-                                    : undefined
+                                : col.options === "leadSource"
+                                  ? LEAD_SOURCE_LIST_ID
+                                  : undefined
                             }
                             value={row[col.key]}
-                            placeholder={
-                              editable
-                                ? col.key === "service"
-                                  ? "Pick or type a service…"
-                                  : "Pick or type…"
-                                : ""
-                            }
+                            placeholder={editable ? "Pick or type…" : ""}
                             disabled={!editable}
                             readOnly={!editable}
                             tabIndex={editable ? 0 : -1}
                             onChange={(e) => {
                               if (!editable) return;
-                              if (col.key === "service") {
-                                const raw = e.target.value;
-                                if (isCustomServiceChoice(raw) || servicePriceByName.has(raw.trim().toLowerCase())) {
-                                  commitService(rowKey(row), raw, false);
-                                } else {
-                                  patchRow(row.id, { service: raw }, false);
-                                }
-                                return;
-                              }
                               patchRow(row.id, { [col.key]: e.target.value }, false);
                             }}
-                            onBlur={(e) => {
+                            onBlur={() => {
                               if (!editable) return;
-                              if (col.key === "service") {
-                                commitService(rowKey(row), e.currentTarget.value, true);
-                                return;
-                              }
                               queuePersistNow(rowKey(row));
                             }}
                           />
@@ -1728,12 +1901,15 @@ export function SheetTable({
                     }
 
                     if (col.kind === "time") {
+                      const window = findWindowForSheetTime(row.time);
+                      const timeValue = window
+                        ? sheetTimeForWindow(window)
+                        : normalizeSheetTime(row.time);
                       return (
                         <td key={col.key} className={cellClass}>
-                          <input
-                            className="sheet-cell sheet-time"
-                            type="time"
-                            value={normalizeSheetTime(row.time)}
+                          <select
+                            className="sheet-cell sheet-select sheet-time"
+                            value={timeValue}
                             disabled={!editable}
                             tabIndex={editable ? 0 : -1}
                             onChange={(e) => {
@@ -1744,7 +1920,13 @@ export function SheetTable({
                                 true,
                               );
                             }}
-                          />
+                          >
+                            {timeOptionsForValue(timeValue).map((opt) => (
+                              <option key={opt.value || "empty"} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                       );
                     }
@@ -1867,17 +2049,6 @@ export function SheetTable({
                       />
                     </div>
                   </td>
-                  <td className="sheet-del-cell">
-                    <button
-                      type="button"
-                      className="sheet-del-btn"
-                      onClick={() => removeRow(row)}
-                      aria-label={`Delete ${row.clientName || "row"}`}
-                      title="Delete client from Sheet and system"
-                    >
-                      ×
-                    </button>
-                  </td>
                 </tr>
               );
             })}
@@ -1894,6 +2065,25 @@ export function SheetTable({
           onApply={(lines) => {
             applyPartsLines(partsPickerRow.id, lines, partsPickerRow);
             setPartsPickerRowId(null);
+          }}
+        />
+      ) : null}
+      {servicesPickerRow ? (
+        <SheetServicesPicker
+          open
+          title="Services"
+          catalog={serviceCatalog}
+          initialLines={parseServiceLines(undefined, servicesPickerRow.service)}
+          onClose={() => setServicesPickerRowId(null)}
+          onApply={(lines) => {
+            applyServiceLines(servicesPickerRow.id, lines, servicesPickerRow);
+            setServicesPickerRowId(null);
+          }}
+          onAddCustom={(pending) => {
+            pendingServiceLinesRef.current = pending;
+            setCustomError("");
+            setCustomRowId(rowKey(servicesPickerRow));
+            setServicesPickerRowId(null);
           }}
         />
       ) : null}
@@ -1954,7 +2144,9 @@ export function SheetTable({
                   }
                   return [...prev, { name: data.service!.name, unitPrice }];
                 });
-                commitService(rowId, data.service.name, true, Number(unitPrice) || undefined);
+                const pending = pendingServiceLinesRef.current;
+                pendingServiceLinesRef.current = [];
+                appendCustomService(rowId, data.service.name, unitPrice, pending);
                 setCustomRowId(null);
               } catch {
                 setCustomError("Could not save service");

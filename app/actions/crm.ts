@@ -250,6 +250,8 @@ export async function scheduleCrmLeadAction(formData: FormData) {
   const localDate = dayKeyInBusinessTz(start);
   const localTime = timeHmInBusinessTz(start);
   const startHour = Number(localTime.slice(0, 2));
+  const windowLabel =
+    SCHEDULE_WINDOWS.find((w) => w.startHour === startHour)?.label || localTime;
 
   const { error: leadErr } = await admin
     .from("leads")
@@ -264,6 +266,7 @@ export async function scheduleCrmLeadAction(formData: FormData) {
         technician: techName,
         sheetDate: localDate,
         sheetTime: localTime,
+        sheetTimeWindow: windowLabel,
       },
     })
     .eq("id", leadId);
@@ -316,8 +319,6 @@ export async function scheduleCrmLeadAction(formData: FormData) {
     console.error("[scheduleCrmLeadAction] invoice", err);
   }
 
-  const windowLabel =
-    SCHEDULE_WINDOWS.find((w) => w.startHour === startHour)?.label || localTime;
   void notifyTechnicianJobAssigned({
     technicianId,
     clientName: lead.name || String(prev.clientName || "Client"),

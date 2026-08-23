@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   applyServicePriceToJobCost,
+  applyServicesPriceToJobCost,
   bankFeeFor,
   clearProfitFor,
   effectiveTechPay,
@@ -101,6 +102,40 @@ describe("effectiveTechPay", () => {
         partsCost: "",
       }),
       250,
+    );
+  });
+});
+
+describe("applyServicesPriceToJobCost", () => {
+  const prices = new Map<string, number>([
+    ["tune-up / lubrication", 99],
+    ["cable replacement", 189],
+  ]);
+
+  it("sums multiple catalog services into job cost", () => {
+    assert.equal(
+      applyServicesPriceToJobCost(
+        "",
+        [],
+        [
+          { name: "Tune-up / lubrication", qty: 1 },
+          { name: "Cable replacement", qty: 1 },
+        ],
+        prices,
+      ),
+      "288.00",
+    );
+  });
+
+  it("replaces auto-filled previous service total", () => {
+    assert.equal(
+      applyServicesPriceToJobCost(
+        "99.00",
+        [{ name: "Tune-up / lubrication", qty: 1 }],
+        [{ name: "Cable replacement", qty: 2 }],
+        prices,
+      ),
+      "378.00",
     );
   });
 });

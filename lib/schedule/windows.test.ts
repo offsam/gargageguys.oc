@@ -2,8 +2,11 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   SCHEDULE_WINDOWS,
+  findWindowForSheetTime,
   firstFreeWindow,
   jobMatchesWindow,
+  sheetTimeForWindow,
+  sheetTimeSelectOptions,
   slotStatusForTech,
   windowRange,
 } from "./windows";
@@ -67,5 +70,14 @@ describe("schedule windows", () => {
     ];
     const free = firstFreeWindow(jobs, "tech-1", "2026-08-20");
     assert.equal(free?.id, "9-11");
+  });
+
+  it("maps sheet times to arrival windows for the Time column", () => {
+    const nine = findWindowForSheetTime("09:00");
+    assert.equal(nine?.label, "9–11");
+    assert.equal(sheetTimeForWindow(nine!), "09:00");
+    assert.equal(findWindowForSheetTime("9–11")?.id, "9-11");
+    const opts = sheetTimeSelectOptions();
+    assert.ok(opts.some((o) => o.value === "09:00" && o.label === "9–11"));
   });
 });

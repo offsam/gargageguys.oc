@@ -92,21 +92,48 @@ export function effectiveTechPay(row: SheetMoneyRow): number {
  * Fill job cost from a priced catalog service when the cell is empty
  * or still holds the previous service's auto price.
  */
+export type SheetServiceLineLike = { name: string; qty: number };
+
+export function servicesTotalPrice(
+  lines: SheetServiceLineLike[],
+  priceByName: Map<string, number>,
+): number {
+  let total = 0;
+  for (const line of lines) {
+    const unit = priceByName.get(line.name.trim().toLowerCase()) || 0;
+    if (unit > 0) total += unit * line.qty;
+  }
+  return total;
+}
+
+export function applyServicesPriceToJobCost(
+  jobCost: string,
+  previousLines: SheetServiceLineLike[],
+  nextLines: SheetServiceLineLike[],
+  priceByName: Map<string, number>,
+): string {
+  const prevTotal = servicesTotalPrice(previousLines, priceByName);
+  const nextTotal = servicesTotalPrice(nextLines, priceByName);
+  const current = parseMoney(jobCost);
+  if (!nextLines.length) {
+    if (prevTotal > 0 && Math.abs(current - prevTotal) < 0.009) return "";
+    return jobCost;
+  }
+  if (nextTotal <= 0) return jobCost;
+  if (current === 0) return formatFee(nextTotal);
+  if (prevTotal > 0 && Math.abs(current - prevTotal) < 0.009) return formatFee(nextTotal);
+  return jobCost;
+}
+
 export function applyServicePriceToJobCost(
   jobCost: string,
   previousService: string,
   nextService: string,
   priceByName: Map<string, number>,
 ): string {
-  const prevPrice = priceByName.get(previousService.trim().toLowerCase()) || 0;
-  const nextPrice = priceByName.get(nextService.trim().toLowerCase()) || 0;
-  const current = parseMoney(jobCost);
-  if (!nextService.trim()) {
-    if (prevPrice > 0 && Math.abs(current - prevPrice) < 0.009) return "";
-    return jobCost;
-  }
-  if (nextPrice <= 0) return jobCost;
-  if (current === 0) return formatFee(nextPrice);
-  if (prevPrice > 0 && Math.abs(current - prevPrice) < 0.009) return formatFee(nextPrice);
-  return jobCost;
+  const prevLines = previousService.trim()
+    ? [{ name: previousService.trim(), qty: 1 }]
+    : [];
+  const nextLines = nextService.trim() ? [{ name: nextService.trim(), qty: 1 }] : [];
+  return applyServicesPriceToJobCost(jobCost, prevLines, nextLines, priceByName);
 }

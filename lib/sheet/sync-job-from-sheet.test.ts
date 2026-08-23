@@ -23,6 +23,12 @@ describe("normalizeSheetTime", () => {
     assert.equal(normalizeSheetTime("noon"), "");
     assert.equal(normalizeSheetTime(""), "");
   });
+
+  it("maps arrival window labels to start clock", () => {
+    assert.equal(normalizeSheetTime("9–11"), "09:00");
+    assert.equal(normalizeSheetTime("9-11"), "09:00");
+    assert.equal(normalizeSheetTime("1–3"), "13:00");
+  });
 });
 
 describe("sheetDateTimeToStart", () => {
