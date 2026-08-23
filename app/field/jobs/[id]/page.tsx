@@ -20,6 +20,8 @@ import { loadServices } from "@/lib/field/service-store";
 import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 import { sheetServiceFromLead } from "@/lib/sheet/issue-service";
 import { canAddJobItems } from "@/lib/field/job-status";
+import { formatJobAddress } from "@/lib/field/maps";
+import { FieldMapsLink } from "@/components/bos/FieldMapsLink";
 
 export default async function FieldJobPage({
   params,
@@ -133,7 +135,11 @@ export default async function FieldJobPage({
         <p>
           <strong>Address</strong>
           <br />
-          {[job.address, job.zip].filter(Boolean).join(", ") || "—"}
+          {(() => {
+            const address = formatJobAddress(job.address, job.zip);
+            if (!address) return "—";
+            return <FieldMapsLink address={address} />;
+          })()}
         </p>
         <p>
           <strong>Stock</strong>

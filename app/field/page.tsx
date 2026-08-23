@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { BosShell } from "@/components/bos/BosShell";
-import { FieldCalendar } from "@/components/bos/FieldCalendar";
-import { FieldDayTimeline } from "@/components/bos/FieldDayTimeline";
+import { FieldDayBoard } from "@/components/bos/FieldDayBoard";
 import { FieldScheduleFab } from "@/components/bos/FieldScheduleFab";
 import { FieldShell } from "@/components/bos/FieldShell";
 import { requireRouteAccess } from "@/lib/auth/require";
@@ -9,13 +8,16 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFieldAttentionCount } from "@/lib/field/load-attention";
 import {
   formatDayHeading,
-  jobCountsByDay,
   jobsForDay,
   parseDayKey,
   startOfToday,
   toDayKey,
   type FieldJob,
 } from "@/lib/field/days";
+import { isBusyJob } from "@/lib/field/busy";
+import { geocodeMany } from "@/lib/field/geocode";
+import { formatJobAddress } from "@/lib/field/maps";
+import type { FieldMapPin } from "@/components/bos/FieldDayMap";
 import { ensureTechFieldJobsFromSheet } from "@/lib/sheet/sync-job-from-sheet";
 
 export default async function FieldPage({
@@ -53,7 +55,6 @@ export default async function FieldPage({
   const { data: jobsRaw } = await query.limit(800);
   const jobs = (jobsRaw || []) as FieldJob[];
 
-  const counts = jobCountsByDay(jobs);
   const dayJobs = jobsForDay(jobs, selectedDay);
   const open = dayJobs.filter((j) => j.status !== "done");
   const done = dayJobs.filter((j) => j.status === "done");
@@ -62,11 +63,33 @@ export default async function FieldPage({
   const attentionCount =
     user.role === "technician" ? await getFieldAttentionCount(user.id) : 0;
 
+  const geocodeQueries = dayJobs
+    .filter((j) => !isBusyJob(j))
+    .map((j) => {
+      const text = formatJobAddress(j.address, j.zip);
+      return text ? { id: j.id, text } : null;
+    })
+    .filter((row): row is { id: string; text: string } => Boolean(row));
+
+  const points = await geocodeMany(geocodeQueries);
+  const pins: FieldMapPin[] = dayJobs
+    .filter((j) => points[j.id])
+    .map((j) => {
+      const address = formatJobAddress(j.address, j.zip);
+      return {
+        id: j.id,
+        title: j.title || "Client",
+        label: `${j.title || "Client"}${address ? ` · ${address}` : ""}`,
+        href: `/field/jobs/${j.id}`,
+        point: points[j.id],
+      };
+    });
+
   const body = (
-    <div className="field-home">
+    <div className="field-home field-home--map">
       {user.role === "technician" ? <FieldScheduleFab /> : null}
 
-      <section className="field-section">
+      <section className="field-section field-section--day">
         <div className="field-section-head">
           <h2>{heading}</h2>
           {!isToday ? (
@@ -87,12 +110,7 @@ export default async function FieldPage({
           </div>
         </div>
 
-        <FieldDayTimeline jobs={dayJobs} />
-      </section>
-
-      <section className="field-section">
-        <h2>Calendar</h2>
-        <FieldCalendar counts={counts} selectedDay={selectedDay} />
+        <FieldDayBoard jobs={dayJobs} pins={pins} />
       </section>
     </div>
   );

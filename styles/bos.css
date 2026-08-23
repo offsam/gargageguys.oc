@@ -3278,6 +3278,16 @@ body.sheet-col-resizing * {
   backdrop-filter: blur(10px);
 }
 
+.field-tabs--5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.field-tabs--5 a,
+.field-tabs--5 button {
+  font-size: 0.62rem;
+  padding: 0.5rem 0.1rem;
+}
+
 .field-tabs a,
 .field-tabs button {
   appearance: none;
@@ -5991,5 +6001,179 @@ button.bos-btn:disabled {
 @media (max-width: 900px) {
   .sched-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+/* —— Field day board: clients + Leaflet/Carto map —— */
+.field-home--map {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: calc(100dvh - 7.5rem - env(safe-area-inset-bottom, 0px));
+}
+
+.field-section--day {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.65rem;
+}
+
+.field-day-board {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.65rem;
+}
+
+.field-day-board__clients {
+  max-height: min(34vh, 240px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.field-day-clients {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.field-day-client {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--bos-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.field-day-client__main {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.field-day-client__time {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--bos-muted);
+  white-space: nowrap;
+}
+
+.field-day-client__title {
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-day-client__addr {
+  font-size: 0.8rem;
+  color: var(--bos-accent-2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+
+.field-day-client__addr--muted {
+  color: var(--bos-muted);
+  text-decoration: none;
+}
+
+.field-day-client--busy {
+  opacity: 0.85;
+  background: #fff7e8;
+}
+
+.field-day-map {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: min(48vh, 360px);
+  height: min(48vh, 360px);
+  border: 1px solid var(--bos-border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #e8eef5;
+}
+
+.field-day-map__canvas {
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+}
+
+.field-day-map__empty {
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 0.78rem;
+  color: var(--bos-muted);
+  pointer-events: none;
+}
+
+.field-map-pin {
+  background: transparent;
+  border: 0;
+}
+
+.field-map-pin__dot {
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 4px;
+  border-radius: 50%;
+  background: #1d4ed8;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.35);
+}
+
+.field-map-pin--focus .field-map-pin__dot {
+  width: 18px;
+  height: 18px;
+  margin: 4px;
+  background: #ea580c;
+}
+
+.field-map-popup {
+  color: #0f172a;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.field-maps-link {
+  color: var(--bos-accent-2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+
+/* Hide Leaflet / tile attribution chrome (no flag watermarks). */
+.field-day-map .leaflet-control-attribution,
+.field-day-map .leaflet-attribution-flag {
+  display: none !important;
+}
+
+@media (min-height: 780px) {
+  .field-day-board__clients {
+    max-height: min(30vh, 280px);
+  }
+
+  .field-day-map {
+    min-height: min(52vh, 420px);
+    height: min(52vh, 420px);
   }
 }

@@ -4,10 +4,11 @@ import { techRankLabel } from "@/lib/auth/tech-rank";
 import { signOutAction } from "@/app/actions/auth";
 import { FieldSessionKeeper } from "@/components/bos/FieldSessionKeeper";
 
-type TabId = "schedule" | "report" | "stock" | "attention";
+type TabId = "schedule" | "calendar" | "report" | "stock" | "attention";
 
 const TABS: Array<{ id: TabId; href: string; label: string }> = [
-  { id: "schedule", href: "/field", label: "Schedule" },
+  { id: "schedule", href: "/field", label: "Today" },
+  { id: "calendar", href: "/field/calendar", label: "Calendar" },
   { id: "report", href: "/field/report", label: "Report" },
   { id: "stock", href: "/stock?view=tech", label: "Stock" },
   { id: "attention", href: "/field/attention", label: "Alerts" },
@@ -31,13 +32,15 @@ export function FieldShell({
   children: React.ReactNode;
 }) {
   const activeId: TabId =
-    active === "report" || active === "/field/report"
-      ? "report"
-      : active === "stock" || active === "/stock" || String(active).startsWith("/stock")
-        ? "stock"
-        : active === "attention" || active === "/field/attention"
-          ? "attention"
-          : "schedule";
+    active === "calendar" || active === "/field/calendar"
+      ? "calendar"
+      : active === "report" || active === "/field/report"
+        ? "report"
+        : active === "stock" || active === "/stock" || String(active).startsWith("/stock")
+          ? "stock"
+          : active === "attention" || active === "/field/attention"
+            ? "attention"
+            : "schedule";
 
   return (
     <div className={`field-app${wide ? " field-app--wide" : ""}`}>
@@ -63,7 +66,7 @@ export function FieldShell({
 
       <main className="field-main">{children}</main>
 
-      <nav className="field-tabs" aria-label="Field">
+      <nav className="field-tabs field-tabs--5" aria-label="Field">
         {TABS.map((tab) => (
           <Link
             key={tab.id}

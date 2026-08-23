@@ -10,19 +10,21 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test lib/finance/summary.test.ts lib/sheet/money.test.ts lib/sheet/service-lines.test.ts lib/security/safe-redirect.test.ts lib/seo/insights.test.ts lib/auth/tech-rank.test.ts lib/stock/job-source.test.ts lib/schedule/windows.test.ts lib/sheet/sync-job-from-sheet.test.ts lib/datetime.test.ts lib/field/job-status.test.ts lib/stock/store-balance.test.ts lib/field/job-invoice-types.test.ts",
+    "test": "tsx --test lib/finance/summary.test.ts lib/sheet/money.test.ts lib/sheet/service-lines.test.ts lib/security/safe-redirect.test.ts lib/seo/insights.test.ts lib/auth/tech-rank.test.ts lib/stock/job-source.test.ts lib/schedule/windows.test.ts lib/sheet/sync-job-from-sheet.test.ts lib/datetime.test.ts lib/field/job-status.test.ts lib/stock/store-balance.test.ts lib/field/job-invoice-types.test.ts lib/field/maps.test.ts",
     "smoke": "node scripts/smoke_bos_independence.mjs",
     "ci": "npm run smoke && npm test && npm run typecheck && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.525.0",
     "next": "^15.3.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^22.15.32",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
