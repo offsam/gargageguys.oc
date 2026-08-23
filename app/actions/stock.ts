@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   createStockItem,
+  ensureGgCatalogFromChampionList,
   installOnJob,
   issueWarehouseToTech,
   loadPartnerWarehouseOntoTech,
@@ -40,7 +41,28 @@ export async function ensureStockReadyAction() {
     session.role === "technician" ? session.id : await defaultTechnicianId();
   if (!techId) return { ok: false as const, error: "No technician found to seed van stock" };
   await ensureStockSeeded(techId);
+  // Keep GG catalog aligned with Champion part names (list only, qty 0).
+  if (session.role !== "technician") {
+    await ensureGgCatalogFromChampionList().catch(() => null);
+  }
   return { ok: true as const };
+}
+
+/** Owner/office: copy Champion part names into GG catalog without quantities. */
+export async function copyChampionCatalogToGgAction(): Promise<{
+  ok: boolean;
+  error?: string;
+  created?: number;
+  ensured?: number;
+}> {
+  const session = await requireStaff();
+  if (!session) return { ok: false, error: "Not signed in" };
+  if (session.role === "technician") return { ok: false, error: "Not allowed" };
+
+  const result = await ensureGgCatalogFromChampionList();
+  if (!result.ok) return { ok: false, error: result.error };
+  revalidatePath("/stock");
+  return { ok: true, created: result.created, ensured: result.ensured };
 }
 
 export async function issueToTechAction(formData: FormData) {

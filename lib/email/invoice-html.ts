@@ -25,16 +25,26 @@ export function buildInvoiceEmail(invoice: JobInvoice, note?: string) {
   const url = invoicePublicUrl(invoice.public_token);
   const paid = invoice.status === "complete" || invoice.status === "signed";
   const address = [invoice.client_address, invoice.client_zip].filter(Boolean).join(", ");
+  const discountTotal = invoice.lines.reduce(
+    (sum, line) => sum + (Number(line.discountCents) || 0),
+    0,
+  );
   const rows = invoice.lines
-    .map(
-      (line) => `
+    .map((line) => {
+      const discount = Number(line.discountCents) || 0;
+      const listCents = Number(line.listCents) || line.unitCents;
+      const discountNote =
+        discount > 0
+          ? `<br/><span style="color:#067647;font-size:11px;">Client discount −${money(discount)} (was ${money(listCents)})</span>`
+          : "";
+      return `
         <tr>
-          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;">${esc(line.name)}<br/><span style="color:#6b7280;font-size:11px;">${line.kind === "part" ? "Part" : "Labor"}</span></td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;">${esc(line.name)}${discountNote}<br/><span style="color:#6b7280;font-size:11px;">${line.kind === "part" ? "Part" : "Labor"}</span></td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:13px;">${line.qty}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;">${money(line.unitCents)}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;font-weight:700;">${money(line.totalCents)}</td>
-        </tr>`,
-    )
+        </tr>`;
+    })
     .join("");
 
   const noteHtml = note?.trim()
@@ -80,7 +90,10 @@ export function buildInvoiceEmail(invoice: JobInvoice, note?: string) {
         </tr>
         ${rows}
       </table>
-      <p style="text-align:right;margin:14px 0 0;font-size:18px;"><strong>Total ${money(invoice.total_cents)}</strong></p>
+      <p style="text-align:right;margin:14px 0 0;font-size:13px;color:#067647;">${
+        discountTotal > 0 ? `Client discount −${money(discountTotal)}` : ""
+      }</p>
+      <p style="text-align:right;margin:6px 0 0;font-size:18px;"><strong>Total ${money(invoice.total_cents)}</strong></p>
       <p style="margin:22px 0 0;font-size:13px;color:#4b5563;">
         View / print this invoice: <a href="${esc(url)}">${esc(url)}</a>
       </p>

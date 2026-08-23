@@ -4,7 +4,7 @@ import { StockBoard } from "@/components/bos/StockBoard";
 import { requireRouteAccess } from "@/lib/auth/require";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { listPartnersAction } from "@/app/actions/partners";
-import { loadPartnerWarehouseOntoTech } from "@/lib/stock/ops";
+import { loadPartnerWarehouseOntoTech, ensureGgCatalogFromChampionList } from "@/lib/stock/ops";
 import {
   ensureStockSeeded,
   loadStockState,
@@ -69,12 +69,18 @@ export default async function StockPage({
         : seedTechId;
 
   await ensureStockSeeded(seedTechId);
+  const isTechOnly = user.role === "technician";
+  const canManage = !isTechOnly;
+  if (!isTechOnly) {
+    // Idempotent: Champion names appear in GG Stock as a list with 0 qty.
+    await ensureGgCatalogFromChampionList().catch((err) => {
+      console.error("[stock] champion→GG catalog", err);
+    });
+  }
 
   const partners = await listPartnersAction();
   let state = await loadStockState();
   const showPrices = user.role === "owner";
-  const isTechOnly = user.role === "technician";
-  const canManage = !isTechOnly;
 
   // Paper counts land in partner warehouse; Field only shows/uses van — load them on.
   if (isTechOnly) {

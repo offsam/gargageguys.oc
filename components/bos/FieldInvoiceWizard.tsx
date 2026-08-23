@@ -11,6 +11,7 @@ import {
   removeInvoiceLineAction,
   saveSignatureAction,
   startPaymentAction,
+  updateInvoiceLinePriceAction,
 } from "@/app/actions/job-invoice";
 import { FIELD_SERVICES, findFieldServiceByName, withCustomService, type FieldService } from "@/lib/field/services-catalog";
 import { upsertServiceAction } from "@/app/actions/services";
@@ -19,6 +20,7 @@ import {
   money,
   formatJobNumber,
   PAYMENT_OPTIONS,
+  sumInvoiceDiscounts,
   type JobInvoice,
   type JobInvoiceStatus,
 } from "@/lib/field/job-invoice-types";
@@ -71,6 +73,7 @@ export function FieldInvoiceWizard({
   const [error, setError] = useState("");
   const [partId, setPartId] = useState("");
   const [partQty, setPartQty] = useState(1);
+  const [partPrice, setPartPrice] = useState("");
   const [extraServices, setExtraServices] = useState<FieldService[]>([]);
   const [customOpen, setCustomOpen] = useState(false);
   const [customError, setCustomError] = useState("");
@@ -87,6 +90,15 @@ export function FieldInvoiceWizard({
       "",
   );
   const [serviceQty, setServiceQty] = useState(1);
+  const [servicePrice, setServicePrice] = useState(() => {
+    const match =
+      withCustomService(services).find(
+        (s) => s.name.toLowerCase() === defaultServiceName.trim().toLowerCase(),
+      ) || findFieldServiceByName(defaultServiceName);
+    return match?.unitPriceCents ? (match.unitPriceCents / 100).toFixed(2) : "";
+  });
+  const [editingLineId, setEditingLineId] = useState<string | null>(null);
+  const [editPrice, setEditPrice] = useState("");
   const [paymentType, setPaymentType] = useState(invoice.payment_type || "Credit Card");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef(false);
@@ -319,6 +331,9 @@ export function FieldInvoiceWizard({
                 setPartId(id);
                 const part = vanParts.find((p) => p.id === id);
                 setPartQty(part && part.qty > 0 ? 1 : 0);
+                setPartPrice(
+                  part ? ((part.unitCostCents || 0) / 100).toFixed(2) : "",
+                );
               }}
             >
               <option value="">
@@ -343,6 +358,19 @@ export function FieldInvoiceWizard({
                 const capped = maxPartQty > 0 ? Math.min(raw, maxPartQty) : 1;
                 setPartQty(Math.max(1, capped));
               }}
+              aria-label="Part quantity"
+            />
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              inputMode="decimal"
+              className="inv-price-input"
+              value={partPrice}
+              disabled={!itemsUnlocked || pending || !partId}
+              placeholder="Price $"
+              aria-label="Part price"
+              onChange={(e) => setPartPrice(e.target.value)}
             />
             <button
               type="button"
@@ -354,9 +382,11 @@ export function FieldInvoiceWizard({
                 fd.set("technicianId", technicianId);
                 fd.set("itemId", partId);
                 fd.set("qty", String(Math.min(partQty, selectedPart.qty)));
+                if (partPrice.trim()) fd.set("unitPrice", partPrice.trim());
                 run(() => addPartToInvoiceAction(fd));
                 setPartId("");
                 setPartQty(1);
+                setPartPrice("");
               }}
             >
               Add part
@@ -386,6 +416,10 @@ export function FieldInvoiceWizard({
                   return;
                 }
                 setServiceId(next);
+                const svc = catalog.find((s) => s.id === next);
+                setServicePrice(
+                  svc?.unitPriceCents ? (svc.unitPriceCents / 100).toFixed(2) : "",
+                );
               }}
             >
               <option value="">Service…</option>
@@ -405,6 +439,19 @@ export function FieldInvoiceWizard({
               value={serviceQty}
               disabled={!itemsUnlocked || pending}
               onChange={(e) => setServiceQty(Number(e.target.value) || 1)}
+              aria-label="Service quantity"
+            />
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              inputMode="decimal"
+              className="inv-price-input"
+              value={servicePrice}
+              disabled={!itemsUnlocked || pending || !serviceId || serviceId === "svc-custom"}
+              placeholder="Price $"
+              aria-label="Service price"
+              onChange={(e) => setServicePrice(e.target.value)}
             />
             <button
               type="button"
@@ -414,6 +461,7 @@ export function FieldInvoiceWizard({
                 fd.set("jobId", jobId);
                 fd.set("serviceId", serviceId);
                 fd.set("qty", String(serviceQty));
+                if (servicePrice.trim()) fd.set("unitPrice", servicePrice.trim());
                 run(() => addServiceToInvoiceAction(fd));
               }}
             >
@@ -443,38 +491,111 @@ export function FieldInvoiceWizard({
           <p className="field-muted">No lines yet.</p>
         ) : (
           <ul className="inv-lines">
-            {invoice.lines.map((line) => (
-              <li key={line.id}>
-                <div>
-                  <strong>
-                    {line.kind === "part" ? "Part" : "Service"} · {line.name}
-                  </strong>
-                  <span>
-                    {line.qty} × {money(line.unitCents)}
-                  </span>
-                </div>
-                <div className="inv-line-right">
-                  <strong>{money(line.totalCents)}</strong>
-                  {(invoice.status === "draft" || invoice.status === "estimate_ready") && (
-                    <button
-                      type="button"
-                      className="inv-remove"
-                      disabled={pending}
-                      onClick={() => {
-                        const fd = new FormData();
-                        fd.set("jobId", jobId);
-                        fd.set("lineId", line.id);
-                        run(() => removeInvoiceLineAction(fd));
-                      }}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
+            {invoice.lines.map((line) => {
+              const listCents = Number(line.listCents) || line.unitCents;
+              const discount = Number(line.discountCents) || 0;
+              const canEdit =
+                invoice.status === "draft" || invoice.status === "estimate_ready";
+              const editing = editingLineId === line.id;
+              return (
+                <li key={line.id}>
+                  <div>
+                    <strong>
+                      {line.kind === "part" ? "Part" : "Service"} · {line.name}
+                    </strong>
+                    <span>
+                      {line.qty} × {money(line.unitCents)}
+                      {discount > 0 ? (
+                        <>
+                          {" "}
+                          <em className="inv-discount-tag">
+                            was {money(listCents)} · client discount −{money(discount)}
+                          </em>
+                        </>
+                      ) : listCents > 0 && line.unitCents > listCents ? (
+                        <>
+                          {" "}
+                          <em className="inv-price-up-tag">was {money(listCents)}</em>
+                        </>
+                      ) : null}
+                    </span>
+                    {editing ? (
+                      <div className="inv-edit-price">
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          inputMode="decimal"
+                          value={editPrice}
+                          onChange={(e) => setEditPrice(e.target.value)}
+                          aria-label="Edit line price"
+                        />
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => {
+                            const fd = new FormData();
+                            fd.set("jobId", jobId);
+                            fd.set("lineId", line.id);
+                            fd.set("unitPrice", editPrice);
+                            run(() => updateInvoiceLinePriceAction(fd));
+                            setEditingLineId(null);
+                          }}
+                        >
+                          Save price
+                        </button>
+                        <button
+                          type="button"
+                          className="inv-remove"
+                          onClick={() => setEditingLineId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="inv-line-right">
+                    <strong>{money(line.totalCents)}</strong>
+                    {canEdit ? (
+                      <>
+                        <button
+                          type="button"
+                          className="inv-remove"
+                          disabled={pending}
+                          onClick={() => {
+                            setEditingLineId(line.id);
+                            setEditPrice(((line.unitCents || 0) / 100).toFixed(2));
+                          }}
+                        >
+                          Price
+                        </button>
+                        <button
+                          type="button"
+                          className="inv-remove"
+                          disabled={pending}
+                          onClick={() => {
+                            const fd = new FormData();
+                            fd.set("jobId", jobId);
+                            fd.set("lineId", line.id);
+                            run(() => removeInvoiceLineAction(fd));
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
+        {sumInvoiceDiscounts(invoice.lines) > 0 ? (
+          <div className="inv-total inv-total--discount">
+            <span>Client discount</span>
+            <strong>−{money(sumInvoiceDiscounts(invoice.lines))}</strong>
+          </div>
+        ) : null}
         <div className="inv-total">
           <span>Total</span>
           <strong>{money(invoice.total_cents)}</strong>

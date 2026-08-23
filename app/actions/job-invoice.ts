@@ -19,6 +19,13 @@ import {
   type InvoiceLine,
   type JobInvoiceStatus,
 } from "@/lib/field/job-invoice";
+import { buildInvoiceLine } from "@/lib/field/job-invoice-types";
+
+function dollarsToCents(raw: unknown): number | null {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * 100);
+}
 
 function revalidateJob(jobId: string) {
   revalidatePath(`/field/jobs/${jobId}`);
@@ -126,16 +133,20 @@ export async function addPartToInvoiceAction(formData: FormData) {
     return { ok: false as const, error: "Invoice already finalized" };
   }
 
-  const unitCents = item.unitCostCents || 0;
-  const line: InvoiceLine = {
+  const listCents = item.unitCostCents || 0;
+  const priceRaw = formData.get("unitPrice");
+  const edited = dollarsToCents(priceRaw);
+  const unitCents = edited == null ? listCents : edited;
+
+  const line = buildInvoiceLine({
     id: randomUUID(),
     kind: "part",
     refId: item.id,
     name: item.name,
     qty,
+    listCents,
     unitCents,
-    totalCents: unitCents * qty,
-  };
+  });
   const lines = [...invoice.lines, line];
   const next = await saveJobInvoiceLines(invoice.id, lines, "estimate_ready");
   revalidateJob(jobId);
@@ -165,9 +176,15 @@ export async function addServiceToInvoiceAction(formData: FormData) {
 
   const isCustom = serviceId === "svc-custom";
   const name = isCustom ? customName || "Custom service" : service.name;
-  const unitCents = isCustom
+  const listCents = isCustom
     ? Math.round((Number.isFinite(customDollars) ? customDollars : 0) * 100)
     : service.unitPriceCents;
+  const edited = dollarsToCents(formData.get("unitPrice"));
+  const unitCents = isCustom
+    ? listCents
+    : edited == null
+      ? listCents
+      : edited;
 
   if (isCustom && unitCents <= 0) {
     return { ok: false as const, error: "Set a price for custom service" };
@@ -177,20 +194,58 @@ export async function addServiceToInvoiceAction(formData: FormData) {
     await upsertService({ name: customName, unitPriceCents: unitCents }).catch(() => null);
   }
 
-  const line: InvoiceLine = {
+  const line = buildInvoiceLine({
     id: randomUUID(),
     kind: "service",
     refId: service.id,
     name,
     qty,
+    listCents,
     unitCents,
-    totalCents: unitCents * qty,
-  };
+  });
   const next = await saveJobInvoiceLines(
     invoice.id,
     [...invoice.lines, line],
     "estimate_ready",
   );
+  revalidateJob(jobId);
+  return { ok: true as const, invoice: next };
+}
+
+export async function updateInvoiceLinePriceAction(formData: FormData) {
+  const session = await requireTechOrStaff();
+  if (!session) return { ok: false as const, error: "Not signed in" };
+
+  const jobId = String(formData.get("jobId") || "");
+  const lineId = String(formData.get("lineId") || "");
+  const unitCents = dollarsToCents(formData.get("unitPrice"));
+  if (!jobId || !lineId) return { ok: false as const, error: "Missing line" };
+  if (unitCents == null) return { ok: false as const, error: "Invalid price" };
+
+  const invoice = await getJobInvoiceByJobId(jobId);
+  if (!invoice) return { ok: false as const, error: "Invoice not found" };
+  if (["signed", "complete"].includes(invoice.status)) {
+    return { ok: false as const, error: "Invoice already finalized" };
+  }
+
+  const lines = invoice.lines.map((line) => {
+    if (line.id !== lineId) return line;
+    const listCents = Number(line.listCents) || line.unitCents;
+    return buildInvoiceLine({
+      id: line.id,
+      kind: line.kind,
+      refId: line.refId,
+      name: line.name,
+      qty: line.qty,
+      listCents,
+      unitCents,
+    });
+  });
+  if (!lines.some((l) => l.id === lineId)) {
+    return { ok: false as const, error: "Line not found" };
+  }
+
+  const next = await saveJobInvoiceLines(invoice.id, lines, invoice.status);
   revalidateJob(jobId);
   return { ok: true as const, invoice: next };
 }

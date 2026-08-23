@@ -6,9 +6,45 @@ export type InvoiceLine = {
   refId?: string;
   name: string;
   qty: number;
+  /** Catalog / list price at add time (before any discount). */
+  listCents: number;
+  /** Charged unit price (may be higher or lower than list). */
   unitCents: number;
+  /** Client discount when unit < list: (listCents - unitCents) * qty. */
+  discountCents: number;
   totalCents: number;
 };
+
+/** Build a line with discount only when charged price is below list. */
+export function buildInvoiceLine(input: {
+  id: string;
+  kind: InvoiceLineKind;
+  refId?: string;
+  name: string;
+  qty: number;
+  listCents: number;
+  unitCents: number;
+}): InvoiceLine {
+  const qty = Math.max(1, Math.floor(Number(input.qty) || 1));
+  const listCents = Math.max(0, Math.round(Number(input.listCents) || 0));
+  const unitCents = Math.max(0, Math.round(Number(input.unitCents) || 0));
+  const discountCents = unitCents < listCents ? (listCents - unitCents) * qty : 0;
+  return {
+    id: input.id,
+    kind: input.kind,
+    refId: input.refId,
+    name: input.name,
+    qty,
+    listCents,
+    unitCents,
+    discountCents,
+    totalCents: unitCents * qty,
+  };
+}
+
+export function sumInvoiceDiscounts(lines: InvoiceLine[]) {
+  return lines.reduce((sum, line) => sum + (Number(line.discountCents) || 0), 0);
+}
 
 export type JobInvoiceStatus =
   | "draft"
@@ -70,16 +106,25 @@ export function parseInvoiceLines(raw: unknown): InvoiceLine[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .map((row) => {
-      const r = row as Partial<InvoiceLine>;
+      const r = row as Partial<InvoiceLine> & { listPriceCents?: number };
       const qty = Number(r.qty) || 0;
       const unitCents = Number(r.unitCents) || 0;
+      const listCents =
+        Number(r.listCents) ||
+        Number(r.listPriceCents) ||
+        unitCents;
+      const discountCents =
+        Number(r.discountCents) ||
+        (unitCents < listCents ? (listCents - unitCents) * qty : 0);
       return {
         id: String(r.id || `line-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
         kind: r.kind === "part" ? "part" : "service",
         refId: r.refId ? String(r.refId) : undefined,
         name: String(r.name || ""),
         qty,
+        listCents,
         unitCents,
+        discountCents,
         totalCents: Number(r.totalCents) || qty * unitCents,
       } as InvoiceLine;
     })

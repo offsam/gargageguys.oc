@@ -4317,6 +4317,48 @@ button.bos-btn:disabled {
   font-size: 1.05rem;
 }
 
+.inv-total--discount {
+  margin-top: 0.35rem;
+  color: #067647;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.inv-discount-tag {
+  color: #067647;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.inv-price-up-tag {
+  color: var(--bos-muted);
+  font-style: normal;
+}
+
+.inv-price-input {
+  max-width: 5.5rem;
+}
+
+.inv-edit-price {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+.inv-edit-price input {
+  width: 5.5rem;
+  border: 1px solid var(--bos-border);
+  border-radius: 8px;
+  padding: 0.35rem 0.45rem;
+}
+
+.inv-doc-discount {
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: #067647;
+}
+
 .inv-sign-pad {
   width: 100%;
   height: 280px;

@@ -33,6 +33,10 @@ export function InvoiceDocument({
   const services = invoice.lines.filter((l) => l.kind !== "part");
   const parts = invoice.lines.filter((l) => l.kind === "part");
   const ordered = [...services, ...parts];
+  const discountTotal = ordered.reduce(
+    (sum, line) => sum + (Number(line.discountCents) || 0),
+    0,
+  );
 
   return (
     <div className="inv-doc-page">
@@ -108,15 +112,26 @@ export function InvoiceDocument({
                 <td colSpan={5}>No line items</td>
               </tr>
             ) : (
-              ordered.map((line) => (
+              ordered.map((line) => {
+                const discount = Number(line.discountCents) || 0;
+                const listCents = Number(line.listCents) || line.unitCents;
+                return (
                 <tr key={line.id}>
-                  <td>{line.name}</td>
+                  <td>
+                    {line.name}
+                    {discount > 0 ? (
+                      <div className="inv-doc-discount">
+                        Client discount −{money(discount)} (was {money(listCents)} each)
+                      </div>
+                    ) : null}
+                  </td>
                   <td>{line.kind === "part" ? "Part" : "Labor"}</td>
                   <td>{line.qty}</td>
                   <td>{money(line.unitCents)}</td>
                   <td>{money(line.totalCents)}</td>
                 </tr>
-              ))
+              );
+              })
             )}
           </tbody>
         </table>
@@ -128,6 +143,12 @@ export function InvoiceDocument({
                 <th>Subtotal</th>
                 <td>{money(invoice.subtotal_cents || invoice.total_cents)}</td>
               </tr>
+              {discountTotal > 0 ? (
+                <tr>
+                  <th>Client discount</th>
+                  <td>−{money(discountTotal)}</td>
+                </tr>
+              ) : null}
               <tr className="inv-doc-grand">
                 <th>Total</th>
                 <td>{money(invoice.total_cents)}</td>

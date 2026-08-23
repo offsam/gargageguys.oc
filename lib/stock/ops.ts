@@ -13,7 +13,10 @@ import {
   type StockState,
 } from "@/lib/stock/store";
 import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
-import type { ChampionPaperCount } from "@/lib/stock/champion-paper-count";
+import {
+  CHAMPION_PAPER_COUNTS,
+  type ChampionPaperCount,
+} from "@/lib/stock/champion-paper-count";
 
 export type StockOpResult = { ok: true; state: StockState } | { ok: false; error: string };
 
@@ -719,4 +722,56 @@ export async function replacePartnerStockCounts(input: {
 
   await saveStockState(state);
   return { ok: true, set: touched.size, created };
+}
+
+/**
+ * Copy Champion part names into the shared GG catalog.
+ * Creates missing items; ensures a GG warehouse row exists at 0 when missing.
+ * Never copies Champion quantities and never reduces existing GG stock.
+ */
+export async function ensureGgCatalogFromChampionList(): Promise<
+  { ok: true; created: number; ensured: number } | { ok: false; error: string }
+> {
+  const state = await loadStockState({ skipRepair: true });
+  let created = 0;
+  let ensured = 0;
+
+  for (const row of CHAMPION_PAPER_COUNTS) {
+    const name = row.name.trim();
+    if (!name) continue;
+
+    let item = findItemByLooseName(state, name);
+    if (!item) {
+      const seed = SEED_STOCK_ITEMS.find((s) => normPartName(s.name) === normPartName(name));
+      item = {
+        id: randomUUID(),
+        sku: seed?.sku || `CUS-${randomUUID().slice(0, 8).toUpperCase()}`,
+        name: seed?.name || name,
+        category: seed?.category || "Misc",
+        subcategory: seed?.subcategory,
+        unitCostCents: seed ? 0 : 0,
+        unit: "ea",
+        reorderAt: 0,
+        active: true,
+      };
+      state.items.push(item);
+      created += 1;
+    } else if (item.active === false) {
+      item.active = true;
+    }
+
+    const hasGgWarehouse = state.balances.some(
+      (b) =>
+        b.itemId === item!.id &&
+        b.locationType === "warehouse" &&
+        !b.partnerId,
+    );
+    if (!hasGgWarehouse) {
+      setBalanceQty(state, item.id, "warehouse", 0);
+    }
+    ensured += 1;
+  }
+
+  await saveStockState(state);
+  return { ok: true, created, ensured };
 }
