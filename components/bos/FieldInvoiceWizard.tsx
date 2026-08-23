@@ -106,19 +106,9 @@ export function FieldInvoiceWizard({
   const SIGN_PAD_HEIGHT = 280;
 
   const selectedPart = vanParts.find((p) => p.id === partId) || null;
-  const maxPartQty = selectedPart ? Math.max(0, selectedPart.qty) : 0;
+  // Van may go negative when tech borrows from another stock — no max clamp.
   const canAddPart =
-    itemsUnlocked &&
-    Boolean(partId) &&
-    maxPartQty > 0 &&
-    partQty >= 1 &&
-    partQty <= maxPartQty &&
-    !pending;
-
-  useEffect(() => {
-    if (!selectedPart) return;
-    if (partQty > selectedPart.qty) setPartQty(Math.max(1, selectedPart.qty));
-  }, [selectedPart, partQty]);
+    itemsUnlocked && Boolean(partId) && partQty >= 1 && !pending;
 
   useEffect(() => {
     setInvoice(initial);
@@ -330,7 +320,7 @@ export function FieldInvoiceWizard({
                 const id = e.target.value;
                 setPartId(id);
                 const part = vanParts.find((p) => p.id === id);
-                setPartQty(part && part.qty > 0 ? 1 : 0);
+                setPartQty(1);
                 setPartPrice(
                   part ? ((part.unitCostCents || 0) / 100).toFixed(2) : "",
                 );
@@ -342,7 +332,7 @@ export function FieldInvoiceWizard({
                   : "Part from Garage Guys van…"}
               </option>
               {vanParts.map((p) => (
-                <option key={p.id} value={p.id} disabled={p.qty <= 0}>
+                <option key={p.id} value={p.id}>
                   {p.name} ({p.qty}) · {money(p.unitCostCents)}
                 </option>
               ))}
@@ -350,13 +340,10 @@ export function FieldInvoiceWizard({
             <input
               type="number"
               min={1}
-              max={maxPartQty || 1}
               value={partQty}
               disabled={!itemsUnlocked || pending || !partId}
               onChange={(e) => {
-                const raw = Number(e.target.value) || 1;
-                const capped = maxPartQty > 0 ? Math.min(raw, maxPartQty) : 1;
-                setPartQty(Math.max(1, capped));
+                setPartQty(Math.max(1, Math.floor(Number(e.target.value) || 1)));
               }}
               aria-label="Part quantity"
             />
@@ -393,14 +380,13 @@ export function FieldInvoiceWizard({
             </button>
           </div>
           {itemsUnlocked && selectedPart && partQty > selectedPart.qty ? (
-            <p className="inv-error">Only {selectedPart.qty} on the van.</p>
+            <p className="field-muted">
+              Van shows {selectedPart.qty}. Extra units go negative (ok if taken from
+              another stock).
+            </p>
           ) : null}
           {vanParts.length === 0 ? (
-            <p className="field-muted">
-              {stockFrom === "partner"
-                ? `No ${stockSourceLabel} parts on your van.`
-                : "No Garage Guys parts on your van."}
-            </p>
+            <p className="field-muted">No parts in catalog yet.</p>
           ) : null}
 
           <h3>Add service</h3>
