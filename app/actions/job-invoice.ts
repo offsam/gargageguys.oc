@@ -5,7 +5,6 @@ import { randomUUID } from "crypto";
 import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { installOnJob } from "@/lib/stock/ops";
-import { loadStockState, techQty } from "@/lib/stock/store";
 import { pickLeadWorkMeta, resolveJobStockSource } from "@/lib/stock/job-source";
 import { listPartnersAction } from "@/app/actions/partners";
 import { findFieldService } from "@/lib/field/services-catalog";
@@ -98,21 +97,7 @@ export async function addPartToInvoiceAction(formData: FormData) {
   const source = resolveJobStockSource(workSource, partnerName, await listPartnersAction());
   const partnerId = source.from === "partner" ? source.owner : undefined;
 
-  const stateBefore = await loadStockState();
-  const available = techQty(stateBefore, itemId, technicianId, partnerId);
-  if (available <= 0) {
-    return {
-      ok: false as const,
-      error: `No stock on van for this part (${source.label})`,
-    };
-  }
-  if (qty > available) {
-    return {
-      ok: false as const,
-      error: `Only ${available} on van — cannot add ${qty}`,
-    };
-  }
-
+  // Van qty may go negative — tech sometimes installs parts taken from another stock.
   const stock = await installOnJob({
     itemId,
     qty,

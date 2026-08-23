@@ -65,7 +65,9 @@ export default async function FieldJobPage({
       state = await loadStockState();
     }
   }
+  // Include 0 / negative van qty — tech may install parts borrowed from another stock.
   const availableParts = state.items
+    .filter((item) => item.active !== false)
     .map((item) => ({
       id: item.id,
       name: item.name,
@@ -77,7 +79,10 @@ export default async function FieldJobPage({
       ),
       unitCostCents: item.unitCostCents || 0,
     }))
-    .filter((row) => row.qty > 0);
+    .sort((a, b) => {
+      if (a.qty > 0 !== b.qty > 0) return a.qty > 0 ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
 
   let invoice = null as Awaited<ReturnType<typeof ensureJobInvoice>> | null;
   try {

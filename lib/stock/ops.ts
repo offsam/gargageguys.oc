@@ -30,11 +30,18 @@ function applyDelta(
 ): string | null {
   const current = getBalanceQty(state, itemId, locationType, technicianId, partnerId);
   const next = current + delta;
-  if (next < 0) {
+  // Tech van may go negative (tech borrowed from another stock). Warehouse/partner cannot.
+  if (next < 0 && locationType !== "tech") {
     return `Insufficient stock (have ${current}, need ${Math.abs(delta)})`;
   }
-  // Never persist negative — belt and suspenders with get/set clamps.
-  setBalanceQty(state, itemId, locationType, Math.max(0, next), technicianId, partnerId);
+  setBalanceQty(
+    state,
+    itemId,
+    locationType,
+    locationType === "tech" ? next : Math.max(0, next),
+    technicianId,
+    partnerId,
+  );
   return null;
 }
 
