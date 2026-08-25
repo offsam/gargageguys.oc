@@ -10,6 +10,10 @@ import {
   type MetaLeadRow,
 } from "@/lib/ads/meta";
 import { upsertAdsSnapshot } from "@/lib/ads/snapshots";
+import {
+  snapshotFromUpsert,
+  syncMetaLeadCostsFromSnapshot,
+} from "@/lib/ads/meta-lead-cost";
 import { ingestMetaLeadToCrm, metaLeadRowToIngest } from "@/lib/leads/meta-ingest";
 import { catchUpMetaLeads } from "@/lib/leads/meta-catchup";
 import { catchUpGoogleLeads } from "@/lib/leads/google-catchup";
@@ -113,6 +117,20 @@ export async function syncMetaAdsAction() {
       },
       raw: metrics.raw,
     });
+    try {
+      await syncMetaLeadCostsFromSnapshot(
+        snapshotFromUpsert({
+          platform: "meta",
+          period,
+          spend: metrics.spend,
+          leads: metrics.leads,
+          cpl: metrics.cpl,
+          metrics: { campaigns: metrics.campaigns },
+        }),
+      );
+    } catch (error) {
+      console.error("[ads-sync] meta lead-cost refresh failed", error);
+    }
     let catchup: { ingested: number; skipped: number; scanned: number } | null = null;
     try {
       catchup = await catchUpMetaLeads(7);
@@ -125,6 +143,7 @@ export async function syncMetaAdsAction() {
     revalidatePath("/owner");
     revalidatePath("/crm");
     revalidatePath("/dispatch");
+    revalidatePath("/sheet");
     return {
       ok: true as const,
       spend: metrics.spend,

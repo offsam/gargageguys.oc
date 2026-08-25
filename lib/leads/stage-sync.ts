@@ -15,6 +15,7 @@ export const SHEET_STATUSES = [
   "Estimate",
   "Completed",
   "Cancelled",
+  "No win",
   "No-show",
 ] as const;
 
@@ -32,6 +33,9 @@ const LEGACY_STATUS_MAP: Record<string, SheetStatus> = {
   "No-answer": "No answer",
   estimate: "Estimate",
   ESTIMATE: "Estimate",
+  "No Win": "No win",
+  "no win": "No win",
+  Nowin: "No win",
 };
 
 export const STATUS_TO_STAGE: Record<SheetStatus, LeadStage> = {
@@ -45,6 +49,7 @@ export const STATUS_TO_STAGE: Record<SheetStatus, LeadStage> = {
   Estimate: "qualified",
   Completed: "completed",
   Cancelled: "cancelled",
+  "No win": "lost",
   "No-show": "lost",
 };
 

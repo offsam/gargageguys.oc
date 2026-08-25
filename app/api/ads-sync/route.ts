@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchMetaAdsMetrics, getDefaultAdsPeriod, getMetaAdsConfig } from "@/lib/ads/meta";
 import { fetchGoogleAdsMetrics, getGoogleAdsConfig } from "@/lib/ads/google";
 import { upsertAdsSnapshot } from "@/lib/ads/snapshots";
+import {
+  snapshotFromUpsert,
+  syncMetaLeadCostsFromSnapshot,
+} from "@/lib/ads/meta-lead-cost";
 import { catchUpMetaLeads } from "@/lib/leads/meta-catchup";
 import { catchUpGoogleLeads } from "@/lib/leads/google-catchup";
 import { isCronAuthorized } from "@/lib/security/cron-auth";
@@ -48,6 +52,21 @@ async function handle(request: NextRequest) {
         },
         raw: metrics.raw,
       });
+      try {
+        const costSync = await syncMetaLeadCostsFromSnapshot(
+          snapshotFromUpsert({
+            platform: "meta",
+            period,
+            spend: metrics.spend,
+            leads: metrics.leads,
+            cpl: metrics.cpl,
+            metrics: { campaigns: metrics.campaigns },
+          }),
+        );
+        result.metaLeadCostsUpdated = costSync.updated;
+      } catch (error) {
+        console.error("[ads-sync] meta lead-cost refresh failed", error);
+      }
       let catchup: { ingested: number; skipped: number; scanned: number } | null = null;
       try {
         catchup = await catchUpMetaLeads(3);

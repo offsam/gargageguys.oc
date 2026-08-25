@@ -50,7 +50,7 @@ function entryHref(entry: CalendarSheetEntry) {
 
 function statusClass(status: string) {
   if (status === "Completed") return "is-done";
-  if (status === "Cancelled" || status === "No-show") return "is-cancelled";
+  if (status === "Cancelled" || status === "No win" || status === "No-show") return "is-cancelled";
   return "is-active";
 }
 

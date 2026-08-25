@@ -30,9 +30,11 @@ export function AdsReportPanel({ report }: { report: AdsReport }) {
     <div className="ads-board ads-report" style={{ marginBottom: "2rem" }}>
       <h2 style={{ marginTop: 0 }}>Ads report</h2>
       <p className="field-muted">
-        All inbound leads in CRM for {periodLabel(report.periodStart, report.periodEnd)} — not only
-        completed jobs. Spend comes from Meta / Google sync and Thumbtack billed prices.{" "}
-        <strong>Cost / completed</strong> = spend ÷ completed jobs (e.g. 2 of 10 → spend / 2).
+        All inbound leads for {periodLabel(report.periodStart, report.periodEnd)} — every status
+        counts. <strong>Lead cost</strong> = Meta / Google CPL from sync (same as the Ads panel, e.g.
+        $16) — not spend ÷ CRM rows. <strong>Cost / completed</strong> = ad spend ÷ only Completed
+        jobs in your funnel (real cost of a closed job). <strong>Burned</strong> = lead cost ×
+        (Cancelled + No win + No-show).
       </p>
 
       {!rows.length ? (
@@ -51,11 +53,14 @@ export function AdsReportPanel({ report }: { report: AdsReport }) {
                 <th>In progress</th>
                 <th>Estimate</th>
                 <th>Completed</th>
-                <th>Lost</th>
+                <th>Cancelled</th>
+                <th>No win</th>
+                <th>No-show</th>
                 <th>Spend</th>
-                <th>Cost / lead</th>
+                <th>Lead cost</th>
+                <th>Burned</th>
                 <th>Cost / completed</th>
-                <th>Close %</th>
+                <th>Win %</th>
                 <th>Revenue</th>
               </tr>
             </thead>
@@ -70,9 +75,12 @@ export function AdsReportPanel({ report }: { report: AdsReport }) {
                   <td>{row.active || "—"}</td>
                   <td>{row.estimate || "—"}</td>
                   <td>{row.completed || "—"}</td>
-                  <td>{row.lost || "—"}</td>
+                  <td>{row.cancelled || "—"}</td>
+                  <td>{row.noWin || "—"}</td>
+                  <td>{row.noShow || "—"}</td>
                   <td>{money(row.spend)}</td>
-                  <td>{money(row.cpl)}</td>
+                  <td>{money(row.leadCost)}</td>
+                  <td>{money(row.leadCostBurned)}</td>
                   <td>{money(row.costPerCompleted)}</td>
                   <td>{pct(row.conversionPct)}</td>
                   <td>{money(row.revenue)}</td>
@@ -89,11 +97,14 @@ export function AdsReportPanel({ report }: { report: AdsReport }) {
                 <td>{totals.active || "—"}</td>
                 <td>{totals.estimate || "—"}</td>
                 <td>{totals.completed || "—"}</td>
-                <td>{totals.lost || "—"}</td>
+                <td>{totals.cancelled || "—"}</td>
+                <td>{totals.noWin || "—"}</td>
+                <td>{totals.noShow || "—"}</td>
                 <td>
                   <strong>{money(totals.spend)}</strong>
                 </td>
-                <td>{money(totals.cpl)}</td>
+                <td>—</td>
+                <td>{money(totals.leadCostBurned)}</td>
                 <td>{money(totals.costPerCompleted)}</td>
                 <td>{pct(totals.conversionPct)}</td>
                 <td>{money(totals.revenue)}</td>

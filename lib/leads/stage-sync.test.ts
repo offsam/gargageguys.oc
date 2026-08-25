@@ -34,3 +34,10 @@ describe("Estimate status", () => {
     assert.equal(statusBlockedReason("Completed", { jobCost: "100" }), null);
   });
 });
+
+describe("No win status", () => {
+  it("normalizes No win", () => {
+    assert.equal(normalizeSheetStatus("No win"), "No win");
+    assert.equal(normalizeSheetStatus("No Win"), "No win");
+  });
+});

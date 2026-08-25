@@ -9,7 +9,13 @@ import { listPartnersAction } from "@/app/actions/partners";
 import { loadServices } from "@/lib/field/service-store";
 import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
-import { canonicalLeadSource, sheetLeadCostFor } from "@/lib/leads/source";
+import { canonicalLeadSource } from "@/lib/leads/source";
+import {
+  buildMetaPricingIndex,
+  metaPricingForClient,
+  resolveSheetLeadCost,
+} from "@/lib/ads/meta-lead-cost";
+import { listAdsSnapshots } from "@/lib/ads/snapshots";
 import { sheetIssueFromLead, sheetServiceFromLead } from "@/lib/sheet/issue-service";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
 import type { FieldJob } from "@/lib/field/days";
@@ -35,7 +41,7 @@ export default async function SheetPage() {
   const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();
 
-  const [{ data: leads }, { data: techProfiles }, { data: jobsForNumbers }, stockState, partners, catalog] =
+  const [{ data: leads }, { data: techProfiles }, { data: jobsForNumbers }, stockState, partners, catalog, metaSnapshots] =
     await Promise.all([
     supabase
       .from("leads")
@@ -60,7 +66,11 @@ export default async function SheetPage() {
     loadStockState().catch(() => null),
     listPartnersAction(),
     loadServices().catch(() => FIELD_SERVICES.filter((s) => s.id !== "svc-custom")),
+    listAdsSnapshots(1, "meta").catch(() => []),
   ]);
+
+  const metaPricing = buildMetaPricingIndex(metaSnapshots[0]);
+  const metaPricingClient = metaPricingForClient(metaPricing);
 
   const jobNumberByLead = new Map<string, string>();
   const jobStartByLead = new Map<string, string>();
@@ -165,7 +175,7 @@ export default async function SheetPage() {
       workSource,
       partnerName: pick(meta, "partnerName", "partner_name", "partner"),
       leadSource,
-      leadCost: sheetLeadCostFor(leadSource, pick(meta, "leadCost", "lead_cost")),
+      leadCost: resolveSheetLeadCost(leadSource, meta, metaPricing),
       date: pick(meta, "sheetDate", "date") || new Date(lead.created_at).toISOString().slice(0, 10),
       time:
         normalizeSheetTime(pick(meta, "sheetTime", "time")) ||
@@ -213,6 +223,7 @@ export default async function SheetPage() {
           name: s.name,
           unitPrice: s.unitPriceCents > 0 ? (s.unitPriceCents / 100).toFixed(2) : "",
         }))}
+        metaPricing={metaPricingClient}
       />
     </BosShell>
   );

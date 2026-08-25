@@ -1,10 +1,12 @@
 import { BosShell } from "@/components/bos/BosShell";
 import { AdsBoard } from "@/components/bos/AdsBoard";
 import { AdsReportPanel } from "@/components/bos/AdsReport";
+import { AdsCampaignReportPanel } from "@/components/bos/AdsCampaignReport";
 import { ThumbtackLeadsBoard } from "@/components/bos/ThumbtackLeadsBoard";
 import { requireRouteAccess } from "@/lib/auth/require";
 import { listAdsSnapshots } from "@/lib/ads/snapshots";
 import { loadAdsReport, periodFromSnapshots } from "@/lib/ads/report";
+import { loadAdsCampaignReport } from "@/lib/ads/campaign-report";
 import type { MetaCampaignMetrics } from "@/lib/ads/meta";
 import { getGoogleAdsConfig, type GoogleAdsCampaignMetrics } from "@/lib/ads/google";
 import { listThumbtackLeadsForAds } from "@/lib/leads/thumbtack-ingest";
@@ -17,13 +19,22 @@ export default async function AdsPage() {
   const metaAds = (adsSnapshots || []).find((r) => r.platform === "meta");
   const googleAds = (adsSnapshots || []).find((r) => r.platform === "google_ads");
 
-  const [adsReport, thumbtackLeads] = await Promise.all([
+  const [adsReport, campaignReport, thumbtackLeads] = await Promise.all([
     loadAdsReport({
       periodStart: period.periodStart,
       periodEnd: period.periodEnd,
-      metaSpend: metaAds?.spend ?? null,
-      googleSpend: googleAds?.spend ?? null,
+      metaAds: metaAds
+        ? { spend: metaAds.spend, leads: metaAds.leads, cpl: metaAds.cpl }
+        : undefined,
+      googleAds: googleAds
+        ? { spend: googleAds.spend, leads: googleAds.leads, cpl: googleAds.cpl }
+        : undefined,
     }).catch(() => null),
+    loadAdsCampaignReport({
+      periodStart: period.periodStart,
+      periodEnd: period.periodEnd,
+      metaSnapshot: metaAds ?? null,
+    }).catch(() => []),
     listThumbtackLeadsForAds(40).catch(() => []),
   ]);
   const campaigns = ((metaAds?.metrics as { campaigns?: MetaCampaignMetrics[] } | null)?.campaigns ||
@@ -60,6 +71,7 @@ export default async function AdsPage() {
       subtitle="Lead funnel by source · spend · cost per lead and per completed job"
     >
       {adsReport ? <AdsReportPanel report={adsReport} /> : null}
+      {campaignReport.length ? <AdsCampaignReportPanel rows={campaignReport} /> : null}
       <ThumbtackLeadsBoard leads={thumbtackLeads} />
       {!metaAds ? (
         <div className="bos-card">

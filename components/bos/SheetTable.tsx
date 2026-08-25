@@ -20,6 +20,8 @@ import {
   partsCostForLines,
   type SheetPartLine,
 } from "@/lib/sheet/parts-lines";
+import type { MetaPricingClient } from "@/lib/ads/meta-lead-cost";
+import { isMetaLeadSource } from "@/lib/ads/meta-lead-cost";
 import {
   WORK_SOURCES,
   isColumnEditable,
@@ -280,6 +282,38 @@ function isCheckPayment(paymentType: string) {
   return paymentType === "Check";
 }
 
+/** Check # and Bank fee light up only for the matching payment type; others stay dim. */
+function paymentColumnState(
+  paymentType: string,
+  key: SheetColumnKey,
+  workSource: string,
+): "active" | "dim" | null {
+  if (key !== "checkNumber" && key !== "bankFee") return null;
+  const picked = Boolean(paymentType.trim());
+  if (!picked) return null;
+
+  if (key === "bankFee") {
+    if (!isOwnWork(workSource)) return null;
+    return isCardPayment(paymentType) ? "active" : "dim";
+  }
+
+  return isCheckPayment(paymentType) ? "active" : "dim";
+}
+
+function paymentColumnClass(
+  paymentType: string,
+  key: SheetColumnKey,
+  workSource: string,
+  needsValue: boolean,
+): string | undefined {
+  const state = paymentColumnState(paymentType, key, workSource);
+  if (state === "dim") return "sheet-cell-payment-dim";
+  if (state !== "active") return undefined;
+  if (key === "bankFee") return "sheet-cell-bank";
+  if (key === "checkNumber") return needsValue ? "sheet-cell-need" : "sheet-cell-check-active";
+  return undefined;
+}
+
 function emptyRow(index: number): SheetRow {
   const id = `new-${index}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   return {
@@ -309,7 +343,12 @@ function emptyRow(index: number): SheetRow {
   };
 }
 
-function applyRowRules(row: SheetRow, patch: Partial<SheetRow>, partners: SheetPartner[]): SheetRow {
+function applyRowRules(
+  row: SheetRow,
+  patch: Partial<SheetRow>,
+  partners: SheetPartner[],
+  metaPricing?: MetaPricingClient | null,
+): SheetRow {
   const next = { ...row, ...patch };
   if (Object.prototype.hasOwnProperty.call(patch, "workSource")) {
     next.workSource = normalizeWorkSource(next.workSource);
@@ -327,6 +366,13 @@ function applyRowRules(row: SheetRow, patch: Partial<SheetRow>, partners: SheetP
     if (isCardPayment(next.paymentType) && (paymentChanged || jobCostChanged || sourceChanged)) {
       next.bankFee = bankFeeFor(next.jobCost);
     }
+    if (paymentChanged) {
+      if (!isCardPayment(next.paymentType)) next.bankFee = "";
+    }
+  }
+
+  if (paymentChanged) {
+    if (!isCheckPayment(next.paymentType)) next.checkNumber = "";
   }
 
   if (isPartnerWork(next.workSource)) {
@@ -344,8 +390,12 @@ function applyRowRules(row: SheetRow, patch: Partial<SheetRow>, partners: SheetP
     Object.prototype.hasOwnProperty.call(patch, "leadSource") &&
     !Object.prototype.hasOwnProperty.call(patch, "leadCost")
   ) {
-    const autoLeadCost = leadCostForSource(next.leadSource);
-    if (autoLeadCost !== null) next.leadCost = autoLeadCost;
+    if (metaPricing && isMetaLeadSource(next.leadSource) && metaPricing.accountCpl != null) {
+      next.leadCost = metaPricing.accountCpl.toFixed(2);
+    } else {
+      const autoLeadCost = leadCostForSource(next.leadSource);
+      if (autoLeadCost !== null) next.leadCost = autoLeadCost;
+    }
   }
 
   return next;
@@ -356,6 +406,7 @@ function statusClass(status: string): string {
     case "Completed":
       return "sheet-status-done";
     case "Cancelled":
+    case "No win":
     case "No-show":
       return "sheet-status-bad";
     case "Tech confirmed":
@@ -588,6 +639,7 @@ export function SheetTable({
   partnerStockParts = {},
   partners = [],
   catalogServices = [],
+  metaPricing = null,
 }: {
   rows: SheetRow[];
   technicians: string[];
@@ -599,6 +651,7 @@ export function SheetTable({
   partnerStockParts?: Record<string, StockPartOption[]>;
   partners?: SheetPartner[];
   catalogServices?: SheetServiceOption[];
+  metaPricing?: MetaPricingClient | null;
 }) {
   useBosLiveRefresh(["leads", "jobs"]);
   const router = useRouter();
@@ -1198,7 +1251,7 @@ export function SheetTable({
       const nextRows = prev.map((row) => {
         if (rowKey(row) !== rowId && row.id !== rowId) return row;
         key = rowKey(row);
-        const next = applyRowRules(row, patch, partners);
+        const next = applyRowRules(row, patch, partners, metaPricing);
         if (
           usesOurParts(next.workSource, next.partnerName, partners) &&
           (Object.prototype.hasOwnProperty.call(patch, "parts") ||
@@ -1787,21 +1840,21 @@ export function SheetTable({
                   </th>
                   {COLUMNS.map((col) => {
                     const editable = isColumnEditable(row.workSource, col.key, colOpts);
-                    const needBankEmpty =
-                      col.key === "bankFee" && cardPay && !String(row.bankFee).trim();
-                    const bankActive = col.key === "bankFee" && cardPay;
+                    const payDimmed =
+                      paymentColumnState(row.paymentType, col.key, row.workSource) === "dim";
+                    const payClass = paymentColumnClass(
+                      row.paymentType,
+                      col.key,
+                      row.workSource,
+                      needCheck && col.key === "checkNumber",
+                    );
                     const cellClass = cellMutedClass(
                       row.workSource,
                       col.key,
-                      needCheck && col.key === "checkNumber"
-                        ? "sheet-cell-need"
-                        : needBankEmpty
-                          ? "sheet-cell-need"
-                          : bankActive
-                            ? "sheet-cell-bank"
-                            : col.key === "jobStatus" && editable
-                              ? statusClass(row.jobStatus)
-                              : undefined,
+                      payClass ||
+                        (col.key === "jobStatus" && editable
+                          ? statusClass(row.jobStatus)
+                          : undefined),
                       colOpts,
                     );
 
@@ -1811,8 +1864,8 @@ export function SheetTable({
                           <button
                             type="button"
                             className="sheet-cell sheet-parts-trigger"
-                            disabled={!editable}
-                            tabIndex={editable ? 0 : -1}
+                            disabled={!editable || payDimmed}
+                            tabIndex={editable && !payDimmed ? 0 : -1}
                             title={row.service || "Pick services"}
                             onClick={() => {
                               if (!editable) return;
@@ -1831,8 +1884,8 @@ export function SheetTable({
                           <button
                             type="button"
                             className="sheet-cell sheet-parts-trigger"
-                            disabled={!editable}
-                            tabIndex={editable ? 0 : -1}
+                            disabled={!editable || payDimmed}
+                            tabIndex={editable && !payDimmed ? 0 : -1}
                             title={row.parts || "Pick parts"}
                             onClick={() => {
                               if (!editable) return;
@@ -1931,8 +1984,8 @@ export function SheetTable({
                             className="sheet-cell sheet-date"
                             type="date"
                             value={toDateInputValue(row.date)}
-                            disabled={!editable}
-                            tabIndex={editable ? 0 : -1}
+                            disabled={!editable || payDimmed}
+                            tabIndex={editable && !payDimmed ? 0 : -1}
                             onChange={(e) => {
                               if (!editable) return;
                               patchRow(row.id, { date: e.target.value || todayISO() }, true);
@@ -1952,8 +2005,8 @@ export function SheetTable({
                           <select
                             className="sheet-cell sheet-select sheet-time"
                             value={timeValue}
-                            disabled={!editable}
-                            tabIndex={editable ? 0 : -1}
+                            disabled={!editable || payDimmed}
+                            tabIndex={editable && !payDimmed ? 0 : -1}
                             onChange={(e) => {
                               if (!editable) return;
                               patchRow(
@@ -2047,18 +2100,18 @@ export function SheetTable({
                                 ? row.techSalary || partnerTechSalary(row.jobCost)
                                 : row[col.key]
                             }
-                            disabled={!editable}
-                            readOnly={!editable || isComputedPartnerSalary}
-                            tabIndex={editable ? 0 : -1}
+                            disabled={!editable || isComputedPartnerSalary || payDimmed}
+                            readOnly={!editable || isComputedPartnerSalary || payDimmed}
+                            tabIndex={editable && !payDimmed && !isComputedPartnerSalary ? 0 : -1}
                             inputMode={isMoney ? "decimal" : undefined}
                             onChange={(e) => {
-                              if (!editable || isComputedPartnerSalary) return;
+                              if (!editable || isComputedPartnerSalary || payDimmed) return;
                               const raw = e.target.value;
                               const next = isMoney ? raw.replace(/[^0-9.-]/g, "") : raw;
                               patchRow(row.id, { [col.key]: next }, false);
                             }}
                             onBlur={() => {
-                              if (!editable || isComputedPartnerSalary) return;
+                              if (!editable || isComputedPartnerSalary || payDimmed) return;
                               queuePersistNow(rowKey(row));
                             }}
                             placeholder={

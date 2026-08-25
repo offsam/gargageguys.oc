@@ -3,6 +3,12 @@ import { ingestLead } from "@/lib/leads/ingest";
 import { escapeHtml, sendTelegram } from "@/lib/notify/channels";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { MetaLeadRow } from "@/lib/ads/meta";
+import { listAdsSnapshots } from "@/lib/ads/snapshots";
+import {
+  buildMetaPricingIndex,
+  formatLeadCostUsd,
+  resolveMetaLeadCost,
+} from "@/lib/ads/meta-lead-cost";
 
 export type MetaIngestFields = {
   leadgenId: string;
@@ -98,6 +104,22 @@ export async function ingestMetaLeadToCrm(input: MetaIngestFields): Promise<{
   const existing = await findLeadIdByMetaLeadgen(leadgenId);
   if (existing) return { leadId: existing, duplicate: true };
 
+  const metaSnapshots = await listAdsSnapshots(1, "meta").catch(() => []);
+  const metaPricing = buildMetaPricingIndex(metaSnapshots[0]);
+  const leadMeta = {
+    metaLeadgenId: leadgenId,
+    metaFormId: input.formId || null,
+    metaAdId: input.adId || null,
+    metaAdsetId: input.adsetId || null,
+    metaCampaignId: input.campaignId || null,
+    metaCampaignName: input.campaignName || null,
+    metaAdName: input.adName || null,
+    metaCreatedTime: input.createdTime || null,
+    leadSource: "Facebook",
+    ...(input.fields ? { metaFields: input.fields } : {}),
+  };
+  const leadCost = resolveMetaLeadCost(leadMeta, metaPricing);
+
   const created = await ingestLead({
     name: String(input.name || "").trim() || "Meta lead",
     phone: String(input.phone).trim(),
@@ -109,16 +131,19 @@ export async function ingestMetaLeadToCrm(input: MetaIngestFields): Promise<{
     dealTitle: String(input.message || "").trim() || "Meta Lead Ad",
     jobStatus: "Waiting",
     metadata: {
-      metaLeadgenId: leadgenId,
-      metaFormId: input.formId || null,
-      metaAdId: input.adId || null,
-      metaAdsetId: input.adsetId || null,
-      metaCampaignId: input.campaignId || null,
-      metaCampaignName: input.campaignName || null,
-      metaAdName: input.adName || null,
-      metaCreatedTime: input.createdTime || null,
-      leadSource: "Facebook",
-      ...(input.fields ? { metaFields: input.fields } : {}),
+      ...leadMeta,
+      ...(leadCost ? { leadCost } : {}),
+      ...(metaPricing.accountCpl != null
+        ? { metaAccountCpl: formatLeadCostUsd(metaPricing.accountCpl) }
+        : {}),
+      ...(input.campaignId && metaPricing.campaigns.get(input.campaignId)?.cpl != null
+        ? {
+            metaCampaignCpl: formatLeadCostUsd(
+              metaPricing.campaigns.get(input.campaignId)!.cpl,
+            ),
+          }
+        : {}),
+      metaLeadCostSyncedAt: metaPricing.syncedAt || new Date().toISOString(),
     },
   });
 

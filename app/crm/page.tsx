@@ -6,7 +6,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { updateInboxStatusAction } from "@/app/actions/crm";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
-import { canonicalLeadSource, sheetLeadCostFor } from "@/lib/leads/source";
+import { canonicalLeadSource } from "@/lib/leads/source";
+import {
+  buildMetaPricingIndex,
+  resolveSheetLeadCost,
+} from "@/lib/ads/meta-lead-cost";
+import { listAdsSnapshots } from "@/lib/ads/snapshots";
 import { sheetIssueFromLead, sheetServiceFromLead } from "@/lib/sheet/issue-service";
 import { loadStockState } from "@/lib/stock/store";
 import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
@@ -33,7 +38,7 @@ export default async function CrmPage() {
   const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();
 
-  const [{ data: leads }, { data: inbox }, { data: techs }, { data: jobsRaw }, stockState, catalog] =
+  const [{ data: leads }, { data: inbox }, { data: techs }, { data: jobsRaw }, stockState, catalog, metaSnapshots] =
     await Promise.all([
       supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(300),
       supabase.from("inbox_items").select("*").order("created_at", { ascending: false }).limit(50),
@@ -52,7 +57,10 @@ export default async function CrmPage() {
         .limit(500),
       loadStockState().catch(() => null),
       loadServices().catch(() => FIELD_SERVICES.filter((s) => s.id !== "svc-custom")),
+      listAdsSnapshots(1, "meta").catch(() => []),
     ]);
+
+  const metaPricing = buildMetaPricingIndex(metaSnapshots[0]);
 
   const technicians = (techs || [])
     .map((t) => ({
@@ -94,7 +102,7 @@ export default async function CrmPage() {
       workSource,
       partnerName: pick(meta, "partnerName", "partner_name", "partner"),
       source,
-      leadCost: sheetLeadCostFor(source, pick(meta, "leadCost", "lead_cost")),
+      leadCost: resolveSheetLeadCost(source, meta, metaPricing),
       date: pick(meta, "sheetDate", "date") || new Date(lead.created_at).toISOString().slice(0, 10),
       jobType: sheetIssueFromLead({
         metadata: meta,

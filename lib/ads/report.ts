@@ -23,11 +23,19 @@ export type AdsReportSourceRow = {
   active: number;
   estimate: number;
   completed: number;
-  lost: number;
+  cancelled: number;
+  noWin: number;
+  noShow: number;
+  /** Cancelled + No win + No-show — paid for lead, no completed job. */
+  noReturn: number;
   /** Leads that moved past Waiting / No answer. */
   processed: number;
   revenue: number;
   spend: number;
+  /** Platform CPL (Meta / Google sync) when available. */
+  leadCost: number | null;
+  /** Lead cost on dead-end rows (cancelled / no win / no-show). */
+  leadCostBurned: number;
   cpl: number | null;
   costPerCompleted: number | null;
   conversionPct: number | null;
@@ -38,6 +46,12 @@ export type AdsReport = {
   periodEnd: string;
   rows: AdsReportSourceRow[];
   totals: AdsReportSourceRow;
+};
+
+export type AdsPlatformSnapshot = {
+  spend?: number | null;
+  leads?: number | null;
+  cpl?: number | null;
 };
 
 export type AdsReportLeadInput = {
@@ -54,7 +68,6 @@ const ACTIVE_STATUSES = new Set<SheetStatus>([
   "En route",
   "On site",
 ]);
-const LOST_STATUSES = new Set<SheetStatus>(["Cancelled", "No-show"]);
 
 function asMeta(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -90,10 +103,15 @@ function emptyRow(source: AdsReportSource): AdsReportSourceRow {
     active: 0,
     estimate: 0,
     completed: 0,
-    lost: 0,
+    cancelled: 0,
+    noWin: 0,
+    noShow: 0,
+    noReturn: 0,
     processed: 0,
     revenue: 0,
     spend: 0,
+    leadCost: null,
+    leadCostBurned: 0,
     cpl: null,
     costPerCompleted: null,
     conversionPct: null,
@@ -101,8 +119,16 @@ function emptyRow(source: AdsReportSource): AdsReportSourceRow {
 }
 
 function finalizeRow(row: AdsReportSourceRow): AdsReportSourceRow {
+  row.noReturn = row.cancelled + row.noWin + row.noShow;
   row.processed = row.received - row.waiting;
-  row.cpl = row.received > 0 && row.spend > 0 ? row.spend / row.received : null;
+  // Meta / Google: CPL from sync (e.g. $16). Never spend ÷ CRM received — that inflates the number.
+  if (row.leadCost != null && row.leadCost > 0) {
+    row.cpl = row.leadCost;
+  } else {
+    row.cpl = row.received > 0 && row.spend > 0 ? row.spend / row.received : null;
+    if (row.cpl != null && row.cpl > 0) row.leadCost = row.cpl;
+  }
+  // Real cost of a closed job = ad spend ÷ completed in our funnel (won vs lost is separate).
   row.costPerCompleted =
     row.completed > 0 && row.spend > 0 ? row.spend / row.completed : null;
   row.conversionPct =
@@ -119,9 +145,52 @@ function thumbtackSpendForLead(meta: Record<string, unknown>): number {
 }
 
 function leadCostSpend(meta: Record<string, unknown>, source: AdsReportSource): number {
+  if (source === "Thumbtack") return thumbtackSpendForLead(meta);
   const explicit = parseMoney(metaString(meta, "leadCost"));
   if (explicit > 0) return explicit;
   return parseMoney(leadCostForSource(source) || "0");
+}
+
+/** CPL from Meta / Google sync only — same number Meta Ads dashboard shows. */
+function platformLeadCost(snapshot: AdsPlatformSnapshot | undefined): number | null {
+  const syncedCpl = Number(snapshot?.cpl);
+  if (syncedCpl > 0) return syncedCpl;
+  const spend = Number(snapshot?.spend);
+  const leads = Number(snapshot?.leads);
+  if (spend > 0 && leads > 0) return spend / leads;
+  return null;
+}
+
+function applyPlatformLeadCosts(
+  rows: Map<AdsReportSource, AdsReportSourceRow>,
+  input: {
+    metaAds?: AdsPlatformSnapshot;
+    googleAds?: AdsPlatformSnapshot;
+  },
+) {
+  const metaCpl = platformLeadCost(input.metaAds);
+
+  for (const source of ["Facebook", "Instagram"] as const) {
+    const row = rows.get(source)!;
+    if (metaCpl != null) row.leadCost = metaCpl;
+    const dead = row.cancelled + row.noWin + row.noShow;
+    if (metaCpl != null && metaCpl > 0 && dead > 0) {
+      row.leadCostBurned = dead * metaCpl;
+    }
+  }
+
+  const googleRow = rows.get("Google")!;
+  const googleCpl = platformLeadCost(input.googleAds);
+  if (googleCpl != null) googleRow.leadCost = googleCpl;
+  const googleDead = googleRow.cancelled + googleRow.noWin + googleRow.noShow;
+  if (googleCpl != null && googleCpl > 0 && googleDead > 0) {
+    googleRow.leadCostBurned = googleDead * googleCpl;
+  }
+
+  const ttRow = rows.get("Thumbtack")!;
+  if (ttRow.received > 0 && ttRow.spend > 0) {
+    ttRow.leadCost = ttRow.spend / ttRow.received;
+  }
 }
 
 export function aggregateAdsReport(
@@ -129,8 +198,8 @@ export function aggregateAdsReport(
   input: {
     periodStart: string;
     periodEnd: string;
-    metaSpend?: number | null;
-    googleSpend?: number | null;
+    metaAds?: AdsPlatformSnapshot;
+    googleAds?: AdsPlatformSnapshot;
   },
 ): AdsReport {
   const rows = new Map<AdsReportSource, AdsReportSourceRow>();
@@ -147,6 +216,8 @@ export function aggregateAdsReport(
     const row = rows.get(source)!;
     const meta = asMeta(lead.metadata);
     const status = sheetStatusFromLead({ stage: lead.stage, metadata: lead.metadata });
+    const perLeadCost = leadCostSpend(meta, source);
+    const isMetaSource = source === "Facebook" || source === "Instagram";
 
     row.received += 1;
 
@@ -157,7 +228,16 @@ export function aggregateAdsReport(
       row.completed += 1;
       const jobCost = parseMoney(metaString(meta, "jobCost")) || parseMoney(lead.deal_price);
       row.revenue += jobCost;
-    } else if (LOST_STATUSES.has(status)) row.lost += 1;
+    } else if (status === "Cancelled") {
+      row.cancelled += 1;
+      if (!isMetaSource && source !== "Google") row.leadCostBurned += perLeadCost;
+    } else if (status === "No win") {
+      row.noWin += 1;
+      if (!isMetaSource && source !== "Google") row.leadCostBurned += perLeadCost;
+    } else if (status === "No-show") {
+      row.noShow += 1;
+      if (!isMetaSource && source !== "Google") row.leadCostBurned += perLeadCost;
+    }
 
     if (source === "Thumbtack") {
       thumbtackSpendAcc += thumbtackSpendForLead(meta);
@@ -168,8 +248,8 @@ export function aggregateAdsReport(
     }
   }
 
-  const metaSpend = Number(input.metaSpend) || 0;
-  const googleSpend = Number(input.googleSpend) || 0;
+  const metaSpend = Number(input.metaAds?.spend) || 0;
+  const googleSpend = Number(input.googleAds?.spend) || 0;
 
   if (metaSpend > 0 && metaLeadCount > 0) {
     const fbRow = rows.get("Facebook")!;
@@ -191,7 +271,7 @@ export function aggregateAdsReport(
   const ttRow = rows.get("Thumbtack")!;
   if (thumbtackSpendAcc > 0) ttRow.spend = thumbtackSpendAcc;
 
-  // Lead-cost sources without platform API spend (Website, Yelp, etc.)
+  applyPlatformLeadCosts(rows, input);
   for (const [source, row] of rows) {
     if (row.spend > 0 || source === "Thumbtack" || source === "Facebook" || source === "Instagram" || source === "Google") {
       continue;
@@ -224,9 +304,12 @@ export function aggregateAdsReport(
         acc.active += row.active;
         acc.estimate += row.estimate;
         acc.completed += row.completed;
-        acc.lost += row.lost;
+        acc.cancelled += row.cancelled;
+        acc.noWin += row.noWin;
+        acc.noShow += row.noShow;
         acc.revenue += row.revenue;
         acc.spend += row.spend;
+        acc.leadCostBurned += row.leadCostBurned;
         return acc;
       },
       emptyRow("Other"),
@@ -268,8 +351,8 @@ export function periodFromSnapshots(snapshots: AdsSnapshotRow[]): {
 export async function loadAdsReport(input?: {
   periodStart?: string;
   periodEnd?: string;
-  metaSpend?: number | null;
-  googleSpend?: number | null;
+  metaAds?: AdsPlatformSnapshot;
+  googleAds?: AdsPlatformSnapshot;
 }): Promise<AdsReport> {
   const periodStart =
     input?.periodStart ||
@@ -295,7 +378,7 @@ export async function loadAdsReport(input?: {
   return aggregateAdsReport(data || [], {
     periodStart,
     periodEnd,
-    metaSpend: input?.metaSpend,
-    googleSpend: input?.googleSpend,
+    metaAds: input?.metaAds,
+    googleAds: input?.googleAds,
   });
 }
