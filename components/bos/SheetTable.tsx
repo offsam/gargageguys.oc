@@ -1388,13 +1388,14 @@ export function SheetTable({
     () =>
       rows.filter(
         (row) =>
-          row.id.startsWith("new-") ||
-          isPinnedRow(row) ||
-          rowInPeriod(row, activeRange.from, activeRange.to),
+          // Keep unsaved drafts visible; everything else must match the period filter
+          // so totals below match what is on screen.
+          row.id.startsWith("new-") || rowInPeriod(row, activeRange.from, activeRange.to),
       ),
-    [rows, activeRange, pinVersion],
+    [rows, activeRange],
   );
 
+  /** Totals only for rows in the selected period (same set as the table). */
   const sheetTotals = useMemo(() => {
     let gross = 0;
     let parts = 0;
@@ -1436,6 +1437,14 @@ export function SheetTable({
     return { gross, parts, clear, techEntries, techTotal, grossEntries };
   }, [periodRows, partners]);
 
+  const periodTotalsLabel = useMemo(() => {
+    const opt = PERIOD_OPTIONS.find((p) => p.id === period);
+    if (period === "custom" && (customFrom || customTo)) {
+      return [customFrom || "…", customTo || "…"].join(" – ");
+    }
+    return opt?.label || "Всё";
+  }, [period, customFrom, customTo]);
+
   const sortedRows = useMemo(() => {
     const next = [...periodRows];
     next.sort((a, b) => {
@@ -1448,6 +1457,10 @@ export function SheetTable({
   }, [periodRows, dateSort]);
 
   function changePeriod(next: SheetPeriod) {
+    // Drop freeze so a period switch can't keep out-of-range rows on screen.
+    releaseQueuedRef.current = false;
+    frozenIdsRef.current = null;
+    setFreezeOrder(false);
     setPeriod(next);
     try {
       localStorage.setItem(
@@ -1464,6 +1477,9 @@ export function SheetTable({
   }
 
   function changeCustomRange(from: string, to: string) {
+    releaseQueuedRef.current = false;
+    frozenIdsRef.current = null;
+    setFreezeOrder(false);
     setCustomFrom(from);
     setCustomTo(to);
     setPeriod("custom");
@@ -1480,16 +1496,20 @@ export function SheetTable({
   const displayRows = useMemo(() => {
     const ids = freezeOrder ? frozenIdsRef.current : null;
     if (!ids?.length) return sortedRows;
+    const allowed = new Set(sortedRows.map((row) => rowKey(row)));
     const byKey = new Map<string, SheetRow>();
-    for (const row of rows) {
+    for (const row of sortedRows) {
       byKey.set(rowKey(row), row);
       byKey.set(row.id, row);
     }
-    const locked = ids.map((id) => byKey.get(id)).filter((row): row is SheetRow => Boolean(row));
+    const locked = ids
+      .map((id) => byKey.get(id))
+      .filter((row): row is SheetRow => Boolean(row))
+      .filter((row) => allowed.has(rowKey(row)));
     const lockedSet = new Set(locked.map((row) => rowKey(row)));
     const extras = sortedRows.filter((row) => !lockedSet.has(rowKey(row)));
     return [...locked, ...extras];
-  }, [sortedRows, rows, freezeOrder]);
+  }, [sortedRows, freezeOrder]);
 
   function freezeRowOrder() {
     focusGenRef.current += 1;
@@ -1566,6 +1586,10 @@ export function SheetTable({
           <div className="sheet-status">{pending ? "Saving…" : status}</div>
         </div>
         <div className="sheet-totals">
+          <div className="sheet-total-card sheet-total-period">
+            <span className="sheet-total-label">Period</span>
+            <strong className="sheet-total-value sheet-total-period-value">{periodTotalsLabel}</strong>
+          </div>
           {sheetTotals.grossEntries.length === 0 ? (
             <div className="sheet-total-card">
               <span className="sheet-total-label">Gross</span>

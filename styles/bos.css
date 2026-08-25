@@ -1438,6 +1438,15 @@ textarea {
   box-shadow: var(--bos-shadow);
 }
 
+.sheet-total-period {
+  background: #f8fafc;
+}
+
+.sheet-total-period-value {
+  font-size: 0.95rem !important;
+  font-weight: 700;
+}
+
 .sheet-total-label {
   font-size: 0.78rem;
   font-weight: 650;
