@@ -69,7 +69,9 @@ function unwrap(body: JsonObject): JsonObject {
     asObject(body.event) ||
     asObject(body.payload) ||
     asObject(body.negotiation) ||
-    asObject(body.lead);
+    asObject(body.lead) ||
+    asObject(body.leadDetails) ||
+    asObject(body.lead_details);
   if (!nested) return body;
   const eventType = str(body.eventType || body.event_type || body.type);
   return eventType ? { ...nested, eventType } : nested;
@@ -222,6 +224,28 @@ export function classifyThumbtackWebhook(input: unknown): ThumbtackWebhookEvent 
 
   const update = parseLeadUpdate(body);
   if (update) return update;
+
+  const looseId = str(
+    body.leadID || body.leadId || body.negotiationID || body.negotiationId || body.id,
+  );
+  const looseCustomer =
+    asObject(body.customer) ||
+    asObject(body.customerInfo) ||
+    asObject(body.customer_info);
+  const loosePhone = str(
+    looseCustomer?.phone || body.phone || body.phoneNumber || body.phone_number,
+  );
+  const looseName = str(
+    looseCustomer?.name || looseCustomer?.displayName || body.name || body.customerName,
+  );
+  if (looseId && (loosePhone || looseName) && !asObject(body.review) && !asObject(body.message)) {
+    const recovered = parseLead({
+      ...body,
+      leadID: looseId,
+      customer: looseCustomer || { name: looseName, phone: loosePhone },
+    });
+    if (recovered) return recovered;
+  }
 
   return { kind: "unknown" };
 }

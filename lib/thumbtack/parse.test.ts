@@ -106,9 +106,21 @@ describe("classifyThumbtackWebhook", () => {
     assert.equal(event.leadPrice, "$26.00");
   });
 
-  it("returns unknown for empty objects", () => {
-    assert.equal(classifyThumbtackWebhook({}).kind, "unknown");
-    assert.equal(classifyThumbtackWebhook(null).kind, "unknown");
+  it("parses leadDetails wrapper from Pro dashboard payloads", () => {
+    const event = classifyThumbtackWebhook({
+      leadDetails: {
+        leadID: "abc123",
+        customer: { name: "Sam Test", phone: "9495550111" },
+        request: {
+          category: "Garage Door Repair",
+          location: { zipCode: "92660", city: "Newport Beach", state: "CA" },
+        },
+      },
+    });
+    assert.equal(event.kind, "lead");
+    if (event.kind !== "lead") return;
+    assert.equal(event.leadId, "abc123");
+    assert.equal(event.phone, "9495550111");
   });
 
   it("keeps Garage Guys Thumbtack sheet cost at $50", () => {

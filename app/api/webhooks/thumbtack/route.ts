@@ -4,6 +4,7 @@ import {
   ingestThumbtackLeadToCrm,
   ingestThumbtackMessage,
   ingestThumbtackReview,
+  recordThumbtackWebhookReceipt,
 } from "@/lib/leads/thumbtack-ingest";
 import { isSupabaseConfigured } from "@/lib/supabase/admin";
 import {
@@ -63,14 +64,32 @@ async function handleThumbtackBody(request: NextRequest) {
   }
 
   const event = classifyThumbtackWebhook(body);
+  const payloadKeys = body && typeof body === "object" ? Object.keys(body as object).slice(0, 40) : [];
 
   try {
     if (event.kind === "lead") {
       const lead = await ingestThumbtackLeadToCrm(event);
+      await recordThumbtackWebhookReceipt({
+        kind: "lead",
+        summary: event.message || event.category,
+        thumbtackLeadId: event.leadId,
+        name: event.name,
+        phone: event.phone,
+        zip: event.zip,
+        crmLeadId: lead.leadId,
+        payloadKeys,
+      }).catch((error) => console.error("[thumbtack-webhook] receipt", error));
       return NextResponse.json({ ok: true, type: "lead", leadId: lead.leadId, duplicate: lead.duplicate });
     }
     if (event.kind === "message") {
       const result = await ingestThumbtackMessage(event);
+      await recordThumbtackWebhookReceipt({
+        kind: "message",
+        summary: event.text,
+        thumbtackLeadId: event.leadId,
+        crmLeadId: result.leadId,
+        payloadKeys,
+      }).catch((error) => console.error("[thumbtack-webhook] receipt", error));
       if (result.skipped) {
         return NextResponse.json(
           { ok: true, type: "message", skipped: true, reason: "lead not found" },
@@ -86,10 +105,24 @@ async function handleThumbtackBody(request: NextRequest) {
     }
     if (event.kind === "review") {
       const result = await ingestThumbtackReview(event);
+      await recordThumbtackWebhookReceipt({
+        kind: "review",
+        summary: event.text || event.author,
+        thumbtackLeadId: event.leadId,
+        name: event.author,
+        payloadKeys,
+      }).catch((error) => console.error("[thumbtack-webhook] receipt", error));
       return NextResponse.json({ ok: true, type: "review", duplicate: result.duplicate });
     }
     if (event.kind === "lead_update") {
       const result = await applyThumbtackLeadUpdate(event);
+      await recordThumbtackWebhookReceipt({
+        kind: "lead_update",
+        summary: event.leadPrice || event.chargeState,
+        thumbtackLeadId: event.leadId,
+        crmLeadId: result.leadId,
+        payloadKeys,
+      }).catch((error) => console.error("[thumbtack-webhook] receipt", error));
       if (result.skipped) {
         return NextResponse.json(
           { ok: true, type: "lead_update", skipped: true, reason: "lead not found" },
@@ -98,7 +131,12 @@ async function handleThumbtackBody(request: NextRequest) {
       }
       return NextResponse.json({ ok: true, type: "lead_update", leadId: result.leadId });
     }
-    return NextResponse.json({ ok: true, type: "unknown", skipped: true });
+    await recordThumbtackWebhookReceipt({
+      kind: "unknown",
+      summary: payloadKeys.length ? `keys: ${payloadKeys.join(", ")}` : "unparsed Thumbtack payload",
+      payloadKeys,
+    }).catch((error) => console.error("[thumbtack-webhook] receipt", error));
+    return NextResponse.json({ ok: true, type: "unknown", skipped: true, keys: payloadKeys });
   } catch (error) {
     console.error("[thumbtack-webhook]", error);
     return NextResponse.json(

@@ -199,6 +199,8 @@ export type ThumbtackAdsLead = {
   leadCost: string;
   thumbtackLeadPrice: string;
   thumbtackLeadId: string;
+  inCrm: boolean;
+  eventKind: string;
 };
 
 function metaString(meta: Record<string, unknown>, key: string): string {
@@ -208,21 +210,65 @@ function metaString(meta: Record<string, unknown>, key: string): string {
   return "";
 }
 
+function asObject(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+export async function recordThumbtackWebhookReceipt(input: {
+  kind: string;
+  summary: string;
+  thumbtackLeadId?: string;
+  name?: string;
+  phone?: string;
+  zip?: string;
+  crmLeadId?: string | null;
+  payloadKeys: string[];
+}): Promise<void> {
+  const admin = getSupabaseAdmin();
+  await admin.from("inbox_items").insert({
+    lead_id: input.crmLeadId || null,
+    item_type: "thumbtack_webhook",
+    title:
+      input.kind === "lead"
+        ? `Thumbtack lead: ${input.name || input.phone || input.thumbtackLeadId || "new"}`
+        : `Thumbtack ${input.kind}`,
+    body: input.summary.slice(0, 2000) || null,
+    source: "Thumbtack",
+    payload: {
+      kind: input.kind,
+      thumbtackLeadId: input.thumbtackLeadId || "",
+      name: input.name || "",
+      phone: input.phone || "",
+      zip: input.zip || "",
+      payloadKeys: input.payloadKeys,
+    },
+    status: "new",
+  });
+}
+
 export async function listThumbtackLeadsForAds(limit = 40): Promise<ThumbtackAdsLead[]> {
   const admin = getSupabaseAdmin();
-  const { data, error } = await admin
-    .from("leads")
-    .select("id, name, phone, zip, address, message, deal_title, stage, created_at, metadata")
-    .eq("source", "Thumbtack")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
+  const [{ data: leadRows, error: leadErr }, { data: hookRows, error: hookErr }] = await Promise.all([
+    admin
+      .from("leads")
+      .select("id, name, phone, zip, address, message, deal_title, stage, created_at, metadata, source")
+      .ilike("source", "%thumbtack%")
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    admin
+      .from("inbox_items")
+      .select("id, title, body, payload, created_at, lead_id")
+      .eq("source", "Thumbtack")
+      .eq("item_type", "thumbtack_webhook")
+      .order("created_at", { ascending: false })
+      .limit(limit),
+  ]);
+  if (leadErr) throw leadErr;
+  if (hookErr) throw hookErr;
 
-  return (data || []).map((row) => {
-    const meta =
-      row.metadata && typeof row.metadata === "object"
-        ? (row.metadata as Record<string, unknown>)
-        : {};
+  const fromCrm: ThumbtackAdsLead[] = (leadRows || []).map((row) => {
+    const meta = asObject(row.metadata) || {};
     return {
       id: row.id,
       name: row.name || "Thumbtack lead",
@@ -235,6 +281,40 @@ export async function listThumbtackLeadsForAds(limit = 40): Promise<ThumbtackAds
       leadCost: metaString(meta, "leadCost") || THUMBTACK_SHEET_LEAD_COST,
       thumbtackLeadPrice: metaString(meta, "thumbtackLeadPrice"),
       thumbtackLeadId: metaString(meta, "thumbtackLeadId"),
+      inCrm: true,
+      eventKind: "lead",
     };
   });
+
+  const crmIds = new Set(fromCrm.map((l) => l.id));
+  const crmTtIds = new Set(fromCrm.map((l) => l.thumbtackLeadId).filter(Boolean));
+
+  const fromHook: ThumbtackAdsLead[] = [];
+  for (const row of hookRows || []) {
+    const payload = asObject(row.payload) || {};
+    const kind = metaString(payload, "kind") || "unknown";
+    const ttId = metaString(payload, "thumbtackLeadId");
+    if (row.lead_id && crmIds.has(row.lead_id)) continue;
+    if (ttId && crmTtIds.has(ttId)) continue;
+    if (kind === "lead") continue;
+    fromHook.push({
+      id: row.id,
+      name: metaString(payload, "name") || row.title || "Thumbtack event",
+      phone: metaString(payload, "phone"),
+      zip: metaString(payload, "zip"),
+      address: "",
+      job: (row.body || "").slice(0, 80),
+      stage: kind,
+      createdAt: row.created_at,
+      leadCost: "",
+      thumbtackLeadPrice: "",
+      thumbtackLeadId: ttId,
+      inCrm: false,
+      eventKind: kind,
+    });
+  }
+
+  return [...fromCrm, ...fromHook]
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .slice(0, limit);
 }

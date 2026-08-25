@@ -9,37 +9,27 @@ function when(iso: string) {
 }
 
 export function ThumbtackLeadsBoard({ leads }: { leads: ThumbtackAdsLead[] }) {
-  const last = leads[0]?.createdAt ? when(leads[0].createdAt) : "—";
+  const people = leads.filter((l) => l.eventKind === "lead" || l.inCrm);
 
   return (
     <div className="ads-board" style={{ marginBottom: "2rem" }}>
-      <h2 style={{ marginTop: 0 }}>Thumbtack leads</h2>
+      <h2 style={{ marginTop: 0 }}>Thumbtack lead list</h2>
       <p className="field-muted">
-        Incoming webhook leads only. Sheet lead cost stays <strong>${THUMBTACK_SHEET_LEAD_COST}</strong>{" "}
-        (your default). If Thumbtack later sends what they billed, it shows in{" "}
-        <strong>TT billed</strong> and does not overwrite Sheet.
-        {leads.length ? ` Last inbound ${last}.` : ""}
+        This is the same kind of list as Meta form leads: name, phone, ZIP. Thumbtack does not let us
+        download their inbox with a Sync button — they <strong>push</strong> each lead to{" "}
+        <code>/api/webhooks/thumbtack</code>. When a delivery succeeds, the row appears here and in CRM
+        Waiting. Sheet cost stays ${THUMBTACK_SHEET_LEAD_COST}.
       </p>
-      <div className="bos-grid" style={{ marginBottom: "1rem" }}>
-        <div className="bos-card">
-          <h3>TT leads in CRM</h3>
-          <div className="value">{leads.length}</div>
-        </div>
-        <div className="bos-card">
-          <h3>Sheet cost / lead</h3>
-          <div className="value">${THUMBTACK_SHEET_LEAD_COST}</div>
-        </div>
-        <div className="bos-card">
-          <h3>Webhook</h3>
-          <div className="value" style={{ fontSize: "1.05rem" }}>
-            /api/webhooks/thumbtack
-          </div>
-        </div>
+      <div className="ads-lead-summary">
+        <strong>{people.length}</strong> leads in this list · webhook{" "}
+        <code>/api/webhooks/thumbtack</code>
       </div>
       {!leads.length ? (
         <div className="bos-card">
-          No Thumbtack leads in CRM yet. Retry a delivery in Thumbtack → Recent deliveries, or wait
-          for the next lead.
+          No Thumbtack names yet — the webhook is live, but Thumbtack has not successfully posted a
+          lead. In Thumbtack → Recent deliveries, open a failed row and Retry. A new customer also
+          fills this table automatically. We cannot pull old Thumbtack leads the way we pull Meta
+          forms.
         </div>
       ) : (
         <table className="bos-table">
@@ -67,13 +57,17 @@ export function ThumbtackLeadsBoard({ leads }: { leads: ThumbtackAdsLead[] }) {
                   ) : null}
                 </td>
                 <td>{lead.phone || "—"}</td>
-                <td>{[lead.zip, lead.job].filter(Boolean).join(" · ") || "—"}</td>
-                <td>{lead.leadCost ? `$${lead.leadCost}` : "—"}</td>
+                <td>{[lead.zip, lead.job].filter(Boolean).join(" · ") || lead.eventKind}</td>
+                <td>{lead.inCrm ? `$${lead.leadCost || THUMBTACK_SHEET_LEAD_COST}` : "—"}</td>
                 <td>{lead.thumbtackLeadPrice || "—"}</td>
                 <td>
-                  <Link href="/crm" className="ads-crm-pill is-in">
-                    {lead.stage || "in CRM"}
-                  </Link>
+                  {lead.inCrm ? (
+                    <Link href="/crm" className="ads-crm-pill is-in">
+                      In CRM{lead.stage ? ` · ${lead.stage}` : ""}
+                    </Link>
+                  ) : (
+                    <span className="ads-crm-pill is-out">{lead.eventKind || "webhook"}</span>
+                  )}
                 </td>
               </tr>
             ))}
