@@ -1358,6 +1358,10 @@ textarea {
   flex: 0 0 auto;
 }
 
+.sheet-top-actions .sheet-total-card {
+  margin-left: 0.25rem;
+}
+
 .sheet-period-bar {
   display: flex;
   flex-wrap: wrap;
@@ -2050,6 +2054,16 @@ body.sheet-col-resizing * {
   font-weight: 600;
 }
 
+.sheet-row-partner .sheet-profit.is-pos .sheet-cell {
+  color: var(--bos-ok);
+  font-weight: 700;
+}
+
+.sheet-row-partner .sheet-profit.is-neg .sheet-cell {
+  color: var(--bos-danger);
+  font-weight: 700;
+}
+
 .sheet-status-done {
   background: #ecfdf5 !important;
 }
@@ -2167,7 +2181,51 @@ body.sheet-col-resizing * {
 
 .sheet-profit .sheet-cell {
   font-weight: 700;
+  color: var(--bos-text);
+}
+
+.sheet-profit.is-pos .sheet-cell,
+.sheet-profit.is-pos {
   color: var(--bos-ok);
+}
+
+.sheet-profit.is-neg .sheet-cell,
+.sheet-profit.is-neg {
+  color: var(--bos-danger);
+}
+
+.sheet-totals-row th {
+  background: #f8fafc !important;
+  border-bottom: 1px solid var(--bos-border);
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  color: var(--bos-text);
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  white-space: nowrap;
+}
+
+.sheet-totals-corner {
+  color: var(--bos-muted);
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.sheet-totals-empty {
+  background: #f8fafc !important;
+}
+
+.sheet-totals-cell {
+  text-align: right !important;
+  font-size: 0.88rem;
+}
+
+.sheet-totals-cell.sheet-profit.is-pos {
+  color: var(--bos-ok);
+}
+
+.sheet-totals-cell.sheet-profit.is-neg {
+  color: var(--bos-danger);
 }
 
 .sheet-del-head {

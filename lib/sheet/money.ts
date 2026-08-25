@@ -30,6 +30,32 @@ export function bankFeeFor(jobCost: string): string {
   return formatFee(parseMoney(jobCost) * BANK_FEE_RATE);
 }
 
+/**
+ * Default lead cost by lead source.
+ * Thumbtack → $50; Facebook / Instagram (Meta) → $25.
+ */
+export function leadCostForSource(source: string | null | undefined): string | null {
+  const s = String(source || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+  if (!s) return null;
+  if (s === "thumbtack" || s.includes("thumbtack")) return "50.00";
+  if (
+    s === "facebook" ||
+    s === "instagram" ||
+    s === "meta" ||
+    s === "meta ads" ||
+    s === "meta facebook" ||
+    s === "meta instagram" ||
+    s.includes("facebook") ||
+    s.includes("instagram")
+  ) {
+    return "25.00";
+  }
+  return null;
+}
+
 /** Partner default tech pay = 30% of gross. */
 export function partnerTechSalary(gross: string): string {
   const n = parseMoney(gross) * PARTNER_TECH_RATE;

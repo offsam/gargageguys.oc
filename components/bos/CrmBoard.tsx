@@ -14,7 +14,7 @@ import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
 import { CUSTOM_SERVICE_LABEL, FIELD_SERVICES, isCustomServiceChoice } from "@/lib/field/services-catalog";
-import { applyServicePriceToJobCost, parseMoney } from "@/lib/sheet/money";
+import { applyServicePriceToJobCost, leadCostForSource, parseMoney } from "@/lib/sheet/money";
 import { CustomServiceModal } from "@/components/bos/CustomServiceModal";
 import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/ScheduleLeadModal";
 import type { FieldJob } from "@/lib/field/days";
@@ -49,6 +49,7 @@ export type { CrmTechnician };
 
 const LEAD_SOURCES = [
   "Facebook",
+  "Instagram",
   "Google",
   "Website",
   "Referral",
@@ -232,7 +233,14 @@ export function CrmBoard({
     moveLead(lead.id, jobStatus);
   }
 
-  function submitSchedule(input: { technicianId: string; startAt: string; endAt: string }) {
+  function submitSchedule(input: {
+    technicianId: string;
+    startAt: string;
+    endAt: string;
+    clientName: string;
+    clientAddress: string;
+    zip?: string;
+  }) {
     if (!scheduleLead) return;
     setScheduleError("");
     startTransition(async () => {
@@ -241,6 +249,9 @@ export function CrmBoard({
       fd.set("technicianId", input.technicianId);
       fd.set("startAt", input.startAt);
       fd.set("endAt", input.endAt);
+      fd.set("clientName", input.clientName);
+      fd.set("clientAddress", input.clientAddress);
+      if (input.zip) fd.set("zip", input.zip);
       const result = await scheduleCrmLeadAction(fd);
       if (!result.ok) {
         setScheduleError(result.error || "Could not schedule");
@@ -318,7 +329,14 @@ export function CrmBoard({
   }
 
   function setField(key: keyof typeof EMPTY_FORM, value: string) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === "leadSource") {
+        const auto = leadCostForSource(value);
+        if (auto !== null) next.leadCost = auto;
+      }
+      return next;
+    });
   }
 
   const allCatalogServices = useMemo(() => {
@@ -766,6 +784,8 @@ export function CrmBoard({
       {scheduleLead ? (
         <ScheduleLeadModal
           leadName={scheduleLead.name}
+          initialClientName={scheduleLead.name}
+          initialAddress={scheduleLead.address}
           technicians={technicians}
           jobs={scheduleJobs}
           pending={pending}

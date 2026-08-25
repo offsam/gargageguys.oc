@@ -135,7 +135,14 @@ export function DispatchCalendar({
     setView("day");
   }
 
-  function submitSchedule(input: { technicianId: string; startAt: string; endAt: string }) {
+  function submitSchedule(input: {
+    technicianId: string;
+    startAt: string;
+    endAt: string;
+    clientName: string;
+    clientAddress: string;
+    zip?: string;
+  }) {
     if (!scheduleLead) return;
     setScheduleError("");
     startTransition(async () => {
@@ -144,6 +151,9 @@ export function DispatchCalendar({
       fd.set("technicianId", input.technicianId);
       fd.set("startAt", input.startAt);
       fd.set("endAt", input.endAt);
+      fd.set("clientName", input.clientName);
+      fd.set("clientAddress", input.clientAddress);
+      if (input.zip) fd.set("zip", input.zip);
       const result = await scheduleCrmLeadAction(fd);
       if (!result.ok) {
         setScheduleError(result.error || "Could not schedule");
@@ -551,6 +561,8 @@ export function DispatchCalendar({
       {scheduleLead ? (
         <ScheduleLeadModal
           leadName={scheduleLead.name}
+          initialClientName={scheduleLead.name}
+          initialAddress={scheduleLead.address}
           technicians={technicians}
           jobs={jobs}
           dayKey={selectedDay}

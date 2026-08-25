@@ -53,6 +53,7 @@ import {
   clearProfitFor,
   effectiveTechPay,
   formatMoneyUsd as formatMoney,
+  leadCostForSource,
   parseMoney as money,
   partnerTechSalary,
 } from "@/lib/sheet/money";
@@ -95,6 +96,7 @@ const PAYMENT_TYPES = ["", "Credit Card", "Venmo", "Zelle", "Cash", "Check"] as 
 const JOB_STATUSES = ["", ...SHEET_STATUSES] as const;
 const LEAD_SOURCES = [
   "Facebook",
+  "Instagram",
   "Google",
   "Website",
   "Referral",
@@ -147,9 +149,9 @@ const COLUMNS: Array<{
   { key: "partnerName", label: "Partner", width: 160, kind: "select", options: "partner" },
   { key: "leadSource", label: "Lead source", width: 140, kind: "combo", options: "leadSource" },
   { key: "leadCost", label: "Lead cost", width: 100, money: true },
+  { key: "jobStatus", label: "Status", width: 140, kind: "select", options: "status" },
   { key: "clientName", label: "Client name", width: 150 },
   { key: "clientAddress", label: "Address", width: 200 },
-  { key: "jobStatus", label: "Status", width: 140, kind: "select", options: "status" },
   { key: "date", label: "Date", width: 130, kind: "date" },
   { key: "time", label: "Time", width: 100, kind: "time" },
   { key: "jobType", label: "Issue", width: 180 },
@@ -336,6 +338,14 @@ function applyRowRules(row: SheetRow, patch: Partial<SheetRow>, partners: SheetP
         next.partsCost = "";
       }
     }
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(patch, "leadSource") &&
+    !Object.prototype.hasOwnProperty.call(patch, "leadCost")
+  ) {
+    const autoLeadCost = leadCostForSource(next.leadSource);
+    if (autoLeadCost !== null) next.leadCost = autoLeadCost;
   }
 
   return next;
@@ -930,9 +940,20 @@ export function SheetTable({
     setScheduleRow(row);
   }
 
-  function submitSchedule(input: { technicianId: string; startAt: string; endAt: string }) {
+  function submitSchedule(input: {
+    technicianId: string;
+    startAt: string;
+    endAt: string;
+    clientName: string;
+    clientAddress: string;
+    zip?: string;
+  }) {
     if (!scheduleRow) return;
-    const rowSnapshot = scheduleRow;
+    const rowSnapshot: SheetRow = {
+      ...scheduleRow,
+      clientName: input.clientName || scheduleRow.clientName,
+      clientAddress: input.clientAddress || scheduleRow.clientAddress,
+    };
     const techName =
       scheduleTechnicians.find((t) => t.id === input.technicianId)?.name || "";
     setScheduleError("");
@@ -945,6 +966,12 @@ export function SheetTable({
           return;
         }
         leadId = saved.id;
+      } else {
+        const saved = await writeRow(rowSnapshot);
+        if (!saved.ok) {
+          setScheduleError(saved.error || "Could not save address");
+          return;
+        }
       }
 
       const fd = new FormData();
@@ -952,6 +979,9 @@ export function SheetTable({
       fd.set("technicianId", input.technicianId);
       fd.set("startAt", input.startAt);
       fd.set("endAt", input.endAt);
+      fd.set("clientName", rowSnapshot.clientName);
+      fd.set("clientAddress", rowSnapshot.clientAddress);
+      if (input.zip) fd.set("zip", input.zip);
       const result = await scheduleCrmLeadAction(fd);
       if (!result.ok) {
         setScheduleError(result.error || "Could not schedule");
@@ -972,7 +1002,7 @@ export function SheetTable({
       if (!leadId.startsWith("new-")) pinRowKey(leadId);
       setRows((prev) => {
         const next = prev.map((r) => {
-          if (rowKey(r) !== rowKey(rowSnapshot) && r.id !== rowSnapshot.id && r.id !== leadId) {
+          if (rowKey(r) !== rowKey(scheduleRow) && r.id !== scheduleRow.id && r.id !== leadId) {
             return r;
           }
           return scheduledRow;
@@ -1395,47 +1425,43 @@ export function SheetTable({
     [rows, activeRange],
   );
 
-  /** Totals only for rows in the selected period (same set as the table). */
+  /** Column money totals for the selected period (same rows as the table). */
   const sheetTotals = useMemo(() => {
-    let gross = 0;
-    let parts = 0;
+    let leadCost = 0;
+    let jobCost = 0;
+    let bankFee = 0;
+    let partsCost = 0;
+    let techSalary = 0;
     let clear = 0;
-    const techPay = new Map<string, number>();
-    const grossBySource = new Map<string, number>();
 
     for (const row of periodRows) {
-      const jobGross = money(row.jobCost);
-      gross += jobGross;
-      parts += money(row.partsCost);
+      leadCost += money(row.leadCost);
+      jobCost += money(row.jobCost);
+      bankFee += money(row.bankFee);
+      partsCost += money(row.partsCost);
+      techSalary += effectiveTechPay(row);
       clear += money(clearProfitFor(row, partners));
-
-      if (jobGross) {
-        let sourceLabel = "Garage Guys";
-        if (isPartnerWork(row.workSource)) {
-          sourceLabel = row.partnerName.trim() || "Partner";
-        } else if (!isOwnWork(row.workSource)) {
-          sourceLabel = "Other";
-        }
-        grossBySource.set(sourceLabel, (grossBySource.get(sourceLabel) || 0) + jobGross);
-      }
-
-      const techName = row.technician.trim();
-      const pay = effectiveTechPay(row);
-      if (!pay) continue;
-      const key = techName || "Unassigned";
-      techPay.set(key, (techPay.get(key) || 0) + pay);
     }
 
-    const techEntries = [...techPay.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-    const techTotal = techEntries.reduce((sum, [, v]) => sum + v, 0);
-    const grossEntries = [...grossBySource.entries()].sort((a, b) => {
-      if (a[0] === "Garage Guys") return -1;
-      if (b[0] === "Garage Guys") return 1;
-      return a[0].localeCompare(b[0]);
-    });
-
-    return { gross, parts, clear, techEntries, techTotal, grossEntries };
+    return { leadCost, jobCost, bankFee, partsCost, techSalary, clear };
   }, [periodRows, partners]);
+
+  const moneyTotalForColumn = (key: SheetColumnKey): number | null => {
+    switch (key) {
+      case "leadCost":
+        return sheetTotals.leadCost;
+      case "jobCost":
+        return sheetTotals.jobCost;
+      case "bankFee":
+        return sheetTotals.bankFee;
+      case "partsCost":
+        return sheetTotals.partsCost;
+      case "techSalary":
+        return sheetTotals.techSalary;
+      default:
+        return null;
+    }
+  };
 
   const periodTotalsLabel = useMemo(() => {
     const opt = PERIOD_OPTIONS.find((p) => p.id === period);
@@ -1584,53 +1610,9 @@ export function SheetTable({
             + Add row
           </button>
           <div className="sheet-status">{pending ? "Saving…" : status}</div>
-        </div>
-        <div className="sheet-totals">
           <div className="sheet-total-card sheet-total-period">
             <span className="sheet-total-label">Period</span>
             <strong className="sheet-total-value sheet-total-period-value">{periodTotalsLabel}</strong>
-          </div>
-          {sheetTotals.grossEntries.length === 0 ? (
-            <div className="sheet-total-card">
-              <span className="sheet-total-label">Gross</span>
-              <strong className="sheet-total-value">{formatMoney(0)}</strong>
-            </div>
-          ) : (
-            sheetTotals.grossEntries.map(([label, amount]) => (
-              <div className="sheet-total-card" key={`gross-${label}`}>
-                <span className="sheet-total-label">Gross · {label}</span>
-                <strong className="sheet-total-value">{formatMoney(amount)}</strong>
-              </div>
-            ))
-          )}
-          <div className="sheet-total-card">
-            <span className="sheet-total-label">
-              {sheetTotals.techEntries.length === 1
-                ? `Tech · ${sheetTotals.techEntries[0][0]}`
-                : "Tech salary"}
-            </span>
-            <strong className="sheet-total-value">
-              {sheetTotals.techEntries.length === 1
-                ? formatMoney(sheetTotals.techEntries[0][1])
-                : sheetTotals.techEntries.length === 0
-                  ? formatMoney(0)
-                  : formatMoney(sheetTotals.techTotal)}
-            </strong>
-            {sheetTotals.techEntries.length > 1 ? (
-              <span className="sheet-total-sub">
-                {sheetTotals.techEntries
-                  .map(([name, amount]) => `${name} ${formatMoney(amount)}`)
-                  .join(" · ")}
-              </span>
-            ) : null}
-          </div>
-          <div className="sheet-total-card">
-            <span className="sheet-total-label">Clear</span>
-            <strong className="sheet-total-value">{formatMoney(sheetTotals.clear)}</strong>
-          </div>
-          <div className="sheet-total-card">
-            <span className="sheet-total-label">Parts</span>
-            <strong className="sheet-total-value">{formatMoney(sheetTotals.parts)}</strong>
           </div>
         </div>
         <label className="sheet-sort">
@@ -1709,6 +1691,33 @@ export function SheetTable({
                 />
               </th>
             </tr>
+            <tr className="sheet-totals-row">
+              <th className="sheet-corner sheet-totals-corner" title={`Totals · ${periodTotalsLabel}`}>
+                Σ
+              </th>
+              {COLUMNS.map((col) => {
+                const amount = moneyTotalForColumn(col.key);
+                if (amount === null) {
+                  return <th key={`tot-${col.key}`} className="sheet-totals-empty" />;
+                }
+                return (
+                  <th key={`tot-${col.key}`} className="sheet-totals-cell">
+                    {formatMoney(amount)}
+                  </th>
+                );
+              })}
+              <th
+                className={
+                  sheetTotals.clear < 0
+                    ? "sheet-totals-cell sheet-profit is-neg"
+                    : sheetTotals.clear > 0
+                      ? "sheet-totals-cell sheet-profit is-pos"
+                      : "sheet-totals-cell sheet-profit"
+                }
+              >
+                {formatMoney(sheetTotals.clear)}
+              </th>
+            </tr>
           </thead>
           <tbody>
             {displayRows.map((row, rowIndex) => {
@@ -1722,6 +1731,10 @@ export function SheetTable({
               const cardPay =
                 isOwnWork(row.workSource) && isCardPayment(row.paymentType);
               const sourcePicked = Boolean(normalizeWorkSource(row.workSource));
+              const profitText = clearProfitFor(row, partners);
+              const profitN = money(profitText);
+              const profitTone =
+                profitN < 0 ? "is-neg" : profitN > 0 ? "is-pos" : "";
 
               return (
                 <tr
@@ -2060,14 +2073,18 @@ export function SheetTable({
                     );
                   })}
                   <td
-                    className={
-                      sourcePicked ? "sheet-profit" : "sheet-profit sheet-cell-muted"
-                    }
+                    className={[
+                      "sheet-profit",
+                      !sourcePicked ? "sheet-cell-muted" : "",
+                      profitTone,
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                   >
                     <div className="sheet-money">
                       <input
                         className="sheet-cell"
-                        value={clearProfitFor(row, partners)}
+                        value={profitText}
                         readOnly
                         tabIndex={-1}
                       />
@@ -2114,6 +2131,8 @@ export function SheetTable({
       {scheduleRow ? (
         <ScheduleLeadModal
           leadName={scheduleRow.clientName || scheduleRow.clientAddress || "this job"}
+          initialClientName={scheduleRow.clientName}
+          initialAddress={scheduleRow.clientAddress}
           technicians={scheduleTechnicians}
           jobs={scheduleBusyJobs}
           dayKey={scheduleRow.date || undefined}

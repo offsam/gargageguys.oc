@@ -13,10 +13,18 @@ import {
   type FieldService,
 } from "@/lib/field/services-catalog";
 import { money } from "@/lib/field/job-invoice-types";
-import { applyServicePriceToJobCost } from "@/lib/sheet/money";
+import { applyServicePriceToJobCost, leadCostForSource } from "@/lib/sheet/money";
 import { WORK_SOURCES } from "@/lib/sheet/work-source";
 
-const LEAD_SOURCES = ["Facebook", "Google", "Website", "Referral", "Thumbtack", "Yelp"] as const;
+const LEAD_SOURCES = [
+  "Facebook",
+  "Instagram",
+  "Google",
+  "Website",
+  "Referral",
+  "Thumbtack",
+  "Yelp",
+] as const;
 const PAYMENT_TYPES = ["", "Credit Card", "Venmo", "Zelle", "Cash", "Check"] as const;
 
 function defaultVisitLocal(): string {
@@ -53,6 +61,7 @@ export function FieldAddClientForm({
   const [workSource, setWorkSource] = useState("Garage Guys");
   const [service, setService] = useState("");
   const [jobCost, setJobCost] = useState("");
+  const [leadCost, setLeadCost] = useState("");
   const [extraServices, setExtraServices] = useState<FieldService[]>([]);
   const [customOpen, setCustomOpen] = useState(false);
   const [customError, setCustomError] = useState("");
@@ -166,7 +175,16 @@ export function FieldAddClientForm({
         <>
           <label>
             <span>Lead source</span>
-            <input name="leadSource" list="field-lead-sources" placeholder="Pick or type…" disabled={pending} />
+            <input
+              name="leadSource"
+              list="field-lead-sources"
+              placeholder="Pick or type…"
+              disabled={pending}
+              onChange={(e) => {
+                const auto = leadCostForSource(e.target.value);
+                if (auto !== null) setLeadCost(auto);
+              }}
+            />
             <datalist id="field-lead-sources">
               {LEAD_SOURCES.map((s) => (
                 <option key={s} value={s} />
@@ -175,7 +193,13 @@ export function FieldAddClientForm({
           </label>
           <label>
             <span>Lead cost</span>
-            <input name="leadCost" inputMode="decimal" disabled={pending} />
+            <input
+              name="leadCost"
+              inputMode="decimal"
+              value={leadCost}
+              onChange={(e) => setLeadCost(e.target.value)}
+              disabled={pending}
+            />
           </label>
           <label>
             <span>Issue</span>

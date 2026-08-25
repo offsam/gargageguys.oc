@@ -6,6 +6,7 @@ import {
   bankFeeFor,
   clearProfitFor,
   effectiveTechPay,
+  leadCostForSource,
   partnerTechSalary,
   parseMoney,
 } from "./money.ts";
@@ -24,6 +25,26 @@ describe("parseMoney / partner tech salary", () => {
 
   it("computes bank fee at 3.5%", () => {
     assert.equal(bankFeeFor("1000"), "35.00");
+  });
+});
+
+describe("leadCostForSource", () => {
+  it("sets Thumbtack to 50", () => {
+    assert.equal(leadCostForSource("Thumbtack"), "50.00");
+    assert.equal(leadCostForSource("thumbtack"), "50.00");
+  });
+
+  it("sets Facebook / Instagram (Meta) to 25", () => {
+    assert.equal(leadCostForSource("Facebook"), "25.00");
+    assert.equal(leadCostForSource("Instagram"), "25.00");
+    assert.equal(leadCostForSource("Meta Instagram"), "25.00");
+    assert.equal(leadCostForSource("Meta Facebook"), "25.00");
+  });
+
+  it("leaves other sources unset", () => {
+    assert.equal(leadCostForSource("Google"), null);
+    assert.equal(leadCostForSource("Website"), null);
+    assert.equal(leadCostForSource(""), null);
   });
 });
 

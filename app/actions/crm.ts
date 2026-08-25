@@ -240,13 +240,22 @@ export async function scheduleCrmLeadAction(formData: FormData) {
     lead.metadata && typeof lead.metadata === "object"
       ? (lead.metadata as Record<string, unknown>)
       : {};
+  const formAddress = String(formData.get("clientAddress") || "").trim();
+  const formName = String(formData.get("clientName") || "").trim();
+  const formZip = String(formData.get("zip") || "").trim();
   const address =
+    formAddress ||
     (typeof (lead as { address?: string | null }).address === "string"
       ? (lead as { address?: string | null }).address
       : "") ||
     String(prev.clientAddress || prev.address || "").trim();
-  const zip = lead.zip || String(prev.zip || "").trim() || null;
-  const title = `${lead.name || "Job"}${zip ? ` — ${zip}` : ""}`.trim();
+  if (!address) {
+    return { ok: false as const, error: "Address is required to schedule" };
+  }
+  const zip = formZip || lead.zip || String(prev.zip || "").trim() || null;
+  const clientName =
+    formName || lead.name || String(prev.clientName || "").trim() || "Client";
+  const title = `${clientName}${zip ? ` — ${zip}` : ""}`.trim();
   const localDate = dayKeyInBusinessTz(start);
   const localTime = timeHmInBusinessTz(start);
   const startHour = Number(localTime.slice(0, 2));
@@ -256,6 +265,9 @@ export async function scheduleCrmLeadAction(formData: FormData) {
   const { error: leadErr } = await admin
     .from("leads")
     .update({
+      name: clientName,
+      address,
+      zip,
       stage: "scheduled",
       assigned_to: technicianId,
       scheduled_at: start.toISOString(),
@@ -264,6 +276,9 @@ export async function scheduleCrmLeadAction(formData: FormData) {
         ...prev,
         jobStatus: "Scheduled",
         technician: techName,
+        clientName,
+        clientAddress: address,
+        ...(zip ? { zip } : {}),
         sheetDate: localDate,
         sheetTime: localTime,
         sheetTimeWindow: windowLabel,
@@ -271,7 +286,35 @@ export async function scheduleCrmLeadAction(formData: FormData) {
     })
     .eq("id", leadId);
 
-  if (leadErr) return { ok: false as const, error: leadErr.message };
+  if (leadErr) {
+    if (/address/i.test(leadErr.message)) {
+      const { error: retryErr } = await admin
+        .from("leads")
+        .update({
+          name: clientName,
+          zip,
+          stage: "scheduled",
+          assigned_to: technicianId,
+          scheduled_at: start.toISOString(),
+          updated_at: new Date().toISOString(),
+          metadata: {
+            ...prev,
+            jobStatus: "Scheduled",
+            technician: techName,
+            clientName,
+            clientAddress: address,
+            ...(zip ? { zip } : {}),
+            sheetDate: localDate,
+            sheetTime: localTime,
+            sheetTimeWindow: windowLabel,
+          },
+        })
+        .eq("id", leadId);
+      if (retryErr) return { ok: false as const, error: retryErr.message };
+    } else {
+      return { ok: false as const, error: leadErr.message };
+    }
+  }
 
   const { data: existingJobs } = await admin
     .from("jobs")
@@ -321,7 +364,7 @@ export async function scheduleCrmLeadAction(formData: FormData) {
 
   void notifyTechnicianJobAssigned({
     technicianId,
-    clientName: lead.name || String(prev.clientName || "Client"),
+    clientName,
     address,
     zip,
     phone: lead.phone || String(prev.phone || ""),

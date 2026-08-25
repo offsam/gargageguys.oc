@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { toDayKey, startOfToday, type FieldJob } from "@/lib/field/days";
 import {
   SCHEDULE_WINDOWS,
@@ -12,6 +13,15 @@ import {
 
 export type CrmTechnician = { id: string; name: string };
 
+export type ScheduleSubmitInput = {
+  technicianId: string;
+  startAt: string;
+  endAt: string;
+  clientName: string;
+  clientAddress: string;
+  zip?: string;
+};
+
 function formatWindowClock(window: ScheduleWindow) {
   const pad = (h: number) => `${h > 12 ? h - 12 : h || 12}${h >= 12 ? "pm" : "am"}`;
   return `${pad(window.startHour)} – ${pad(window.endHour)}`;
@@ -19,6 +29,8 @@ function formatWindowClock(window: ScheduleWindow) {
 
 export function ScheduleLeadModal({
   leadName,
+  initialClientName,
+  initialAddress,
   technicians,
   jobs = [],
   dayKey,
@@ -29,6 +41,8 @@ export function ScheduleLeadModal({
   onSubmit,
 }: {
   leadName: string;
+  initialClientName?: string;
+  initialAddress?: string;
   technicians: CrmTechnician[];
   jobs?: FieldJob[];
   dayKey?: string;
@@ -36,7 +50,7 @@ export function ScheduleLeadModal({
   pending?: boolean;
   error?: string;
   onClose: () => void;
-  onSubmit: (input: { technicianId: string; startAt: string; endAt: string }) => void;
+  onSubmit: (input: ScheduleSubmitInput) => void;
 }) {
   const todayKey = toDayKey(startOfToday());
   const defaultTech =
@@ -48,6 +62,11 @@ export function ScheduleLeadModal({
   const defaultDay =
     dayKey && /^\d{4}-\d{2}-\d{2}$/.test(dayKey) ? dayKey : todayKey;
 
+  const [clientName, setClientName] = useState(
+    () => (initialClientName || leadName || "").trim(),
+  );
+  const [clientAddress, setClientAddress] = useState(() => (initialAddress || "").trim());
+  const [zip, setZip] = useState("");
   const [technicianId, setTechnicianId] = useState(defaultTech);
   const [day, setDay] = useState(defaultDay);
   const [selectedWindowId, setSelectedWindowId] = useState(() => {
@@ -71,6 +90,7 @@ export function ScheduleLeadModal({
   const selectedTechName =
     technicians.find((t) => t.id === technicianId)?.name || "";
 
+  const addressReady = Boolean(clientAddress.trim());
   const summary =
     selectedTechName && selectedWindow
       ? `${day} · ${selectedWindow.label} · ${selectedTechName}`
@@ -101,12 +121,17 @@ export function ScheduleLeadModal({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!technicianId || !selectedWindow) return;
+    const address = clientAddress.trim();
+    if (!address) return;
     const range = windowRange(day, selectedWindow);
     if (!range) return;
     onSubmit({
       technicianId,
       startAt: range.startLocal,
       endAt: range.endLocal,
+      clientName: clientName.trim() || leadName.trim() || "Client",
+      clientAddress: address,
+      zip: zip.trim() || undefined,
     });
   }
 
@@ -121,16 +146,42 @@ export function ScheduleLeadModal({
           </button>
         </div>
         <p className="crm-modal__hint">
-          Assign <strong>{leadName || "this lead"}</strong> with date, technician, and a free
-          arrival window. Busy slots come from the tech&apos;s Field schedule and Sheet bookings.
+          Fill client name and address, then pick date, technician, and a free arrival window.
+          Address is required for the schedule.
         </p>
         <form className="crm-add-form" onSubmit={submit}>
+          <label className="crm-span-2">
+            Client name
+            <input
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              placeholder="Client name"
+              disabled={pending}
+              required
+            />
+          </label>
+          <label className="crm-span-2">
+            Address
+            <AddressAutocomplete
+              value={clientAddress}
+              onChange={setClientAddress}
+              onSelect={(item) => {
+                setClientAddress(item.label);
+                if (item.zip) setZip(item.zip);
+              }}
+              placeholder="Start typing address…"
+              disabled={pending}
+              required
+            />
+          </label>
+
           <label className="crm-span-2">
             Technician
             <select
               value={technicianId}
               onChange={(e) => pickTech(e.target.value)}
               required
+              disabled={pending}
             >
               <option value="">Pick technician</option>
               {technicians.map((t) => (
@@ -147,6 +198,7 @@ export function ScheduleLeadModal({
               value={day}
               onChange={(e) => pickDay(e.target.value)}
               required
+              disabled={pending}
             />
           </label>
 
@@ -187,6 +239,9 @@ export function ScheduleLeadModal({
             </p>
           ) : null}
 
+          {!addressReady ? (
+            <p className="crm-form-error crm-span-2">Enter an address before scheduling.</p>
+          ) : null}
           {technicianId && !selectedWindow ? (
             <p className="crm-form-error crm-span-2">
               No free windows left this day for that tech — pick another date.
@@ -194,13 +249,13 @@ export function ScheduleLeadModal({
           ) : null}
           {error ? <p className="crm-form-error crm-span-2">{error}</p> : null}
           <div className="crm-form-actions crm-span-2">
-            <button type="button" className="crm-btn-secondary" onClick={onClose}>
+            <button type="button" className="crm-btn-secondary" onClick={onClose} disabled={pending}>
               Cancel
             </button>
             <button
               type="submit"
               className="crm-btn-primary"
-              disabled={pending || !technicianId || !selectedWindow}
+              disabled={pending || !technicianId || !selectedWindow || !addressReady}
             >
               {pending ? "Saving…" : "Schedule"}
             </button>
