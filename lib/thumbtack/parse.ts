@@ -1,3 +1,6 @@
+/** Sheet / CRM lead cost we always apply. Thumbtack's own bill is stored separately. */
+export const THUMBTACK_SHEET_LEAD_COST = "50.00";
+
 export type JsonObject = Record<string, unknown>;
 
 export type ThumbtackLeadEvent = {

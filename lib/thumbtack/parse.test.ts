@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { classifyThumbtackWebhook } from "./parse";
+import { classifyThumbtackWebhook, THUMBTACK_SHEET_LEAD_COST } from "./parse";
 import { isThumbtackWebhookAuthorized } from "./auth";
 
 describe("classifyThumbtackWebhook", () => {
@@ -109,6 +109,10 @@ describe("classifyThumbtackWebhook", () => {
   it("returns unknown for empty objects", () => {
     assert.equal(classifyThumbtackWebhook({}).kind, "unknown");
     assert.equal(classifyThumbtackWebhook(null).kind, "unknown");
+  });
+
+  it("keeps Garage Guys Thumbtack sheet cost at $50", () => {
+    assert.equal(THUMBTACK_SHEET_LEAD_COST, "50.00");
   });
 });
 

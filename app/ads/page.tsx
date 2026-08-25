@@ -1,14 +1,19 @@
 import { BosShell } from "@/components/bos/BosShell";
 import { AdsBoard } from "@/components/bos/AdsBoard";
+import { ThumbtackLeadsBoard } from "@/components/bos/ThumbtackLeadsBoard";
 import { requireRouteAccess } from "@/lib/auth/require";
 import { listAdsSnapshots } from "@/lib/ads/snapshots";
 import type { MetaCampaignMetrics } from "@/lib/ads/meta";
 import { getGoogleAdsConfig, type GoogleAdsCampaignMetrics } from "@/lib/ads/google";
+import { listThumbtackLeadsForAds } from "@/lib/leads/thumbtack-ingest";
 
 export default async function AdsPage() {
   const user = await requireRouteAccess("/ads");
 
-  const adsSnapshots = await listAdsSnapshots(12).catch(() => []);
+  const [adsSnapshots, thumbtackLeads] = await Promise.all([
+    listAdsSnapshots(12).catch(() => []),
+    listThumbtackLeadsForAds(40).catch(() => []),
+  ]);
   const metaAds = (adsSnapshots || []).find((r) => r.platform === "meta");
   const googleAds = (adsSnapshots || []).find((r) => r.platform === "google_ads");
   const campaigns = ((metaAds?.metrics as { campaigns?: MetaCampaignMetrics[] } | null)?.campaigns ||
@@ -42,8 +47,9 @@ export default async function AdsPage() {
       user={user}
       active="/ads"
       title="Ads"
-      subtitle="Meta + Google spend, CPL, and leads into CRM Waiting"
+      subtitle="Thumbtack inbound leads · Meta + Google spend, CPL, CRM Waiting"
     >
+      <ThumbtackLeadsBoard leads={thumbtackLeads} />
       {!metaAds ? (
         <div className="bos-card">
           <p style={{ marginTop: 0 }}>

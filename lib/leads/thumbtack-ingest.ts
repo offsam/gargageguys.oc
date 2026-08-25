@@ -3,11 +3,12 @@ import { ingestLead } from "@/lib/leads/ingest";
 import { escapeHtml, sendTelegram } from "@/lib/notify/channels";
 import { createInboxForNewReviews, upsertReviews } from "@/lib/reviews/store";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import type {
-  ThumbtackLeadEvent,
-  ThumbtackLeadUpdateEvent,
-  ThumbtackMessageEvent,
-  ThumbtackReviewEvent,
+import {
+  THUMBTACK_SHEET_LEAD_COST,
+  type ThumbtackLeadEvent,
+  type ThumbtackLeadUpdateEvent,
+  type ThumbtackMessageEvent,
+  type ThumbtackReviewEvent,
 } from "@/lib/thumbtack/parse";
 
 function siteBase() {
@@ -24,6 +25,7 @@ function revalidateLeadPaths() {
   revalidatePath("/sheet");
   revalidatePath("/owner");
   revalidatePath("/reviews");
+  revalidatePath("/ads");
 }
 
 export async function findLeadIdByThumbtackLead(thumbtackLeadId: string): Promise<string | null> {
@@ -49,7 +51,8 @@ async function notifyNewThumbtackLead(input: ThumbtackLeadEvent) {
   if (input.address) lines.push(`<b>Address:</b> ${escapeHtml(input.address)}`);
   if (input.category) lines.push(`<b>Job:</b> ${escapeHtml(input.category)}`);
   if (input.message) lines.push(`<b>Details:</b> ${escapeHtml(input.message.slice(0, 800))}`);
-  if (input.leadPrice) lines.push(`<b>TT price:</b> ${escapeHtml(input.leadPrice)}`);
+  lines.push(`<b>Lead cost (Sheet):</b> $${THUMBTACK_SHEET_LEAD_COST}`);
+  if (input.leadPrice) lines.push(`<b>Thumbtack billed:</b> ${escapeHtml(input.leadPrice)}`);
   lines.push("", `<a href="${siteBase()}/crm">Open CRM Waiting</a>`);
   await sendTelegram(lines.join("\n"));
 }
@@ -80,7 +83,7 @@ export async function ingestThumbtackLeadToCrm(input: ThumbtackLeadEvent): Promi
       thumbtackLeadType: input.leadType || null,
       thumbtackLeadPrice: input.leadPrice || "",
       leadSource: "Thumbtack",
-      leadCost: "50.00",
+      leadCost: THUMBTACK_SHEET_LEAD_COST,
     },
   });
 
@@ -182,4 +185,56 @@ export async function applyThumbtackLeadUpdate(input: ThumbtackLeadUpdateEvent):
     .eq("id", leadId);
   revalidateLeadPaths();
   return { leadId, skipped: false };
+}
+
+export type ThumbtackAdsLead = {
+  id: string;
+  name: string;
+  phone: string;
+  zip: string;
+  address: string;
+  job: string;
+  stage: string;
+  createdAt: string;
+  leadCost: string;
+  thumbtackLeadPrice: string;
+  thumbtackLeadId: string;
+};
+
+function metaString(meta: Record<string, unknown>, key: string): string {
+  const v = meta[key];
+  if (typeof v === "string" && v.trim()) return v.trim();
+  if (typeof v === "number" && Number.isFinite(v)) return String(v);
+  return "";
+}
+
+export async function listThumbtackLeadsForAds(limit = 40): Promise<ThumbtackAdsLead[]> {
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("leads")
+    .select("id, name, phone, zip, address, message, deal_title, stage, created_at, metadata")
+    .eq("source", "Thumbtack")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+
+  return (data || []).map((row) => {
+    const meta =
+      row.metadata && typeof row.metadata === "object"
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+    return {
+      id: row.id,
+      name: row.name || "Thumbtack lead",
+      phone: row.phone || "",
+      zip: row.zip || "",
+      address: row.address || metaString(meta, "clientAddress"),
+      job: (row.deal_title || row.message || "").slice(0, 80),
+      stage: row.stage || "",
+      createdAt: row.created_at,
+      leadCost: metaString(meta, "leadCost") || THUMBTACK_SHEET_LEAD_COST,
+      thumbtackLeadPrice: metaString(meta, "thumbtackLeadPrice"),
+      thumbtackLeadId: metaString(meta, "thumbtackLeadId"),
+    };
+  });
 }
