@@ -117,7 +117,7 @@ export async function ingestMetaLeadToCrm(input: MetaIngestFields): Promise<{
       metaCampaignName: input.campaignName || null,
       metaAdName: input.adName || null,
       metaCreatedTime: input.createdTime || null,
-      leadSource: "Meta Ads",
+      leadSource: "Facebook",
       ...(input.fields ? { metaFields: input.fields } : {}),
     },
   });

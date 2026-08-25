@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { updateInboxStatusAction } from "@/app/actions/crm";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
+import { canonicalLeadSource, sheetLeadCostFor } from "@/lib/leads/source";
 import { sheetIssueFromLead, sheetServiceFromLead } from "@/lib/sheet/issue-service";
 import { loadStockState } from "@/lib/stock/store";
 import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
@@ -77,6 +78,13 @@ export default async function CrmPage() {
       pick(meta, "clientAddress", "address") ||
       "";
     const workSource = pick(meta, "workSource", "work_source", "owner") || "Garage Guys";
+    const source =
+      workSource === "Partner"
+        ? pick(meta, "leadSource", "lead_source")
+        : canonicalLeadSource(lead.source || pick(meta, "leadSource", "lead_source"), {
+            campaignName: pick(meta, "metaCampaignName", "googleCampaignName"),
+            adName: pick(meta, "metaAdName"),
+          });
     return {
       id: lead.id,
       name: lead.name || pick(meta, "clientName", "client_name") || "Unknown",
@@ -85,11 +93,8 @@ export default async function CrmPage() {
       address,
       workSource,
       partnerName: pick(meta, "partnerName", "partner_name", "partner"),
-      source:
-        workSource === "Partner"
-          ? pick(meta, "leadSource", "lead_source")
-          : lead.source || pick(meta, "leadSource", "lead_source") || "",
-      leadCost: pick(meta, "leadCost", "lead_cost"),
+      source,
+      leadCost: sheetLeadCostFor(source, pick(meta, "leadCost", "lead_cost")),
       date: pick(meta, "sheetDate", "date") || new Date(lead.created_at).toISOString().slice(0, 10),
       jobType: sheetIssueFromLead({
         metadata: meta,

@@ -9,6 +9,7 @@ import { listPartnersAction } from "@/app/actions/partners";
 import { loadServices } from "@/lib/field/service-store";
 import { FIELD_SERVICES } from "@/lib/field/services-catalog";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
+import { canonicalLeadSource, sheetLeadCostFor } from "@/lib/leads/source";
 import { sheetIssueFromLead, sheetServiceFromLead } from "@/lib/sheet/issue-service";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
 import type { FieldJob } from "@/lib/field/days";
@@ -139,6 +140,13 @@ export default async function SheetPage() {
 
     const workSource =
       pick(meta, "workSource", "work_source", "owner") || "Garage Guys";
+    const leadSource =
+      workSource === "Partner"
+        ? pick(meta, "leadSource", "lead_source")
+        : canonicalLeadSource(lead.source || pick(meta, "leadSource", "lead_source"), {
+            campaignName: pick(meta, "metaCampaignName", "googleCampaignName"),
+            adName: pick(meta, "metaAdName"),
+          });
 
     return {
       id: lead.id,
@@ -156,11 +164,8 @@ export default async function SheetPage() {
         })(),
       workSource,
       partnerName: pick(meta, "partnerName", "partner_name", "partner"),
-      leadSource:
-        workSource === "Partner"
-          ? pick(meta, "leadSource", "lead_source")
-          : lead.source || pick(meta, "leadSource", "lead_source") || "",
-      leadCost: pick(meta, "leadCost", "lead_cost"),
+      leadSource,
+      leadCost: sheetLeadCostFor(leadSource, pick(meta, "leadCost", "lead_cost")),
       date: pick(meta, "sheetDate", "date") || new Date(lead.created_at).toISOString().slice(0, 10),
       time:
         normalizeSheetTime(pick(meta, "sheetTime", "time")) ||

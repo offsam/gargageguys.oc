@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { LeadStage } from "@/lib/supabase/types";
 import { stageFromSheetStatus, type SheetStatus } from "@/lib/leads/stage-sync";
+import { canonicalLeadSource, sheetLeadCostFor } from "@/lib/leads/source";
 import { ensureLeadWorkOrder } from "@/lib/field/job-invoice";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
 
@@ -23,23 +24,6 @@ export type IngestLeadInput = {
   timeWindow?: string;
   metadata?: Record<string, unknown>;
 };
-
-function mapWebsiteSource(source?: string): string {
-  const raw = String(source || "").trim();
-  if (!raw) return "Website";
-  const lower = raw.toLowerCase();
-  if (lower.includes("thumbtack")) return "Thumbtack";
-  if (lower.includes("yelp")) return "Yelp";
-  if (lower.includes("facebook") || lower.includes("fb") || lower.includes("meta")) {
-    return "Facebook";
-  }
-  if (lower.includes("google")) return "Google";
-  if (lower.includes("referral")) return "Referral";
-  if (lower.includes("garageguys") || lower.includes("website") || lower.includes("pullgarage")) {
-    return "Website";
-  }
-  return raw.slice(0, 80);
-}
 
 function todayISO(): string {
   const d = new Date();
@@ -81,7 +65,11 @@ export async function ingestLead(input: IngestLeadInput) {
     customerId = created.id;
   }
 
-  const leadSource = mapWebsiteSource(input.source);
+  const extra = input.metadata || {};
+  const leadSource = canonicalLeadSource(input.source, {
+    campaignName: String(extra.metaCampaignName || extra.googleCampaignName || extra.campaignName || ""),
+    adName: String(extra.metaAdName || extra.adName || ""),
+  });
   const jobType =
     input.dealTitle ||
     input.leadType ||
@@ -95,17 +83,12 @@ export async function ingestLead(input: IngestLeadInput) {
     input.stage || stageFromSheetStatus(jobStatus) || ("new" as LeadStage);
 
   const sheetDate = input.preferredDate || todayISO();
-  const metadata = {
-    workSource: "Garage Guys",
-    partnerName: "",
+  const leadCost = sheetLeadCostFor(
     leadSource,
-    leadCost: "",
-    sheetDate,
-    clientName: name,
-    clientAddress: address || (zip ? `ZIP ${zip}` : ""),
-    jobStatus,
-    jobType,
-    issue: jobType,
+    String(extra.leadCost || extra.lead_cost || ""),
+  );
+  const metadata = {
+    partnerName: "",
     service: "",
     parts: "",
     paymentType: "",
@@ -116,13 +99,22 @@ export async function ingestLead(input: IngestLeadInput) {
     technician: "",
     techSalary: "",
     description: "",
-    phone,
-    zip,
     preferredDate: input.preferredDate || "",
     timeWindow: input.timeWindow || "",
     websiteLeadType: input.leadType || "",
     ...(input.dealId ? { dealId: input.dealId } : {}),
-    ...(input.metadata || {}),
+    ...extra,
+    workSource: String(extra.workSource || "Garage Guys"),
+    leadSource,
+    leadCost,
+    clientName: name,
+    clientAddress: address || String(extra.clientAddress || "") || (zip ? `ZIP ${zip}` : ""),
+    jobStatus,
+    jobType,
+    issue: String(extra.issue || jobType),
+    phone,
+    zip,
+    sheetDate: String(extra.sheetDate || sheetDate),
   };
 
   const { data: lead, error: leadError } = await supabase
