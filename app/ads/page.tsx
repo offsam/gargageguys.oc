@@ -1,8 +1,10 @@
 import { BosShell } from "@/components/bos/BosShell";
 import { AdsBoard } from "@/components/bos/AdsBoard";
+import { AdsReportPanel } from "@/components/bos/AdsReport";
 import { ThumbtackLeadsBoard } from "@/components/bos/ThumbtackLeadsBoard";
 import { requireRouteAccess } from "@/lib/auth/require";
 import { listAdsSnapshots } from "@/lib/ads/snapshots";
+import { loadAdsReport, periodFromSnapshots } from "@/lib/ads/report";
 import type { MetaCampaignMetrics } from "@/lib/ads/meta";
 import { getGoogleAdsConfig, type GoogleAdsCampaignMetrics } from "@/lib/ads/google";
 import { listThumbtackLeadsForAds } from "@/lib/leads/thumbtack-ingest";
@@ -10,12 +12,20 @@ import { listThumbtackLeadsForAds } from "@/lib/leads/thumbtack-ingest";
 export default async function AdsPage() {
   const user = await requireRouteAccess("/ads");
 
-  const [adsSnapshots, thumbtackLeads] = await Promise.all([
-    listAdsSnapshots(12).catch(() => []),
-    listThumbtackLeadsForAds(40).catch(() => []),
-  ]);
+  const adsSnapshots = await listAdsSnapshots(12).catch(() => []);
+  const period = periodFromSnapshots(adsSnapshots);
   const metaAds = (adsSnapshots || []).find((r) => r.platform === "meta");
   const googleAds = (adsSnapshots || []).find((r) => r.platform === "google_ads");
+
+  const [adsReport, thumbtackLeads] = await Promise.all([
+    loadAdsReport({
+      periodStart: period.periodStart,
+      periodEnd: period.periodEnd,
+      metaSpend: metaAds?.spend ?? null,
+      googleSpend: googleAds?.spend ?? null,
+    }).catch(() => null),
+    listThumbtackLeadsForAds(40).catch(() => []),
+  ]);
   const campaigns = ((metaAds?.metrics as { campaigns?: MetaCampaignMetrics[] } | null)?.campaigns ||
     []) as MetaCampaignMetrics[];
   const googleCampaigns = ((googleAds?.metrics as { campaigns?: GoogleAdsCampaignMetrics[] } | null)
@@ -47,8 +57,9 @@ export default async function AdsPage() {
       user={user}
       active="/ads"
       title="Ads"
-      subtitle="Thumbtack inbound leads · Meta + Google spend, CPL, CRM Waiting"
+      subtitle="Lead funnel by source · spend · cost per lead and per completed job"
     >
+      {adsReport ? <AdsReportPanel report={adsReport} /> : null}
       <ThumbtackLeadsBoard leads={thumbtackLeads} />
       {!metaAds ? (
         <div className="bos-card">

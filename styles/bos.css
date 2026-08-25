@@ -3475,6 +3475,23 @@ body.sheet-col-resizing * {
   color: var(--bos-muted);
 }
 
+.ads-report-table .ads-report-total td {
+  border-top: 2px solid var(--bos-border);
+  background: #f8fafc;
+}
+
+.ads-report-table th,
+.ads-report-table td {
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .ads-report-table th:nth-child(n + 8),
+  .ads-report-table td:nth-child(n + 8) {
+    font-size: 0.78rem;
+  }
+}
+
 .ads-crm-pill {
   display: inline-block;
   font-size: 0.72rem;
