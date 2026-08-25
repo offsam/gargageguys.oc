@@ -12,6 +12,7 @@ export const SHEET_STATUSES = [
   "Tech confirmed",
   "En route",
   "On site",
+  "Estimate",
   "Completed",
   "Cancelled",
   "No-show",
@@ -29,6 +30,8 @@ const LEGACY_STATUS_MAP: Record<string, SheetStatus> = {
   "Did not answer": "No answer",
   "No Answer": "No answer",
   "No-answer": "No answer",
+  estimate: "Estimate",
+  ESTIMATE: "Estimate",
 };
 
 export const STATUS_TO_STAGE: Record<SheetStatus, LeadStage> = {
@@ -38,6 +41,8 @@ export const STATUS_TO_STAGE: Record<SheetStatus, LeadStage> = {
   "Tech confirmed": "in_progress",
   "En route": "in_progress",
   "On site": "in_progress",
+  // Pending client approval — keep off "completed"; metadata.jobStatus is source of truth.
+  Estimate: "qualified",
   Completed: "completed",
   Cancelled: "cancelled",
   "No-show": "lost",
@@ -110,6 +115,8 @@ export function stageFromSheetStatus(status: string): LeadStage | undefined {
 }
 
 export const COMPLETE_NEEDS_PRICE = "Enter the job cost before moving to Completed";
+export const ESTIMATE_NEEDS_PRICE = "Enter the job cost before moving to Estimate";
+export const ESTIMATE_NEEDS_TECH = "Assign a technician before moving to Estimate";
 
 export function jobPriceAmount(...values: unknown[]): number {
   for (const raw of values) {
@@ -125,10 +132,44 @@ export function hasJobPrice(...values: unknown[]): boolean {
   return jobPriceAmount(...values) > 0;
 }
 
+export type StatusBlockFields = {
+  jobCost?: unknown;
+  technician?: string | null;
+  /** Extra price fallbacks (deal_price, metadata aliases, etc.). */
+  priceFallbacks?: unknown[];
+};
+
+/**
+ * Null if the status transition is allowed.
+ * Estimate requires job cost + technician; Completed requires job cost.
+ */
+export function statusBlockedReason(
+  status: string,
+  fields: StatusBlockFields = {},
+): string | null {
+  const normalized = normalizeSheetStatus(status);
+  if (!normalized) return null;
+
+  const prices = [fields.jobCost, ...(fields.priceFallbacks || [])];
+
+  if (normalized === "Completed") {
+    if (!hasJobPrice(...prices)) return COMPLETE_NEEDS_PRICE;
+    return null;
+  }
+
+  if (normalized === "Estimate") {
+    if (!hasJobPrice(...prices)) return ESTIMATE_NEEDS_PRICE;
+    if (!String(fields.technician || "").trim()) return ESTIMATE_NEEDS_TECH;
+    return null;
+  }
+
+  return null;
+}
+
 /** Null if Completed is allowed (or status is not Completed). */
 export function completeBlockedReason(status: string, ...priceValues: unknown[]): string | null {
-  const normalized = normalizeSheetStatus(status);
-  if (normalized !== "Completed") return null;
-  if (hasJobPrice(...priceValues)) return null;
-  return COMPLETE_NEEDS_PRICE;
+  return statusBlockedReason(status, {
+    jobCost: priceValues[0],
+    priceFallbacks: priceValues.slice(1),
+  });
 }

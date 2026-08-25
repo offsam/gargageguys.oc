@@ -9,7 +9,7 @@ import {
   updateCrmClientAction,
   updateLeadJobStatusAction,
 } from "@/app/actions/crm";
-import { SHEET_STATUSES, completeBlockedReason, type SheetStatus } from "@/lib/leads/stage-sync";
+import { SHEET_STATUSES, statusBlockedReason, type SheetStatus } from "@/lib/leads/stage-sync";
 import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
@@ -216,7 +216,10 @@ export function CrmBoard({
       setScheduleLead(lead);
       return;
     }
-    const blocked = completeBlockedReason(jobStatus, lead.jobCost);
+    const blocked = statusBlockedReason(jobStatus, {
+      jobCost: lead.jobCost,
+      technician: lead.technician,
+    });
     if (blocked) {
       setError(blocked);
       return;
@@ -409,7 +412,10 @@ export function CrmBoard({
   function submitAdd(e: React.FormEvent) {
     e.preventDefault();
     setFormError("");
-    const blocked = completeBlockedReason(form.jobStatus, form.jobCost);
+    const blocked = statusBlockedReason(form.jobStatus, {
+      jobCost: form.jobCost,
+      technician: form.technician,
+    });
     if (blocked) {
       setFormError(blocked);
       return;

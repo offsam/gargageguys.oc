@@ -101,7 +101,8 @@ export default async function OwnerPage() {
     (statusCounts.Scheduled || 0) +
     (statusCounts["Tech confirmed"] || 0) +
     (statusCounts["En route"] || 0) +
-    (statusCounts["On site"] || 0);
+    (statusCounts["On site"] || 0) +
+    (statusCounts.Estimate || 0);
 
   const google = reviewsPayload.aggregates.google;
   const thumbtack = reviewsPayload.aggregates.thumbtack;
@@ -315,6 +316,10 @@ export default async function OwnerPage() {
             <li>
               <span>On site</span>
               <strong>{statusCounts["On site"] || 0}</strong>
+            </li>
+            <li>
+              <span>Estimate</span>
+              <strong>{statusCounts.Estimate || 0}</strong>
             </li>
             <li>
               <span>Completed</span>

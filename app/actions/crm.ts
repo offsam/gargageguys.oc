@@ -10,7 +10,7 @@ import {
   sheetStatusFromLead,
   STATUS_TO_JOB_STATUS,
   STAGE_TO_STATUS,
-  completeBlockedReason,
+  statusBlockedReason,
   type SheetStatus,
 } from "@/lib/leads/stage-sync";
 import { dayKeyInBusinessTz, parseLocalDateTime, timeHmInBusinessTz } from "@/lib/datetime";
@@ -175,12 +175,11 @@ export async function updateLeadJobStatusAction(formData: FormData) {
       ? (existing.metadata as Record<string, unknown>)
       : {};
 
-  const blocked = completeBlockedReason(
-    jobStatus,
-    prev.jobCost,
-    prev.job_cost,
-    existing.deal_price,
-  );
+  const blocked = statusBlockedReason(jobStatus, {
+    jobCost: prev.jobCost ?? prev.job_cost ?? existing.deal_price,
+    priceFallbacks: [prev.jobCost, prev.job_cost, existing.deal_price],
+    technician: String(prev.technician || prev.tech_name || ""),
+  });
   if (blocked) return { ok: false as const, error: blocked };
 
   const stage = stageFromSheetStatus(jobStatus) as LeadStage;

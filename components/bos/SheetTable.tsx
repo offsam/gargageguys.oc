@@ -11,7 +11,7 @@ import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/Schedule
 import { scheduleCrmLeadAction } from "@/app/actions/crm";
 import type { FieldJob } from "@/lib/field/days";
 import { useBosLiveRefresh } from "@/lib/realtime/useBosLiveRefresh";
-import { SHEET_STATUSES, completeBlockedReason } from "@/lib/leads/stage-sync";
+import { SHEET_STATUSES, statusBlockedReason } from "@/lib/leads/stage-sync";
 import { FIELD_SERVICES, findFieldServiceByName, isCustomServiceChoice } from "@/lib/field/services-catalog";
 import { CustomServiceModal } from "@/components/bos/CustomServiceModal";
 import {
@@ -365,6 +365,8 @@ function statusClass(status: string): string {
       return "sheet-status-active";
     case "Scheduled":
       return "sheet-status-sched";
+    case "Estimate":
+      return "sheet-status-estimate";
     case "Waiting":
       return "sheet-status-wait";
     case "No answer":
@@ -1869,7 +1871,10 @@ export function SheetTable({
                                   requestSchedule(row);
                                   return;
                                 }
-                                const blocked = completeBlockedReason(nextStatus, row.jobCost);
+                                const blocked = statusBlockedReason(nextStatus, {
+                                  jobCost: row.jobCost,
+                                  technician: row.technician,
+                                });
                                 if (blocked) {
                                   setStatus(blocked);
                                   e.target.value = row.jobStatus;

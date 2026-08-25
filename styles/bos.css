@@ -2076,6 +2076,9 @@ body.sheet-col-resizing * {
 .sheet-status-sched {
   background: #f5f3ff !important;
 }
+.sheet-status-estimate {
+  background: #fff7ed !important;
+}
 .sheet-status-wait {
   background: #fffbeb !important;
 }

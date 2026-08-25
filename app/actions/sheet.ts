@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { stageFromSheetStatus, completeBlockedReason, normalizeSheetStatus, sheetStatusFromLead } from "@/lib/leads/stage-sync";
+import { stageFromSheetStatus, statusBlockedReason, normalizeSheetStatus, sheetStatusFromLead } from "@/lib/leads/stage-sync";
 import { isOwnWork, isPartnerWork } from "@/lib/sheet/work-source";
 import { listPartnersAction } from "@/app/actions/partners";
 import { parseSheetStockPulls, syncSheetPartStock } from "@/lib/stock/ops";
@@ -287,7 +287,10 @@ export async function saveSheetRowAction(
     return { ok: true, id: input.id };
   }
 
-  const blocked = completeBlockedReason(input.jobStatus, input.jobCost);
+  const blocked = statusBlockedReason(input.jobStatus, {
+    jobCost: input.jobCost,
+    technician: input.technician,
+  });
   if (blocked) return { ok: false, error: blocked };
 
   const requestedStatus = normalizeSheetStatus(input.jobStatus);
