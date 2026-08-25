@@ -33,6 +33,7 @@ mustExist("app/ads/page.tsx");
 mustExist("app/reviews/page.tsx");
 mustExist("app/api/callback/route.ts");
 mustExist("app/api/ads/google-leads/route.ts");
+mustExist("app/api/webhooks/thumbtack/route.ts");
 mustExist("lib/security/cron-auth.ts");
 mustExist("lib/auth/require.ts");
 mustExist("supabase/migrations/202608150001_role_aware_rls.sql");
@@ -58,6 +59,12 @@ ok(
   googleLeads.includes("GOOGLE_ADS_LEAD_WEBHOOK_KEY is not configured") ||
     googleLeads.includes("!cfg.webhookKey"),
   "google leads webhook must fail-closed without key",
+);
+
+const thumbtackWebhook = readFileSync(join(root, "app/api/webhooks/thumbtack/route.ts"), "utf8");
+ok(
+  thumbtackWebhook.includes("THUMBTACK_WEBHOOK_SECRET is not configured"),
+  "thumbtack webhook must fail-closed without secret",
 );
 
 mustExist("public/llms.txt");
