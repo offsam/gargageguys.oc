@@ -3,7 +3,7 @@ import { AdsBoard } from "@/components/bos/AdsBoard";
 import { AdsReportPanel } from "@/components/bos/AdsReport";
 import { AdsCampaignReportPanel } from "@/components/bos/AdsCampaignReport";
 import { AdsPeriodBar } from "@/components/bos/AdsPeriodBar";
-import { ThumbtackLeadsBoard } from "@/components/bos/ThumbtackLeadsBoard";
+import { AdsLeadsFeed } from "@/components/bos/AdsLeadsFeed";
 import { requireRouteAccess } from "@/lib/auth/require";
 import { listAdsSnapshots } from "@/lib/ads/snapshots";
 import { loadAdsReport, periodFromSnapshots } from "@/lib/ads/report";
@@ -11,7 +11,7 @@ import { loadAdsCampaignReport } from "@/lib/ads/campaign-report";
 import { resolveAdsReportPeriod } from "@/lib/ads/period";
 import type { MetaCampaignMetrics } from "@/lib/ads/meta";
 import { getGoogleAdsConfig, type GoogleAdsCampaignMetrics } from "@/lib/ads/google";
-import { listThumbtackLeadsForAds } from "@/lib/leads/thumbtack-ingest";
+import { listAdsLeadFeed } from "@/lib/leads/ads-feed";
 
 export default async function AdsPage({
   searchParams,
@@ -40,7 +40,7 @@ export default async function AdsPage({
     reportPeriod.periodStart !== syncPeriod.periodStart ||
     reportPeriod.periodEnd !== syncPeriod.periodEnd;
 
-  const [adsReport, campaignReport, thumbtackLeads] = await Promise.all([
+  const [adsReport, campaignReport, feedLeads] = await Promise.all([
     loadAdsReport({
       periodStart: reportPeriod.periodStart,
       periodEnd: reportPeriod.periodEnd,
@@ -57,7 +57,11 @@ export default async function AdsPage({
       periodEnd: reportPeriod.periodEnd,
       metaSnapshot: metaAds ?? null,
     }).catch(() => []),
-    listThumbtackLeadsForAds(40).catch(() => []),
+    listAdsLeadFeed({
+      periodStart: reportPeriod.periodStart,
+      periodEnd: reportPeriod.periodEnd,
+      limit: 80,
+    }).catch(() => []),
   ]);
   const campaigns = ((metaAds?.metrics as { campaigns?: MetaCampaignMetrics[] } | null)?.campaigns ||
     []) as MetaCampaignMetrics[];
@@ -100,8 +104,12 @@ export default async function AdsPage({
       {adsReport ? (
         <AdsReportPanel report={adsReport} estimateSpend={estimateMetaSpend} />
       ) : null}
+      <AdsLeadsFeed
+        leads={feedLeads}
+        periodStart={reportPeriod.periodStart}
+        periodEnd={reportPeriod.periodEnd}
+      />
       {campaignReport.length ? <AdsCampaignReportPanel rows={campaignReport} /> : null}
-      <ThumbtackLeadsBoard leads={thumbtackLeads} />
       {!metaAds ? (
         <div className="bos-card">
           <p style={{ marginTop: 0 }}>

@@ -3683,6 +3683,60 @@ body.sheet-col-resizing * {
   color: #c2410c;
 }
 
+.ads-source-pill {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  letter-spacing: 0.01em;
+}
+
+.ads-source-pill.is-thumbtack {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.ads-source-pill.is-facebook {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.ads-source-pill.is-instagram {
+  background: #fdf2f8;
+  color: #be185d;
+}
+
+.ads-source-pill.is-google {
+  background: #fefce8;
+  color: #a16207;
+}
+
+.ads-source-pill.is-website {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.ads-source-pill.is-yelp {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.ads-source-pill.is-referral {
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.ads-source-pill.is-other {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.ads-feed-table th:nth-child(2),
+.ads-feed-table td:nth-child(2) {
+  min-width: 8.5rem;
+}
+
 @media (max-width: 900px) {
   .ads-campaign-head {
     grid-template-columns: 1rem 1fr;
