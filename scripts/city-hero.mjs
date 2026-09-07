@@ -95,10 +95,10 @@ export function statsBarBlock() {
     </div>
     <div class="stat-item stat-item--reviews">
       <div class="stat-review-split">
-        <a class="stat-review-side" target="_blank" rel="noopener noreferrer" href="https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690" aria-label="74 Thumbtack reviews">
+        <a class="stat-review-side" target="_blank" rel="noopener noreferrer" href="https://www.thumbtack.com/ca/tustin/garage-door-repair/garage-guys/service/533172338874097690" aria-label="79 Thumbtack reviews">
           <span class="stat-review-score">5.0</span>
           <span class="stat-review-stars">★★★★★</span>
-          <span class="stat-review-count" data-tt-reviews>74 Reviews</span>
+          <span class="stat-review-count" data-tt-reviews>79 Reviews</span>
           <span class="stat-review-source">Thumbtack</span>
         </a>
         <span class="stat-review-divider" aria-hidden="true"></span>
