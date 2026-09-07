@@ -3,11 +3,12 @@ import { isCronAuthorized } from "@/lib/security/cron-auth";
 import { telegramWebhookSecret } from "@/lib/telegram/auth";
 
 function siteBase() {
-  return (
+  const raw =
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
-    "https://garageguysoc.com"
-  ).replace(/\/$/, "");
+    "https://garageguysoc.com";
+  const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  return withProto.replace(/\/$/, "");
 }
 
 /**
