@@ -45,7 +45,7 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const limited = rateLimit(`callback:${clientIp(request)}`, {
+  const limited = await rateLimit(`callback:${clientIp(request)}`, {
     limit: 5,
     windowMs: 60_000,
   });

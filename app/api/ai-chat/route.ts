@@ -48,7 +48,7 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const limited = rateLimit(`ai-chat:${clientIp(request)}`, {
+  const limited = await rateLimit(`ai-chat:${clientIp(request)}`, {
     limit: 20,
     windowMs: 60_000,
   });
