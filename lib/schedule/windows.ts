@@ -101,9 +101,45 @@ export function findWindowById(id: string): ScheduleWindow | undefined {
   return SCHEDULE_WINDOWS.find((w) => w.id === id);
 }
 
-/** Sheet Time column value for a window (start clock, e.g. 09:00). */
 export function sheetTimeForWindow(window: ScheduleWindow): string {
   return `${String(window.startHour).padStart(2, "0")}:00`;
+}
+
+/**
+ * Next arrival window at least `minLeadMinutes` ahead (Pacific).
+ * Example: message at 12:00 → 1–3 (starts 13:00).
+ * If none left today, returns first window (8–10) for the next calendar day.
+ */
+export function nextArrivalWindow(
+  now: Date = new Date(),
+  minLeadMinutes = 60,
+): { window: ScheduleWindow; dayKey: string; sheetTime: string } {
+  const dayKey = dayKeyInBusinessTz(now);
+  const hm = timeHmInBusinessTz(now);
+  const [hh, mm] = hm.split(":").map(Number);
+  const nowMinutes = hh * 60 + mm;
+  const threshold = nowMinutes + minLeadMinutes;
+
+  for (const window of SCHEDULE_WINDOWS) {
+    if (window.startHour * 60 >= threshold) {
+      return {
+        window,
+        dayKey,
+        sheetTime: sheetTimeForWindow(window),
+      };
+    }
+  }
+
+  // Past last window — roll to tomorrow 8–10
+  const [y, mo, d] = dayKey.split("-").map(Number);
+  const noonToday = zonedWallTimeToUtc(y, mo, d, 12, 0, 0);
+  const nextKey = dayKeyInBusinessTz(new Date(noonToday.getTime() + 24 * 60 * 60 * 1000));
+  const first = SCHEDULE_WINDOWS[0]!;
+  return {
+    window: first,
+    dayKey: nextKey,
+    sheetTime: sheetTimeForWindow(first),
+  };
 }
 
 /** Match a stored Sheet time (09:00 or label 9–11) to an arrival window. */

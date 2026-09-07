@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { zonedWallTimeToUtc } from "@/lib/datetime";
+import { nextArrivalWindow } from "@/lib/schedule/windows";
 import {
   parseChampionClock,
   parseChampionTelegramMessage,
+  parseChampionTelegramMessages,
+  splitChampionTelegramJobs,
 } from "@/lib/telegram/champion-parse";
 
 describe("parseChampionClock", () => {
@@ -10,61 +14,140 @@ describe("parseChampionClock", () => {
     assert.equal(parseChampionClock("130pm or after"), "13:30");
   });
 
-  it("parses 1:30 pm", () => {
-    assert.equal(parseChampionClock("1:30 pm"), "13:30");
+  it("parses Around 9am → 9–11 window", () => {
+    assert.equal(parseChampionClock("Around 9am"), "09:00");
   });
 
-  it("parses 9am", () => {
-    assert.equal(parseChampionClock("9am"), "09:00");
+  it("parses 8-9am → 8–10 window", () => {
+    assert.equal(parseChampionClock("8-9am"), "08:00");
   });
 
-  it("parses 1130am", () => {
-    assert.equal(parseChampionClock("1130am"), "11:30");
+  it("ignores dollar amounts", () => {
+    assert.equal(parseChampionClock("$600-$1600"), "");
   });
 });
 
-describe("parseChampionTelegramMessage", () => {
-  it("parses the Champion sample message", () => {
+describe("nextArrivalWindow", () => {
+  it("at noon Pacific picks 1–3", () => {
+    const noon = zonedWallTimeToUtc(2026, 9, 7, 12, 0, 0);
+    const next = nextArrivalWindow(noon, 60);
+    assert.equal(next.window.id, "1-3");
+    assert.equal(next.sheetTime, "13:00");
+    assert.equal(next.dayKey, "2026-09-07");
+  });
+});
+
+describe("parseChampionTelegramMessage samples", () => {
+  const noon = zonedWallTimeToUtc(2026, 9, 7, 12, 0, 0);
+
+  it("1 address-first, no time → auto 1–3", () => {
     const text = [
-      "130pm or after",
+      "2892 Copa De Oro Dr, Los Alamitos, CA 90720",
       "",
-      "402 Beryl Cove Way, Seal Beach, CA 90740",
+      "Sasha",
       "",
-      "Christina",
+      "Door squeeks after service",
       "",
       "** Call before",
     ].join("\n");
-
-    const parsed = parseChampionTelegramMessage(text);
+    const parsed = parseChampionTelegramMessage(text, noon);
     assert.equal(parsed.ok, true);
     if (!parsed.ok) return;
-    assert.equal(parsed.clientName, "Christina");
-    assert.equal(parsed.clientAddress, "402 Beryl Cove Way, Seal Beach, CA 90740");
-    assert.equal(parsed.zip, "90740");
-    assert.equal(parsed.sheetTime, "13:30");
-    assert.equal(parsed.timeRaw, "130pm or after");
-    assert.match(parsed.description, /or after/i);
-    assert.match(parsed.description, /Call before/i);
+    assert.equal(parsed.clientName, "Sasha");
+    assert.match(parsed.clientAddress, /Copa De Oro/);
+    assert.equal(parsed.timeAuto, true);
+    assert.equal(parsed.sheetTime, "13:00");
+    assert.match(parsed.description, /Door squeeks/i);
   });
 
-  it("parses without blank lines", () => {
+  it("2 Mary call before", () => {
     const text = [
-      "2:00pm",
-      "16352 Rhone Ln, Huntington Beach, CA 92647",
-      "John Smith",
-      "Gate code 1234",
+      "1108 W 6th St, Santa Ana, CA 92703",
+      "",
+      "Mary",
+      "",
+      "** Call before",
     ].join("\n");
-    const parsed = parseChampionTelegramMessage(text);
+    const parsed = parseChampionTelegramMessage(text, noon);
     assert.equal(parsed.ok, true);
     if (!parsed.ok) return;
-    assert.equal(parsed.clientName, "John Smith");
-    assert.equal(parsed.sheetTime, "14:00");
-    assert.equal(parsed.zip, "92647");
-    assert.match(parsed.description, /Gate code/);
+    assert.equal(parsed.clientName, "Mary");
+    assert.equal(parsed.timeAuto, true);
   });
 
-  it("fails without address", () => {
-    const parsed = parseChampionTelegramMessage("130pm\nChristina");
-    assert.equal(parsed.ok, false);
+  it("3 time at end 8-9am", () => {
+    const text = [
+      "13532 Iowa St, Westminster, CA 92683",
+      "",
+      "Bob",
+      "",
+      "Springs. Asked about senior discount",
+      "",
+      "8-9am",
+    ].join("\n");
+    const parsed = parseChampionTelegramMessage(text, noon);
+    assert.equal(parsed.ok, true);
+    if (!parsed.ok) return;
+    assert.equal(parsed.clientName, "Bob");
+    assert.equal(parsed.timeAuto, false);
+    assert.equal(parsed.sheetTime, "08:00");
+    assert.match(parsed.description, /Springs/i);
+  });
+
+  it("4 price range stays in notes", () => {
+    const text = [
+      "4338 Canyon Coral Ln, Yorba Linda, CA 92886",
+      "",
+      "Edwardo",
+      "",
+      "Torsion conversion kit",
+      "$600-$1600",
+    ].join("\n");
+    const parsed = parseChampionTelegramMessage(text, noon);
+    assert.equal(parsed.ok, true);
+    if (!parsed.ok) return;
+    assert.equal(parsed.clientName, "Edwardo");
+    assert.equal(parsed.timeAuto, true);
+    assert.match(parsed.jobCostHint, /600/);
+    assert.match(parsed.description, /Torsion/i);
+  });
+
+  it("5 Around 9am first", () => {
+    const text = [
+      "Around 9am",
+      "",
+      "703 Iris Ave, Corona Del Mar, CA 92625",
+      "",
+      "Dorothy",
+      "",
+      "** Call before",
+    ].join("\n");
+    const parsed = parseChampionTelegramMessage(text, noon);
+    assert.equal(parsed.ok, true);
+    if (!parsed.ok) return;
+    assert.equal(parsed.clientName, "Dorothy");
+    assert.equal(parsed.sheetTime, "09:00");
+    assert.equal(parsed.timeAuto, false);
+  });
+
+  it("splits numbered batch", () => {
+    const batch = [
+      "1. 2892 Copa De Oro Dr, Los Alamitos, CA 90720",
+      "",
+      "Sasha",
+      "",
+      "** Call before",
+      "",
+      "2. 1108 W 6th St, Santa Ana, CA 92703",
+      "",
+      "Mary",
+      "",
+      "** Call before",
+    ].join("\n");
+    assert.equal(splitChampionTelegramJobs(batch).length, 2);
+    const parsed = parseChampionTelegramMessages(batch, noon);
+    assert.equal(parsed.length, 2);
+    assert.equal(parsed[0]!.ok && parsed[0].clientName, "Sasha");
+    assert.equal(parsed[1]!.ok && parsed[1].clientName, "Mary");
   });
 });

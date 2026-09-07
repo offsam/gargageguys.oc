@@ -6,7 +6,7 @@ import {
   isTelegramWebhookAuthorized,
   telegramWebhookSecret,
 } from "@/lib/telegram/auth";
-import { ingestChampionTelegramJob } from "@/lib/telegram/champion-ingest";
+import { ingestChampionTelegramJobs } from "@/lib/telegram/champion-ingest";
 import { championTelegramHelpText } from "@/lib/telegram/champion-parse";
 
 /**
@@ -93,7 +93,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, help: true });
   }
 
-  // Ignore other slash commands.
   if (text.startsWith("/")) {
     return NextResponse.json({ ok: true, ignored: "command" });
   }
@@ -104,47 +103,68 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await ingestChampionTelegramJob({
+    const results = await ingestChampionTelegramJobs({
       text,
       chatId: String(chatId),
       messageId: msg.message_id,
       fromUsername: msg.from?.username || msg.from?.first_name || "",
     });
 
-    if (!result.ok) {
+    const okResults = results.filter((r) => r.ok);
+    const failResults = results.filter((r) => !r.ok);
+
+    if (okResults.length === 0) {
+      const err = failResults[0] && !failResults[0].ok ? failResults[0].error : "Parse failed";
       await reply(
         chatId,
         [
           `<b>Could not add Champion job</b>`,
-          escapeHtml(result.error),
+          escapeHtml(err),
           "",
           escapeHtml(championTelegramHelpText()),
         ].join("\n"),
       );
-      return NextResponse.json({ ok: false, error: result.error });
+      return NextResponse.json({ ok: false, error: err });
     }
 
-    const lines = [
-      result.duplicate
-        ? `<b>Already on Sheet</b> (same Telegram message)`
-        : `<b>Champion job added to Sheet</b>`,
+    const lines: string[] = [
+      okResults.length === 1
+        ? okResults[0]!.ok && okResults[0].duplicate
+          ? `<b>Already on Sheet</b>`
+          : `<b>Champion job → Sheet (Sam)</b>`
+        : `<b>${okResults.length} Champion jobs → Sheet (Sam)</b>`,
       "",
-      `<b>Job #:</b> ${escapeHtml(result.jobNumber || "—")}`,
-      `<b>Client:</b> ${escapeHtml(result.parsed.clientName)}`,
-      `<b>Address:</b> ${escapeHtml(result.parsed.clientAddress)}`,
-      `<b>Time:</b> ${escapeHtml(result.parsed.timeRaw || result.parsed.sheetTime || "—")}`,
-      `<b>Partner:</b> ${escapeHtml(result.partnerName)}`,
     ];
-    if (result.parsed.description) {
-      lines.push(`<b>Notes:</b> ${escapeHtml(result.parsed.description)}`);
+
+    for (const result of results) {
+      if (!result.ok) {
+        lines.push(`• <b>Failed:</b> ${escapeHtml(result.error)}`);
+        continue;
+      }
+      const timeBit = result.parsed.timeAuto
+        ? `${result.windowLabel} (auto)`
+        : result.windowLabel || result.parsed.timeRaw || result.sheetTime;
+      lines.push(
+        `• <b>${escapeHtml(result.jobNumber || "—")}</b> ${escapeHtml(result.parsed.clientName)} — ${escapeHtml(timeBit)}`,
+      );
+      lines.push(`  ${escapeHtml(result.parsed.clientAddress)}`);
     }
+
     await reply(chatId, lines.join("\n"));
 
     return NextResponse.json({
       ok: true,
-      leadId: result.leadId,
-      jobNumber: result.jobNumber,
-      duplicate: Boolean(result.duplicate),
+      count: okResults.length,
+      failed: failResults.length,
+      jobs: okResults.map((r) =>
+        r.ok
+          ? {
+              leadId: r.leadId,
+              jobNumber: r.jobNumber,
+              duplicate: Boolean(r.duplicate),
+            }
+          : null,
+      ),
     });
   } catch (err) {
     console.error("[telegram-webhook]", err);

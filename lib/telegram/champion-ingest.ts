@@ -1,14 +1,18 @@
 import { revalidatePath } from "next/cache";
-import { dayKeyInBusinessTz } from "@/lib/datetime";
 import { ensureLeadWorkOrder } from "@/lib/field/job-invoice";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
+import { notifyTechnicianJobAssigned } from "@/lib/notify/tech-job";
+import { syncSheetLeadToFieldJob } from "@/lib/sheet/sync-job-from-sheet";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
+  championSheetDateForParse,
   parseChampionTelegramMessage,
+  splitChampionTelegramJobs,
   type ChampionTelegramParsed,
 } from "@/lib/telegram/champion-parse";
 
 const FALLBACK_PARTNER = "Champion Garage Doors Service";
+const DEFAULT_TECH = "Sam";
 
 export type ChampionTelegramIngestResult =
   | {
@@ -16,6 +20,10 @@ export type ChampionTelegramIngestResult =
       leadId: string;
       jobNumber: string;
       partnerName: string;
+      technician: string;
+      sheetDate: string;
+      sheetTime: string;
+      windowLabel: string;
       parsed: ChampionTelegramParsed;
       duplicate?: boolean;
     }
@@ -31,9 +39,32 @@ async function resolveChampionPartnerName(): Promise<string> {
   return partners?.[0]?.name || FALLBACK_PARTNER;
 }
 
+export async function resolveChampionTechnician(): Promise<{
+  id: string;
+  name: string;
+} | null> {
+  const want = (process.env.TELEGRAM_CHAMPION_TECH_NAME || DEFAULT_TECH).trim().toLowerCase();
+  if (!want) return null;
+  const admin = getSupabaseAdmin();
+  const { data: techs } = await admin
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("role", "technician");
+  const list = techs || [];
+  const exact = list.find((t) => (t.full_name || "").trim().toLowerCase() === want);
+  if (exact) return { id: exact.id, name: exact.full_name || DEFAULT_TECH };
+  const firstName = list.find((t) => {
+    const full = (t.full_name || "").trim().toLowerCase();
+    return full.split(/\s+/)[0] === want;
+  });
+  if (firstName) return { id: firstName.id, name: firstName.full_name || DEFAULT_TECH };
+  return null;
+}
+
 export async function findLeadIdByTelegramMessage(
   chatId: string,
   messageId: number,
+  jobIndex = 0,
 ): Promise<string | null> {
   if (!chatId || !messageId) return null;
   const admin = getSupabaseAdmin();
@@ -43,25 +74,37 @@ export async function findLeadIdByTelegramMessage(
     .contains("metadata", {
       telegramChatId: String(chatId),
       telegramMessageId: messageId,
+      telegramJobIndex: jobIndex,
     })
     .limit(1)
     .maybeSingle();
   return data?.id || null;
 }
 
-export async function ingestChampionTelegramJob(input: {
+async function ingestOneChampionJob(input: {
   text: string;
   chatId: string;
   messageId: number;
+  jobIndex: number;
   fromUsername?: string;
+  now?: Date;
 }): Promise<ChampionTelegramIngestResult> {
-  const parsed = parseChampionTelegramMessage(input.text);
+  const now = input.now || new Date();
+  const parsed = parseChampionTelegramMessage(input.text, now);
   if (!parsed.ok) {
     return { ok: false, error: parsed.error };
   }
 
   const admin = getSupabaseAdmin();
-  const existingId = await findLeadIdByTelegramMessage(input.chatId, input.messageId);
+  const existingId = await findLeadIdByTelegramMessage(
+    input.chatId,
+    input.messageId,
+    input.jobIndex,
+  );
+  const tech = await resolveChampionTechnician();
+  const technicianName = tech?.name || process.env.TELEGRAM_CHAMPION_TECH_NAME || DEFAULT_TECH;
+  const sheetDate = championSheetDateForParse(parsed, now);
+
   if (existingId) {
     let jobNumber = "";
     try {
@@ -75,13 +118,16 @@ export async function ingestChampionTelegramJob(input: {
       leadId: existingId,
       jobNumber,
       partnerName: await resolveChampionPartnerName(),
+      technician: technicianName,
+      sheetDate,
+      sheetTime: parsed.sheetTime,
+      windowLabel: parsed.windowLabel,
       parsed,
       duplicate: true,
     };
   }
 
   const partnerName = await resolveChampionPartnerName();
-  const sheetDate = dayKeyInBusinessTz(new Date());
   const meta = {
     workSource: "Partner",
     partnerName,
@@ -91,8 +137,8 @@ export async function ingestChampionTelegramJob(input: {
     sheetTime: parsed.sheetTime,
     clientName: parsed.clientName,
     clientAddress: parsed.clientAddress,
-    jobStatus: "Waiting",
-    jobType: "",
+    jobStatus: "Scheduled",
+    jobType: parsed.description.slice(0, 120),
     service: "",
     parts: "",
     paymentType: "",
@@ -100,15 +146,19 @@ export async function ingestChampionTelegramJob(input: {
     jobCost: "",
     bankFee: "",
     partsCost: "",
-    technician: "",
+    technician: technicianName,
     techSalary: "",
     description: parsed.description,
     zip: parsed.zip,
     telegramChatId: String(input.chatId),
     telegramMessageId: input.messageId,
+    telegramJobIndex: input.jobIndex,
     telegramFrom: input.fromUsername || "",
     telegramText: input.text.trim(),
     telegramIngest: "champion",
+    timeAuto: parsed.timeAuto,
+    windowLabel: parsed.windowLabel,
+    jobCostHint: parsed.jobCostHint,
   };
 
   const insertPayload = {
@@ -120,9 +170,10 @@ export async function ingestChampionTelegramJob(input: {
     lead_type: "champion_telegram",
     message: input.text.trim(),
     problem: parsed.description || null,
-    deal_title: null as string | null,
+    deal_title: parsed.description.slice(0, 120) || null,
     deal_price: null as string | null,
-    stage: "new",
+    stage: "scheduled" as const,
+    assigned_to: tech?.id || null,
     metadata: meta,
   };
 
@@ -155,15 +206,91 @@ export async function ingestChampionTelegramJob(input: {
     console.error("[champion-telegram] job number", err);
   }
 
+  if (tech?.id) {
+    const synced = await syncSheetLeadToFieldJob({
+      leadId: createdLead.id,
+      date: sheetDate,
+      time: parsed.sheetTime,
+      technicianId: tech.id,
+      technicianName,
+      jobStatus: "Scheduled",
+      clientName: parsed.clientName,
+      clientAddress: parsed.clientAddress,
+      zip: parsed.zip,
+      notes: parsed.description,
+    });
+    if (!synced.ok) {
+      console.error("[champion-telegram] field sync", synced.error);
+    } else if (synced.jobId) {
+      await admin
+        .from("jobs")
+        .update({ status: "assigned", updated_at: new Date().toISOString() })
+        .eq("id", synced.jobId);
+    }
+    await notifyTechnicianJobAssigned({
+      technicianId: tech.id,
+      clientName: parsed.clientName,
+      address: parsed.clientAddress,
+      zip: parsed.zip,
+      date: sheetDate,
+      timeLabel: parsed.windowLabel || parsed.sheetTime,
+      service: parsed.description.slice(0, 80) || "Champion job",
+      jobNumber,
+    }).catch((err) => console.error("[champion-telegram] tech notify", err));
+  } else {
+    console.warn("[champion-telegram] technician Sam not found in profiles");
+  }
+
   revalidatePath("/sheet");
   revalidatePath("/crm");
   revalidatePath("/dispatch");
+  revalidatePath("/field");
+  revalidatePath("/schedule");
 
   return {
     ok: true,
     leadId: createdLead.id,
     jobNumber,
     partnerName,
+    technician: technicianName,
+    sheetDate,
+    sheetTime: parsed.sheetTime,
+    windowLabel: parsed.windowLabel,
     parsed,
   };
+}
+
+export async function ingestChampionTelegramJob(input: {
+  text: string;
+  chatId: string;
+  messageId: number;
+  fromUsername?: string;
+  now?: Date;
+}): Promise<ChampionTelegramIngestResult> {
+  return ingestOneChampionJob({ ...input, jobIndex: 0 });
+}
+
+export async function ingestChampionTelegramJobs(input: {
+  text: string;
+  chatId: string;
+  messageId: number;
+  fromUsername?: string;
+  now?: Date;
+}): Promise<ChampionTelegramIngestResult[]> {
+  const now = input.now || new Date();
+  const texts = splitChampionTelegramJobs(input.text);
+  const results: ChampionTelegramIngestResult[] = [];
+  for (let i = 0; i < texts.length; i++) {
+    results.push(
+      await ingestOneChampionJob({
+        text: texts[i]!,
+        chatId: input.chatId,
+        messageId: input.messageId,
+        jobIndex: i,
+        fromUsername: input.fromUsername,
+        now,
+      }),
+    );
+  }
+  return results;
 }

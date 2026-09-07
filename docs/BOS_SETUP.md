@@ -29,7 +29,9 @@ Office lead alerts still use `TELEGRAM_CHAT_ID`.
 
 ## Champion jobs from Telegram → Sheet
 
-Paste Champion-style messages into the bot; they become **Partner → Champion** Sheet rows.
+Paste Champion-style messages into the bot; they become **Partner → Champion** Sheet rows, assigned to **Sam**, status **Scheduled**.
+
+If time is missing, the next arrival window at least 1 hour ahead is used (e.g. message at noon → **1–3**). Multiple numbered jobs (`1. … 2. …`) in one message are all imported.
 
 Example:
 
