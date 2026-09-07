@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   debugGoogleAdsAction,
   debugMetaAdsTokenAction,
@@ -12,6 +12,11 @@ import {
 } from "@/app/actions/ads";
 import type { MetaCampaignMetrics, MetaLeadRow } from "@/lib/ads/meta";
 import type { GoogleAdsCampaignMetrics } from "@/lib/ads/google";
+import {
+  clearHiddenMetaCampaignIds,
+  hideMetaCampaignId,
+  readHiddenMetaCampaignIds,
+} from "@/lib/ads/hidden-campaigns";
 
 type EnrichedLead = MetaLeadRow & {
   inCrm: boolean;
@@ -93,6 +98,14 @@ export function AdsBoard({
   const [pendingDebug, startDebug] = useTransition();
   const [googleMsg, setGoogleMsg] = useState("");
   const [pendingGoogle, startGoogle] = useTransition();
+  const [hiddenCampaignIds, setHiddenCampaignIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setHiddenCampaignIds(readHiddenMetaCampaignIds());
+  }, []);
+
+  const visibleCampaigns = campaigns.filter((c) => !hiddenCampaignIds.includes(c.id));
+  const hiddenCampaignCount = campaigns.length - visibleCampaigns.length;
 
   function ensureLeads(campaignId: string) {
     const existing = cache[campaignId];
@@ -322,40 +335,74 @@ export function AdsBoard({
       </p>
 
       <h2>Campaigns</h2>
-      {!campaigns.length ? (
-        <div className="bos-card">No campaigns in this period. Sync Meta Ads first.</div>
+      {hiddenCampaignCount > 0 ? (
+        <div className="ads-lead-summary">
+          {hiddenCampaignCount} hidden ·{" "}
+          <button
+            type="button"
+            className="ads-link-btn"
+            onClick={() => {
+              clearHiddenMetaCampaignIds();
+              setHiddenCampaignIds([]);
+            }}
+          >
+            Show all again
+          </button>
+        </div>
+      ) : null}
+      {!visibleCampaigns.length ? (
+        <div className="bos-card">
+          {campaigns.length
+            ? "All Meta campaigns in this period are hidden."
+            : "No campaigns in this period. Sync Meta Ads first."}
+        </div>
       ) : (
         <div className="ads-campaign-list">
-          {campaigns.map((c) => {
+          {visibleCampaigns.map((c) => {
             const open = expandedId === c.id;
             const state = cache[c.id];
             return (
               <div key={c.id} className={`ads-campaign${open ? " is-open" : ""}`}>
-                <button
-                  type="button"
-                  className="ads-campaign-head"
-                  onClick={() => toggleCampaign(c.id)}
-                  aria-expanded={open}
-                >
-                  <span className="ads-campaign-chevron" aria-hidden>
-                    {open ? "▾" : "▸"}
-                  </span>
-                  <span className="ads-campaign-name">{c.name}</span>
-                  <span className="ads-campaign-stat">{moneyExact(c.spend)}</span>
-                  <span className="ads-campaign-stat">
-                    {state?.status === "ready"
-                      ? `${state.leads.length} forms`
-                      : `${c.leads} insights`}
-                  </span>
-                  <span className="ads-campaign-stat">
-                    {state?.status === "ready" && state.leads.length > 0
-                      ? `${moneyExact(c.spend / state.leads.length)} CPL`
-                      : `${moneyExact(c.cpl)} CPL`}
-                  </span>
-                  <span className="ads-campaign-stat muted">
-                    {c.clicks} clk · {c.impressions} imp
-                  </span>
-                </button>
+                <div className="ads-campaign-row">
+                  <button
+                    type="button"
+                    className="ads-campaign-head"
+                    onClick={() => toggleCampaign(c.id)}
+                    aria-expanded={open}
+                  >
+                    <span className="ads-campaign-chevron" aria-hidden>
+                      {open ? "▾" : "▸"}
+                    </span>
+                    <span className="ads-campaign-name">{c.name}</span>
+                    <span className="ads-campaign-stat">{moneyExact(c.spend)}</span>
+                    <span className="ads-campaign-stat">
+                      {state?.status === "ready"
+                        ? `${state.leads.length} forms`
+                        : `${c.leads} insights`}
+                    </span>
+                    <span className="ads-campaign-stat">
+                      {state?.status === "ready" && state.leads.length > 0
+                        ? `${moneyExact(c.spend / state.leads.length)} CPL`
+                        : `${moneyExact(c.cpl)} CPL`}
+                    </span>
+                    <span className="ads-campaign-stat muted">
+                      {c.clicks} clk · {c.impressions} imp
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ads-hide-campaign"
+                    title={`Hide ${c.name}`}
+                    aria-label={`Hide ${c.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (expandedId === c.id) setExpandedId(null);
+                      setHiddenCampaignIds(hideMetaCampaignId(c.id));
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
 
                 {open ? (
                   <div className="ads-campaign-body">
