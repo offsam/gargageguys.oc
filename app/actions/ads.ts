@@ -99,8 +99,8 @@ export async function syncMetaAdsAction() {
   }
 
   try {
-    const days = Number(process.env.ADS_SYNC_DAYS || 28);
-    const period = getDefaultAdsPeriod(Number.isFinite(days) && days > 0 ? days : 28);
+    const days = Number(process.env.ADS_SYNC_DAYS || 30);
+    const period = getDefaultAdsPeriod(Number.isFinite(days) && days > 0 ? days : 30);
     const metrics = await fetchMetaAdsMetrics(period);
     await upsertAdsSnapshot({
       platform: "meta",
@@ -179,8 +179,8 @@ export async function loadMetaCampaignLeadsAction(campaignId: string): Promise<{
   if (!campaignId) return { ok: false, error: "Pick a campaign" };
 
   try {
-    const days = Number(process.env.ADS_SYNC_DAYS || 28);
-    const period = getDefaultAdsPeriod(Number.isFinite(days) && days > 0 ? days : 28);
+    const days = Number(process.env.ADS_SYNC_DAYS || 30);
+    const period = getDefaultAdsPeriod(Number.isFinite(days) && days > 0 ? days : 30);
     const leads = await fetchMetaCampaignLeads(campaignId, period);
 
     const admin = getSupabaseAdmin();
@@ -282,8 +282,8 @@ export async function syncGoogleAdsAction() {
   }
 
   try {
-    const days = Number(process.env.ADS_SYNC_DAYS || 28);
-    const period = getDefaultAdsPeriod(Number.isFinite(days) && days > 0 ? days : 28);
+    const days = Number(process.env.ADS_SYNC_DAYS || 30);
+    const period = getDefaultAdsPeriod(Number.isFinite(days) && days > 0 ? days : 30);
     const metrics = await fetchGoogleAdsMetrics(period);
     await upsertAdsSnapshot({
       platform: "google_ads",

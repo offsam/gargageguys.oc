@@ -4,6 +4,7 @@ export type AdsRangePreset =
   | "week"
   | "7d"
   | "28d"
+  | "30d"
   | "sync"
   | "custom";
 
@@ -13,26 +14,29 @@ export type AdsReportPeriod = {
   periodEnd: string;
 };
 
-function fmt(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function pacificYmd(date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 }
 
-function startOfLocalDay(d = new Date()): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+function addDaysYmd(ymd: string, delta: number): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d));
+  utc.setUTCDate(utc.getUTCDate() + delta);
+  return utc.toISOString().slice(0, 10);
 }
 
-function addDays(d: Date, n: number): Date {
-  const next = new Date(d);
-  next.setDate(next.getDate() + n);
-  return next;
-}
-
-/** Monday as start of week (local). */
-function startOfWeek(d = new Date()): Date {
-  const day = startOfLocalDay(d);
-  const wd = day.getDay(); // 0 Sun
+/** Monday as start of week (Pacific). */
+function startOfWeekYmd(todayYmd: string): string {
+  const [y, m, d] = todayYmd.split("-").map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d));
+  const wd = utc.getUTCDay(); // 0 Sun
   const offset = wd === 0 ? -6 : 1 - wd;
-  return addDays(day, offset);
+  return addDaysYmd(todayYmd, offset);
 }
 
 export function resolveAdsReportPeriod(input: {
@@ -43,31 +47,37 @@ export function resolveAdsReportPeriod(input: {
   syncEnd?: string | null;
 }): AdsReportPeriod {
   const range = String(input.range || "").trim().toLowerCase() || "sync";
-  const today = startOfLocalDay();
+  const today = pacificYmd();
 
   if (range === "today") {
-    return { preset: "today", periodStart: fmt(today), periodEnd: fmt(today) };
+    return { preset: "today", periodStart: today, periodEnd: today };
   }
   if (range === "yesterday") {
-    const y = addDays(today, -1);
-    return { preset: "yesterday", periodStart: fmt(y), periodEnd: fmt(y) };
+    const y = addDaysYmd(today, -1);
+    return { preset: "yesterday", periodStart: y, periodEnd: y };
   }
   if (range === "week") {
-    const start = startOfWeek(today);
-    return { preset: "week", periodStart: fmt(start), periodEnd: fmt(today) };
+    return { preset: "week", periodStart: startOfWeekYmd(today), periodEnd: today };
   }
   if (range === "7d") {
     return {
       preset: "7d",
-      periodStart: fmt(addDays(today, -6)),
-      periodEnd: fmt(today),
+      periodStart: addDaysYmd(today, -6),
+      periodEnd: today,
     };
   }
   if (range === "28d") {
     return {
       preset: "28d",
-      periodStart: fmt(addDays(today, -27)),
-      periodEnd: fmt(today),
+      periodStart: addDaysYmd(today, -27),
+      periodEnd: today,
+    };
+  }
+  if (range === "30d") {
+    return {
+      preset: "30d",
+      periodStart: addDaysYmd(today, -29),
+      periodEnd: today,
     };
   }
   if (range === "custom") {
@@ -92,8 +102,8 @@ export function resolveAdsReportPeriod(input: {
 
   return {
     preset: "7d",
-    periodStart: fmt(addDays(today, -6)),
-    periodEnd: fmt(today),
+    periodStart: addDaysYmd(today, -6),
+    periodEnd: today,
   };
 }
 
@@ -103,6 +113,7 @@ export const ADS_RANGE_OPTIONS: Array<{ id: AdsRangePreset; label: string }> = [
   { id: "week", label: "This week" },
   { id: "7d", label: "Last 7 days" },
   { id: "28d", label: "Last 28 days" },
+  { id: "30d", label: "Last 30 days" },
   { id: "sync", label: "Meta sync period" },
   { id: "custom", label: "Custom" },
 ];

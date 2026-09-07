@@ -208,14 +208,111 @@ export async function getMetaPageWebhookSubscriptions(): Promise<{
   return { pageId: pageAuth.pageId, pageName: pageAuth.pageName, data: json };
 }
 
-export function getDefaultAdsPeriod(days = 28): AdsPeriod {
-  // Local calendar days (same as Ads period bar) so Sync period matches "28d".
-  const end = new Date();
-  const start = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-  start.setDate(start.getDate() - (days - 1));
-  const iso = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  return { startDate: iso(start), endDate: iso(end) };
+/** Calendar YMD in America/Los_Angeles (Meta ad accounts for OC are Pacific). */
+export function pacificYmd(date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function addCalendarDays(ymd: string, delta: number): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d));
+  utc.setUTCDate(utc.getUTCDate() + delta);
+  return utc.toISOString().slice(0, 10);
+}
+
+export function getDefaultAdsPeriod(days = 30): AdsPeriod {
+  // Match Meta Ads Manager "Last N days" in the ad account timezone (Pacific),
+  // not the Vercel UTC clock — otherwise spend lags Ads Manager by a day.
+  const endDate = pacificYmd();
+  const n = Number.isFinite(days) && days > 0 ? Math.floor(days) : 30;
+  const startDate = addCalendarDays(endDate, -(n - 1));
+  return { startDate, endDate };
+}
+
+/** Side-by-side spend windows so we can reconcile Ads Manager vs BOS. */
+export async function compareMetaSpendWindows(opts?: {
+  token?: string;
+  accountId?: string;
+}): Promise<{
+  accountId: string;
+  accountName: string | null;
+  timezone: string | null;
+  currency: string | null;
+  /** Lifetime amount spent on the ad account (Meta returns cents). */
+  lifetimeSpend: number | null;
+  windows: Array<{ key: string; spend: number; leads: number; period?: AdsPeriod }>;
+}> {
+  const cfg = getMetaAdsConfig();
+  const token = opts?.token || cfg.token;
+  const accountId = normalizeAccountId(opts?.accountId || cfg.accountId);
+  if (!token || !accountId) {
+    throw new Error("META_ADS_ACCESS_TOKEN and META_AD_ACCOUNT_ID are required");
+  }
+
+  const accountRes = await graphGet(accountId, token, {
+    fields: "name,currency,timezone_name,amount_spent",
+  });
+  const account = accountRes as unknown as {
+    name?: string;
+    currency?: string;
+    timezone_name?: string;
+    amount_spent?: string | number;
+  };
+  const amountSpentCents = num(account.amount_spent);
+  const lifetimeSpend = amountSpentCents > 0 ? amountSpentCents / 100 : null;
+
+  const end = pacificYmd();
+  const calendarWindows: Array<{ key: string; days: number }> = [
+    { key: "calendar_7d", days: 7 },
+    { key: "calendar_28d", days: 28 },
+    { key: "calendar_30d", days: 30 },
+    { key: "calendar_35d", days: 35 },
+  ];
+  const presets = ["last_7d", "last_14d", "last_28d", "last_30d", "last_90d", "this_month", "maximum"] as const;
+
+  const windows: Array<{ key: string; spend: number; leads: number; period?: AdsPeriod }> = [];
+
+  for (const w of calendarWindows) {
+    const period = {
+      startDate: addCalendarDays(end, -(w.days - 1)),
+      endDate: end,
+    };
+    const metrics = await fetchMetaAdsMetrics(period, { token, accountId });
+    windows.push({
+      key: w.key,
+      spend: metrics.spend,
+      leads: metrics.leads,
+      period,
+    });
+  }
+
+  for (const preset of presets) {
+    const res = await graphGet(`${accountId}/insights`, token, {
+      fields: "spend,actions",
+      level: "account",
+      date_preset: preset,
+    });
+    const row = (res.data?.[0] || {}) as Record<string, unknown>;
+    windows.push({
+      key: `preset_${preset}`,
+      spend: num(row.spend),
+      leads: Math.round(leadCountFromActions(row.actions)),
+    });
+  }
+
+  return {
+    accountId,
+    accountName: account.name || null,
+    timezone: account.timezone_name || null,
+    currency: account.currency || null,
+    lifetimeSpend,
+    windows,
+  };
 }
 
 async function graphGet(path: string, token: string, params: Record<string, string> = {}) {

@@ -119,7 +119,11 @@ async function tryTableUpsert(row: AdsSnapshotRow): Promise<boolean> {
 
 async function tryTableList(limit: number, platform?: string): Promise<AdsSnapshotRow[] | null> {
   const admin = getSupabaseAdmin();
-  let query = admin.from("ads_snapshots").select("*").order("period_end", { ascending: false }).limit(limit);
+  let query = admin
+    .from("ads_snapshots")
+    .select("*")
+    .order("synced_at", { ascending: false })
+    .limit(limit);
   if (platform) query = query.eq("platform", platform);
   const { data, error } = await query;
   if (!error) return (data || []) as AdsSnapshotRow[];
@@ -166,17 +170,31 @@ export async function upsertAdsSnapshot(payload: AdsSnapshotPayload) {
   return { id: row.id };
 }
 
+function sortSnapshotsNewest(rows: AdsSnapshotRow[]) {
+  return rows.slice().sort((a, b) => {
+    const sync = String(b.synced_at || "").localeCompare(String(a.synced_at || ""));
+    if (sync) return sync;
+    const end = String(b.period_end || "").localeCompare(String(a.period_end || ""));
+    if (end) return end;
+    return String(b.period_start || "").localeCompare(String(a.period_start || ""));
+  });
+}
+
 export async function listAdsSnapshots(limit = 12, platform?: string) {
   const file = await loadFile();
-  let fileRows = file.snapshots.slice().sort((a, b) => b.period_end.localeCompare(a.period_end));
+  let fileRows = sortSnapshotsNewest(file.snapshots);
   if (platform) fileRows = fileRows.filter((r) => r.platform === platform);
   fileRows = fileRows.slice(0, limit);
 
   let fromTable: AdsSnapshotRow[] | null = null;
   try {
-    fromTable = await tryTableList(limit, platform);
+    fromTable = await tryTableList(Math.max(limit * 3, 24), platform);
   } catch (err) {
     console.error("[listAdsSnapshots] DB list failed; using file", err);
+  }
+
+  if (fromTable?.length) {
+    fromTable = sortSnapshotsNewest(fromTable).slice(0, limit);
   }
 
   if (!fromTable?.length) return fileRows;

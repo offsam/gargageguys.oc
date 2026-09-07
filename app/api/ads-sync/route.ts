@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchMetaAdsMetrics, getDefaultAdsPeriod, getMetaAdsConfig } from "@/lib/ads/meta";
+import {
+  compareMetaSpendWindows,
+  fetchMetaAdsMetrics,
+  getDefaultAdsPeriod,
+  getMetaAdsConfig,
+} from "@/lib/ads/meta";
 import { fetchGoogleAdsMetrics, getGoogleAdsConfig } from "@/lib/ads/google";
 import { upsertAdsSnapshot } from "@/lib/ads/snapshots";
 import {
@@ -29,11 +34,22 @@ async function handle(request: NextRequest) {
     );
   }
 
-  const days = Number(process.env.ADS_SYNC_DAYS || 28);
-  const period = getDefaultAdsPeriod(Number.isFinite(days) && days > 0 ? days : 28);
+  const url = new URL(request.url);
+  const daysParam = Number(url.searchParams.get("days") || process.env.ADS_SYNC_DAYS || 30);
+  const days = Number.isFinite(daysParam) && daysParam > 0 ? daysParam : 30;
+  const period = getDefaultAdsPeriod(days);
+  const wantCompare = url.searchParams.get("compare") === "1";
 
   try {
-    const result: Record<string, unknown> = { ok: true, period };
+    const result: Record<string, unknown> = { ok: true, period, days };
+
+    if (meta.ok && wantCompare) {
+      try {
+        result.compare = await compareMetaSpendWindows();
+      } catch (error) {
+        result.compareError = error instanceof Error ? error.message : "compare failed";
+      }
+    }
 
     if (meta.ok) {
       try {
