@@ -200,6 +200,8 @@ export function aggregateAdsReport(
     periodEnd: string;
     metaAds?: AdsPlatformSnapshot;
     googleAds?: AdsPlatformSnapshot;
+    /** When filtering a day/week that is not the Meta sync window, estimate spend as CPL × received. */
+    estimateMetaSpend?: boolean;
   },
 ): AdsReport {
   const rows = new Map<AdsReportSource, AdsReportSourceRow>();
@@ -251,7 +253,7 @@ export function aggregateAdsReport(
   const metaSpend = Number(input.metaAds?.spend) || 0;
   const googleSpend = Number(input.googleAds?.spend) || 0;
 
-  if (metaSpend > 0 && metaLeadCount > 0) {
+  if (metaSpend > 0 && metaLeadCount > 0 && !input.estimateMetaSpend) {
     const fbRow = rows.get("Facebook")!;
     const igRow = rows.get("Instagram")!;
     if (facebookCount > 0) {
@@ -266,12 +268,22 @@ export function aggregateAdsReport(
   }
 
   const googleRow = rows.get("Google")!;
-  if (googleSpend > 0) googleRow.spend = googleSpend;
+  if (googleSpend > 0 && !input.estimateMetaSpend) googleRow.spend = googleSpend;
 
   const ttRow = rows.get("Thumbtack")!;
   if (thumbtackSpendAcc > 0) ttRow.spend = thumbtackSpendAcc;
 
   applyPlatformLeadCosts(rows, input);
+
+  if (input.estimateMetaSpend) {
+    for (const source of ["Facebook", "Instagram", "Google"] as const) {
+      const row = rows.get(source)!;
+      if (row.leadCost != null && row.leadCost > 0 && row.received > 0) {
+        row.spend = row.leadCost * row.received;
+      }
+    }
+  }
+
   for (const [source, row] of rows) {
     if (row.spend > 0 || source === "Thumbtack" || source === "Facebook" || source === "Instagram" || source === "Google") {
       continue;
@@ -353,6 +365,7 @@ export async function loadAdsReport(input?: {
   periodEnd?: string;
   metaAds?: AdsPlatformSnapshot;
   googleAds?: AdsPlatformSnapshot;
+  estimateMetaSpend?: boolean;
 }): Promise<AdsReport> {
   const periodStart =
     input?.periodStart ||
@@ -380,5 +393,6 @@ export async function loadAdsReport(input?: {
     periodEnd,
     metaAds: input?.metaAds,
     googleAds: input?.googleAds,
+    estimateMetaSpend: input?.estimateMetaSpend,
   });
 }

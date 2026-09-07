@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { findLeadIdByMetaLeadgen, ingestMetaLeadToCrm } from "@/lib/leads/meta-ingest";
 import { isSupabaseConfigured } from "@/lib/supabase/admin";
+import { PHONE_FIELD_NAMES } from "@/lib/ads/meta";
 
 /**
  * Meta Lead Ads webhook.
@@ -26,14 +27,26 @@ function verifySignature(rawBody: string, signatureHeader: string | null, appSec
 }
 
 function fieldValue(fields: LeadField[], names: string[]) {
-  const lower = names.map((n) => n.toLowerCase());
+  const lower = names.map((n) => n.toLowerCase().replace(/\s+/g, "_"));
   for (const f of fields) {
-    const name = String(f.name || "").toLowerCase();
-    if (!lower.includes(name)) continue;
+    const name = String(f.name || "")
+      .toLowerCase()
+      .replace(/\s+/g, "_");
+    if (!lower.includes(name) && !lower.some((n) => name.includes(n))) continue;
     const v = (f.values || []).map(String).find((x) => x.trim());
     if (v) return v.trim();
   }
   return "";
+}
+
+function fieldsMap(fields: LeadField[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const f of fields) {
+    const name = String(f.name || "").trim();
+    const v = (f.values || []).map(String).find((x) => x.trim())?.trim() || "";
+    if (name && v) out[name] = v;
+  }
+  return out;
 }
 
 async function fetchLeadData(leadgenId: string) {
@@ -41,14 +54,19 @@ async function fetchLeadData(leadgenId: string) {
   if (!token) throw new Error("META_ADS_ACCESS_TOKEN missing");
   const url = new URL(`https://graph.facebook.com/v21.0/${leadgenId}`);
   url.searchParams.set("access_token", token);
-  url.searchParams.set("fields", "id,created_time,ad_id,adset_id,campaign_id,form_id,field_data");
+  url.searchParams.set(
+    "fields",
+    "id,created_time,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,field_data",
+  );
   const res = await fetch(url.toString(), { cache: "no-store" });
   const json = (await res.json()) as {
     id?: string;
     created_time?: string;
     ad_id?: string;
+    ad_name?: string;
     adset_id?: string;
     campaign_id?: string;
+    campaign_name?: string;
     form_id?: string;
     field_data?: LeadField[];
     error?: { message?: string };
@@ -57,6 +75,23 @@ async function fetchLeadData(leadgenId: string) {
     throw new Error(json.error?.message || `Failed to load lead ${leadgenId}`);
   }
   return json;
+}
+
+async function resolveCampaignName(campaignId: string | null | undefined): Promise<string> {
+  const id = String(campaignId || "").trim();
+  if (!id) return "";
+  const token = process.env.META_ADS_ACCESS_TOKEN?.trim();
+  if (!token) return "";
+  try {
+    const url = new URL(`https://graph.facebook.com/v21.0/${id}`);
+    url.searchParams.set("access_token", token);
+    url.searchParams.set("fields", "id,name");
+    const res = await fetch(url.toString(), { cache: "no-store" });
+    const json = (await res.json()) as { name?: string };
+    return String(json.name || "").trim();
+  } catch {
+    return "";
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -125,20 +160,19 @@ export async function POST(request: NextRequest) {
           .join(" ")
           .trim() ||
         "Meta lead";
-      const phone = fieldValue(fields, ["phone_number", "phone", "mobile_number"]);
+      const phone = fieldValue(fields, PHONE_FIELD_NAMES);
+      const email = fieldValue(fields, ["email", "email_address"]);
       const zip = fieldValue(fields, ["zip_code", "zip", "post_code", "postal_code"]);
       const address = fieldValue(fields, ["street_address", "address"]);
       const message = fieldValue(fields, ["message", "notes", "description", "what_do_you_need"]);
-
-      if (!phone) {
-        results.push({ leadgenId, ok: false, error: "missing phone" });
-        continue;
-      }
+      const campaignName =
+        String(data.campaign_name || "").trim() || (await resolveCampaignName(data.campaign_id));
 
       const lead = await ingestMetaLeadToCrm({
         leadgenId,
         name,
         phone,
+        email,
         zip,
         address,
         message,
@@ -146,7 +180,10 @@ export async function POST(request: NextRequest) {
         adId: data.ad_id || null,
         adsetId: data.adset_id || null,
         campaignId: data.campaign_id || null,
+        campaignName: campaignName || null,
+        adName: data.ad_name || null,
         createdTime: data.created_time || null,
+        fields: fieldsMap(fields),
       });
 
       results.push({ leadgenId, ok: true, leadId: lead.leadId });
@@ -159,6 +196,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const retryable = results.some((r) => !r.ok && r.error !== "missing phone");
+  const retryable = results.some((r) => !r.ok);
   return NextResponse.json({ ok: !retryable, results }, { status: retryable ? 500 : 200 });
 }

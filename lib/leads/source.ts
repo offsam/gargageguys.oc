@@ -9,7 +9,9 @@ export function canonicalLeadSource(
 
   if (blob.includes("thumbtack")) return "Thumbtack";
   if (blob.includes("yelp")) return "Yelp";
-  if (blob.includes("instagram") || /(^|[^a-z])ig([^a-z]|$)/.test(blob)) return "Instagram";
+  if (blob.includes("instagram") || blob.includes("insta") || /(^|[^a-z])ig([^a-z]|$)/.test(blob)) {
+    return "Instagram";
+  }
   if (blob.includes("facebook") || blob.includes("meta") || /(^|[^a-z])fb([^a-z]|$)/.test(blob)) {
     return "Facebook";
   }

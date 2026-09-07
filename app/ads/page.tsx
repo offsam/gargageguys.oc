@@ -2,37 +2,59 @@ import { BosShell } from "@/components/bos/BosShell";
 import { AdsBoard } from "@/components/bos/AdsBoard";
 import { AdsReportPanel } from "@/components/bos/AdsReport";
 import { AdsCampaignReportPanel } from "@/components/bos/AdsCampaignReport";
+import { AdsPeriodBar } from "@/components/bos/AdsPeriodBar";
 import { ThumbtackLeadsBoard } from "@/components/bos/ThumbtackLeadsBoard";
 import { requireRouteAccess } from "@/lib/auth/require";
 import { listAdsSnapshots } from "@/lib/ads/snapshots";
 import { loadAdsReport, periodFromSnapshots } from "@/lib/ads/report";
 import { loadAdsCampaignReport } from "@/lib/ads/campaign-report";
+import { resolveAdsReportPeriod } from "@/lib/ads/period";
 import type { MetaCampaignMetrics } from "@/lib/ads/meta";
 import { getGoogleAdsConfig, type GoogleAdsCampaignMetrics } from "@/lib/ads/google";
 import { listThumbtackLeadsForAds } from "@/lib/leads/thumbtack-ingest";
 
-export default async function AdsPage() {
+export default async function AdsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireRouteAccess("/ads");
+  const params = (await searchParams) || {};
+  const rangeParam = typeof params.range === "string" ? params.range : null;
+  const fromParam = typeof params.from === "string" ? params.from : null;
+  const toParam = typeof params.to === "string" ? params.to : null;
 
   const adsSnapshots = await listAdsSnapshots(12).catch(() => []);
-  const period = periodFromSnapshots(adsSnapshots);
+  const syncPeriod = periodFromSnapshots(adsSnapshots);
+  const reportPeriod = resolveAdsReportPeriod({
+    range: rangeParam,
+    from: fromParam,
+    to: toParam,
+    syncStart: syncPeriod.periodStart,
+    syncEnd: syncPeriod.periodEnd,
+  });
   const metaAds = (adsSnapshots || []).find((r) => r.platform === "meta");
   const googleAds = (adsSnapshots || []).find((r) => r.platform === "google_ads");
+  const estimateMetaSpend =
+    reportPeriod.preset !== "sync" ||
+    reportPeriod.periodStart !== syncPeriod.periodStart ||
+    reportPeriod.periodEnd !== syncPeriod.periodEnd;
 
   const [adsReport, campaignReport, thumbtackLeads] = await Promise.all([
     loadAdsReport({
-      periodStart: period.periodStart,
-      periodEnd: period.periodEnd,
+      periodStart: reportPeriod.periodStart,
+      periodEnd: reportPeriod.periodEnd,
       metaAds: metaAds
         ? { spend: metaAds.spend, leads: metaAds.leads, cpl: metaAds.cpl }
         : undefined,
       googleAds: googleAds
         ? { spend: googleAds.spend, leads: googleAds.leads, cpl: googleAds.cpl }
         : undefined,
+      estimateMetaSpend,
     }).catch(() => null),
     loadAdsCampaignReport({
-      periodStart: period.periodStart,
-      periodEnd: period.periodEnd,
+      periodStart: reportPeriod.periodStart,
+      periodEnd: reportPeriod.periodEnd,
       metaSnapshot: metaAds ?? null,
     }).catch(() => []),
     listThumbtackLeadsForAds(40).catch(() => []),
@@ -68,9 +90,16 @@ export default async function AdsPage() {
       user={user}
       active="/ads"
       title="Ads"
-      subtitle="Lead funnel by source · spend · cost per lead and per completed job"
+      subtitle="Lead funnel by day / week · Meta + Google spend · cost per completed"
     >
-      {adsReport ? <AdsReportPanel report={adsReport} /> : null}
+      <AdsPeriodBar
+        preset={reportPeriod.preset}
+        periodStart={reportPeriod.periodStart}
+        periodEnd={reportPeriod.periodEnd}
+      />
+      {adsReport ? (
+        <AdsReportPanel report={adsReport} estimateSpend={estimateMetaSpend} />
+      ) : null}
       {campaignReport.length ? <AdsCampaignReportPanel rows={campaignReport} /> : null}
       <ThumbtackLeadsBoard leads={thumbtackLeads} />
       {!metaAds ? (

@@ -69,7 +69,7 @@ async function handle(request: NextRequest) {
       }
       let catchup: { ingested: number; skipped: number; scanned: number } | null = null;
       try {
-        catchup = await catchUpMetaLeads(3);
+        catchup = await catchUpMetaLeads(7);
       } catch (error) {
         console.error("[ads-sync] meta lead catch-up failed", error);
       }

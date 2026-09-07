@@ -23,18 +23,30 @@ function periodLabel(start: string, end: string) {
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
-export function AdsReportPanel({ report }: { report: AdsReport }) {
+export function AdsReportPanel({
+  report,
+  estimateSpend = false,
+}: {
+  report: AdsReport;
+  estimateSpend?: boolean;
+}) {
   const { rows, totals } = report;
 
   return (
     <div className="ads-board ads-report" style={{ marginBottom: "2rem" }}>
       <h2 style={{ marginTop: 0 }}>Ads report</h2>
       <p className="field-muted">
-        All inbound leads for {periodLabel(report.periodStart, report.periodEnd)} — every status
-        counts. <strong>Lead cost</strong> = Meta / Google CPL from sync (same as the Ads panel, e.g.
-        $16) — not spend ÷ CRM rows. <strong>Cost / completed</strong> = ad spend ÷ only Completed
-        jobs in your funnel (real cost of a closed job). <strong>Burned</strong> = lead cost ×
-        (Cancelled + No win + No-show).
+        Inbound leads for {periodLabel(report.periodStart, report.periodEnd)} — every status counts.
+        Pick Today / Yesterday / This week above for a day-level view.{" "}
+        <strong>Lead cost</strong> = Meta / Google CPL from sync.{" "}
+        {estimateSpend ? (
+          <>
+            <strong>Spend</strong> for this filter ≈ lead cost × received (Meta sync window is
+            different).{" "}
+          </>
+        ) : null}
+        <strong>Cost / completed</strong> = spend ÷ Completed only. <strong>Burned</strong> = lead
+        cost × (Cancelled + No win + No-show).
       </p>
 
       {!rows.length ? (

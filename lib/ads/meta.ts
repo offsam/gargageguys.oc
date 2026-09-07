@@ -221,6 +221,21 @@ function pickField(fields: Record<string, string>, names: string[]) {
   return "";
 }
 
+const PHONE_FIELD_NAMES = [
+  "phone_number",
+  "phone",
+  "mobile_number",
+  "mobile",
+  "cell_phone",
+  "cellphone",
+  "work_phone",
+  "contact_number",
+  "telephone",
+  "tel",
+  "your_phone",
+  "phone_number_with_country_code",
+];
+
 function mapLeadRow(raw: Record<string, unknown>): MetaLeadRow {
   const fields = fieldMap(raw.field_data);
   const first = pickField(fields, ["first_name", "firstname"]);
@@ -237,7 +252,7 @@ function mapLeadRow(raw: Record<string, unknown>): MetaLeadRow {
     adName: raw.ad_name ? String(raw.ad_name) : null,
     formId: raw.form_id ? String(raw.form_id) : null,
     name: full || "Meta lead",
-    phone: pickField(fields, ["phone_number", "phone", "mobile_number", "mobile"]),
+    phone: pickField(fields, PHONE_FIELD_NAMES),
     email: pickField(fields, ["email", "email_address"]),
     zip: pickField(fields, ["zip_code", "zip", "postal_code", "post_code"]),
     address: pickField(fields, ["street_address", "address", "city"]),
@@ -245,6 +260,8 @@ function mapLeadRow(raw: Record<string, unknown>): MetaLeadRow {
     fields,
   };
 }
+
+export { PHONE_FIELD_NAMES, pickField, mapLeadRow };
 
 export async function fetchMetaAdsMetrics(
   period: AdsPeriod,

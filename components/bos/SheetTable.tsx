@@ -482,6 +482,52 @@ function dateTimeSortValue(row: SheetRow): string {
   return `${date}T${time}`;
 }
 
+function normalizeSheetSearch(raw: string): string {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+/** All visible Sheet values — search matches any of these. */
+function sheetRowSearchText(row: SheetRow): string {
+  return [
+    row.jobNumber,
+    row.workSource,
+    row.partnerName,
+    row.leadSource,
+    row.leadCost,
+    row.date,
+    row.time,
+    row.clientName,
+    row.clientAddress,
+    row.jobStatus,
+    row.jobType,
+    row.service,
+    row.parts,
+    row.paymentType,
+    row.checkNumber,
+    row.jobCost,
+    row.bankFee,
+    row.partsCost,
+    row.technician,
+    row.techSalary,
+    row.description,
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function sheetRowMatchesSearch(row: SheetRow, query: string): boolean {
+  const q = normalizeSheetSearch(query);
+  if (!q) return true;
+  const blob = sheetRowSearchText(row);
+  if (blob.includes(q)) return true;
+  // Multi-token: every word must appear somewhere in the row
+  const tokens = q.split(" ").filter(Boolean);
+  return tokens.length > 1 && tokens.every((t) => blob.includes(t));
+}
+
 /** Arrival windows — same slots as Schedule (9–11, etc.). */
 const SHEET_TIME_OPTIONS = sheetTimeSelectOptions();
 
@@ -663,6 +709,9 @@ export function SheetTable({
   const [period, setPeriod] = useState<SheetPeriod>("all");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchHitKey, setSearchHitKey] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [partsPickerRowId, setPartsPickerRowId] = useState<string | null>(null);
   const [servicesPickerRowId, setServicesPickerRowId] = useState<string | null>(null);
   const [armedDeleteKey, setArmedDeleteKey] = useState<string | null>(null);
@@ -699,6 +748,9 @@ export function SheetTable({
   /** Keep freshly created rows visible even if the active period filter would hide them. */
   const pinnedKeysRef = useRef<Set<string>>(new Set());
   const [pinVersion, setPinVersion] = useState(0);
+  /** Just-added rows stay at the top (date sort would bury empty-time drafts under same-day jobs). */
+  const forceTopKeysRef = useRef<string[]>([]);
+  const [forceTopVersion, setForceTopVersion] = useState(0);
 
   const persistTimersRef = useRef<Map<string, number>>(new Map());
   const pendingDrainRef = useRef<Set<string>>(new Set());
@@ -709,6 +761,21 @@ export function SheetTable({
     if (!key || pinnedKeysRef.current.has(key)) return;
     pinnedKeysRef.current.add(key);
     setPinVersion((n) => n + 1);
+  }
+
+  function forceRowToTop(key: string) {
+    if (!key) return;
+    forceTopKeysRef.current = [
+      key,
+      ...forceTopKeysRef.current.filter((k) => k !== key),
+    ].slice(0, 40);
+    setForceTopVersion((n) => n + 1);
+  }
+
+  function dropForceTopKey(key: string) {
+    if (!key || !forceTopKeysRef.current.includes(key)) return;
+    forceTopKeysRef.current = forceTopKeysRef.current.filter((k) => k !== key);
+    setForceTopVersion((n) => n + 1);
   }
 
   function isPinnedRow(row: SheetRow) {
@@ -785,6 +852,8 @@ export function SheetTable({
   }, []);
 
   function changeDateSort(next: "newest" | "oldest") {
+    forceTopKeysRef.current = [];
+    setForceTopVersion((n) => n + 1);
     frozenIdsRef.current = null;
     setFreezeOrder(false);
     setDateSort(next);
@@ -1316,7 +1385,9 @@ export function SheetTable({
     if (!rowInPeriod(draft, activeRange.from, activeRange.to) && period !== "all") {
       changePeriod("all");
     }
-    pinRowKey(rowKey(draft));
+    const draftKey = rowKey(draft);
+    pinRowKey(draftKey);
+    forceRowToTop(draftKey);
     releaseQueuedRef.current = false;
     frozenIdsRef.current = null;
     setFreezeOrder(false);
@@ -1326,7 +1397,7 @@ export function SheetTable({
       rememberRows(next);
       return next;
     });
-    dirtyIdsRef.current.add(rowKey(draft));
+    dirtyIdsRef.current.add(draftKey);
     setPending(true);
     setStatus("Creating…");
     try {
@@ -1337,22 +1408,27 @@ export function SheetTable({
       if (!result.ok && !savedToDb) {
         setStatus(result.error || "Could not create row");
         setRows((prev) => {
-          const next = prev.filter((r) => rowKey(r) !== rowKey(draft));
+          const next = prev.filter((r) => rowKey(r) !== draftKey);
           rowsRef.current = next;
           rememberRows(next);
           return next;
         });
-        dirtyIdsRef.current.delete(rowKey(draft));
-        pinnedKeysRef.current.delete(rowKey(draft));
+        dirtyIdsRef.current.delete(draftKey);
+        pinnedKeysRef.current.delete(draftKey);
+        dropForceTopKey(draftKey);
         return;
       }
 
       const nextJob = result.jobNumber || "";
-      pinRowKey(rowKey(draft));
-      if (savedToDb) pinRowKey(nextId);
+      pinRowKey(draftKey);
+      if (savedToDb) {
+        pinRowKey(nextId);
+        forceRowToTop(nextId);
+        dropForceTopKey(draftKey);
+      }
       setRows((prev) => {
         const next = prev.map((r) =>
-          rowKey(r) === rowKey(draft)
+          rowKey(r) === draftKey
             ? { ...r, id: nextId, jobNumber: nextJob || r.jobNumber }
             : r,
         );
@@ -1360,7 +1436,7 @@ export function SheetTable({
         rememberRows(next);
         return next;
       });
-      dirtyIdsRef.current.delete(rowKey(draft));
+      dirtyIdsRef.current.delete(draftKey);
       if (result.error) {
         setStatus(`Saved with warning: ${result.error}`);
       } else {
@@ -1371,13 +1447,14 @@ export function SheetTable({
       const message = err instanceof Error ? err.message : "Could not create row";
       setStatus(message);
       setRows((prev) => {
-        const next = prev.filter((r) => rowKey(r) !== rowKey(draft));
+        const next = prev.filter((r) => rowKey(r) !== draftKey);
         rowsRef.current = next;
         rememberRows(next);
         return next;
       });
-      dirtyIdsRef.current.delete(rowKey(draft));
-      pinnedKeysRef.current.delete(rowKey(draft));
+      dirtyIdsRef.current.delete(draftKey);
+      pinnedKeysRef.current.delete(draftKey);
+      dropForceTopKey(draftKey);
     } finally {
       setPending(false);
     }
@@ -1480,7 +1557,15 @@ export function SheetTable({
     [rows, activeRange],
   );
 
-  /** Column money totals for the selected period (same rows as the table). */
+  const searchActive = Boolean(normalizeSheetSearch(searchQuery));
+
+  /** Search looks across the whole Sheet (any period); empty search keeps the period filter. */
+  const filteredRows = useMemo(() => {
+    if (!searchActive) return periodRows;
+    return rows.filter((row) => sheetRowMatchesSearch(row, searchQuery));
+  }, [periodRows, rows, searchQuery, searchActive]);
+
+  /** Column money totals for the rows currently on screen. */
   const sheetTotals = useMemo(() => {
     let leadCost = 0;
     let jobCost = 0;
@@ -1489,7 +1574,7 @@ export function SheetTable({
     let techSalary = 0;
     let clear = 0;
 
-    for (const row of periodRows) {
+    for (const row of filteredRows) {
       leadCost += money(row.leadCost);
       jobCost += money(row.jobCost);
       bankFee += money(row.bankFee);
@@ -1499,7 +1584,7 @@ export function SheetTable({
     }
 
     return { leadCost, jobCost, bankFee, partsCost, techSalary, clear };
-  }, [periodRows, partners]);
+  }, [filteredRows, partners]);
 
   const moneyTotalForColumn = (key: SheetColumnKey): number | null => {
     switch (key) {
@@ -1527,15 +1612,32 @@ export function SheetTable({
   }, [period, customFrom, customTo]);
 
   const sortedRows = useMemo(() => {
-    const next = [...periodRows];
+    const next = [...filteredRows];
+    const topRank = (row: SheetRow) => {
+      if (row.id.startsWith("new-")) {
+        const i = forceTopKeysRef.current.indexOf(rowKey(row));
+        return i >= 0 ? i : 0;
+      }
+      const byId = forceTopKeysRef.current.indexOf(row.id);
+      if (byId >= 0) return byId;
+      const byKey = forceTopKeysRef.current.indexOf(rowKey(row));
+      return byKey >= 0 ? byKey : -1;
+    };
     next.sort((a, b) => {
+      const aTop = topRank(a);
+      const bTop = topRank(b);
+      const aForced = aTop >= 0;
+      const bForced = bTop >= 0;
+      if (aForced !== bForced) return aForced ? -1 : 1;
+      if (aForced && bForced && aTop !== bTop) return aTop - bTop;
+
       const da = dateTimeSortValue(a);
       const db = dateTimeSortValue(b);
       if (da === db) return 0;
       return dateSort === "newest" ? (da < db ? 1 : -1) : da < db ? -1 : 1;
     });
     return next;
-  }, [periodRows, dateSort]);
+  }, [filteredRows, dateSort, forceTopVersion]);
 
   function changePeriod(next: SheetPeriod) {
     // Drop freeze so a period switch can't keep out-of-range rows on screen.
@@ -1591,6 +1693,43 @@ export function SheetTable({
     const extras = sortedRows.filter((row) => !lockedSet.has(rowKey(row)));
     return [...locked, ...extras];
   }, [sortedRows, freezeOrder]);
+
+  useEffect(() => {
+    if (!searchActive) {
+      setSearchHitKey(null);
+      return;
+    }
+    // Don't keep an old freeze order while filtering — search should reshuffle the list.
+    releaseQueuedRef.current = false;
+    frozenIdsRef.current = null;
+    setFreezeOrder(false);
+
+    const first = sortedRows[0];
+    if (!first) {
+      setSearchHitKey(null);
+      return;
+    }
+    const key = rowKey(first);
+    setSearchHitKey(key);
+    const timer = window.setTimeout(() => {
+      const el = document.querySelector(`[data-sheet-row="${CSS.escape(key)}"]`);
+      if (el instanceof HTMLElement) {
+        el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    }, 40);
+    return () => window.clearTimeout(timer);
+    // sortedRows identity changes with the query; don't depend on displayRows (freeze).
+  }, [searchActive, searchQuery, sortedRows]);
+
+  function applySearch(next: string) {
+    setSearchQuery(next);
+  }
+
+  function clearSearch() {
+    setSearchQuery("");
+    setSearchHitKey(null);
+    searchInputRef.current?.focus();
+  }
 
   function freezeRowOrder() {
     focusGenRef.current += 1;
@@ -1670,6 +1809,34 @@ export function SheetTable({
             <strong className="sheet-total-value sheet-total-period-value">{periodTotalsLabel}</strong>
           </div>
         </div>
+        <label className="sheet-search">
+          <span className="sheet-search-label">Search</span>
+          <input
+            ref={searchInputRef}
+            type="search"
+            className="sheet-search-input"
+            value={searchQuery}
+            onChange={(e) => applySearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && searchQuery) {
+                e.preventDefault();
+                clearSearch();
+              }
+            }}
+            placeholder="Name, phone, ZIP, job #, address…"
+            aria-label="Search sheet rows"
+          />
+          {searchActive ? (
+            <span className="sheet-search-meta">
+              {displayRows.length
+                ? `${displayRows.length} match${displayRows.length === 1 ? "" : "es"}`
+                : "No matches"}
+              <button type="button" className="sheet-search-clear" onClick={clearSearch}>
+                Clear
+              </button>
+            </span>
+          ) : null}
+        </label>
         <label className="sheet-sort">
           Date / time
           <select
@@ -1794,13 +1961,17 @@ export function SheetTable({
               return (
                 <tr
                   key={rowKey(row)}
-                  className={
+                  data-sheet-row={rowKey(row)}
+                  className={[
                     !sourcePicked
                       ? "sheet-row-need-source"
                       : isPartnerWork(row.workSource)
                         ? "sheet-row-partner"
-                        : "sheet-row-own"
-                  }
+                        : "sheet-row-own",
+                    searchHitKey === rowKey(row) ? "sheet-row-search-hit" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                   onFocusCapture={freezeRowOrder}
                   onBlurCapture={(e) => {
                     const next = e.relatedTarget as Node | null;
