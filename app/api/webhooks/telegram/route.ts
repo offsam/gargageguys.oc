@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     if (/^\/start\b/i.test(text) || /^\/help\b/i.test(text)) {
       await reply(
         chatId,
-        "This chat is not authorized for Champion → Sheet. Add its chat id to TELEGRAM_ALLOWED_CHAT_IDS (or use the office TELEGRAM_CHAT_ID chat).",
+        `This chat is not authorized for Champion → Sheet.\n\nYour chat id: <code>${escapeHtml(String(chatId))}</code>\nAdd it to TELEGRAM_ALLOWED_CHAT_IDS (or paste jobs in the office TELEGRAM_CHAT_ID chat).`,
       );
     }
     return NextResponse.json({ ok: true, ignored: "chat not allowed" });
