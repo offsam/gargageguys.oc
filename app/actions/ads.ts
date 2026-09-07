@@ -7,6 +7,7 @@ import {
   fetchMetaCampaignLeads,
   getDefaultAdsPeriod,
   getMetaAdsConfig,
+  metaDatePresetForDays,
   type MetaLeadRow,
 } from "@/lib/ads/meta";
 import { upsertAdsSnapshot } from "@/lib/ads/snapshots";
@@ -101,7 +102,10 @@ export async function syncMetaAdsAction() {
   try {
     const days = Number(process.env.ADS_SYNC_DAYS || 30);
     const period = getDefaultAdsPeriod(Number.isFinite(days) && days > 0 ? days : 30);
-    const metrics = await fetchMetaAdsMetrics(period);
+    const datePreset = metaDatePresetForDays(Number.isFinite(days) && days > 0 ? days : 30);
+    const metrics = await fetchMetaAdsMetrics(period, {
+      datePreset: datePreset || undefined,
+    });
     await upsertAdsSnapshot({
       platform: "meta",
       period,
@@ -114,6 +118,7 @@ export async function syncMetaAdsAction() {
       metrics: {
         reach: metrics.reach,
         campaigns: metrics.campaigns,
+        datePreset: datePreset || "time_range",
       },
       raw: metrics.raw,
     });

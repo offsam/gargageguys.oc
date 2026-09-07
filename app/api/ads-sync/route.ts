@@ -4,6 +4,7 @@ import {
   fetchMetaAdsMetrics,
   getDefaultAdsPeriod,
   getMetaAdsConfig,
+  metaDatePresetForDays,
 } from "@/lib/ads/meta";
 import { fetchGoogleAdsMetrics, getGoogleAdsConfig } from "@/lib/ads/google";
 import { upsertAdsSnapshot } from "@/lib/ads/snapshots";
@@ -53,7 +54,10 @@ async function handle(request: NextRequest) {
 
     if (meta.ok) {
       try {
-        const metrics = await fetchMetaAdsMetrics(period);
+        const datePreset = metaDatePresetForDays(days);
+        const metrics = await fetchMetaAdsMetrics(period, {
+          datePreset: datePreset || undefined,
+        });
         const row = await upsertAdsSnapshot({
           platform: "meta",
           period,
@@ -66,6 +70,7 @@ async function handle(request: NextRequest) {
           metrics: {
             reach: metrics.reach,
             campaigns: metrics.campaigns,
+            datePreset: datePreset || "time_range",
           },
           raw: metrics.raw,
         });
@@ -95,6 +100,7 @@ async function handle(request: NextRequest) {
           spend: metrics.spend,
           leads: metrics.leads,
           cpl: metrics.cpl,
+          datePreset: datePreset || "time_range",
           ingested: catchup?.ingested ?? 0,
         };
       } catch (error) {

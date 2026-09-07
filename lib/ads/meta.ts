@@ -431,7 +431,7 @@ export { PHONE_FIELD_NAMES, pickField, mapLeadRow };
 
 export async function fetchMetaAdsMetrics(
   period: AdsPeriod,
-  opts?: { token?: string; accountId?: string },
+  opts?: { token?: string; accountId?: string; datePreset?: string },
 ): Promise<MetaAdsMetrics & { accountId: string; raw: unknown }> {
   const cfg = getMetaAdsConfig();
   const token = opts?.token || cfg.token;
@@ -440,19 +440,21 @@ export async function fetchMetaAdsMetrics(
     throw new Error("META_ADS_ACCESS_TOKEN and META_AD_ACCOUNT_ID are required");
   }
 
-  const timeRange = JSON.stringify({ since: period.startDate, until: period.endDate });
   const fields = "spend,impressions,clicks,reach,actions";
+  const rangeParams = opts?.datePreset
+    ? { date_preset: opts.datePreset }
+    : { time_range: JSON.stringify({ since: period.startDate, until: period.endDate }) };
 
   const [accountRes, campaignRows] = await Promise.all([
     graphGet(`${accountId}/insights`, token, {
       fields,
       level: "account",
-      time_range: timeRange,
+      ...rangeParams,
     }),
     graphGetAll(`${accountId}/insights`, token, {
       fields: `campaign_id,campaign_name,${fields}`,
       level: "campaign",
-      time_range: timeRange,
+      ...rangeParams,
       limit: "50",
     }),
   ]);
@@ -494,8 +496,19 @@ export async function fetchMetaAdsMetrics(
     leads,
     cpl,
     campaigns,
-    raw: { account: accountRes, campaigns: campaignRows },
+    raw: { account: accountRes, campaigns: campaignRows, range: rangeParams },
   };
+}
+
+/** Map BOS day count to Meta Ads Manager date_preset when possible. */
+export function metaDatePresetForDays(days: number): string | null {
+  const n = Math.floor(days);
+  if (n === 7) return "last_7d";
+  if (n === 14) return "last_14d";
+  if (n === 28) return "last_28d";
+  if (n === 30) return "last_30d";
+  if (n === 90) return "last_90d";
+  return null;
 }
 
 /** Pull actual Lead Ads rows for a campaign (name/phone/etc). */
