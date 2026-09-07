@@ -441,7 +441,7 @@ export async function fetchMetaAdsMetrics(
   }
 
   const fields = "spend,impressions,clicks,reach,actions";
-  const rangeParams = opts?.datePreset
+  const rangeParams: Record<string, string> = opts?.datePreset
     ? { date_preset: opts.datePreset }
     : { time_range: JSON.stringify({ since: period.startDate, until: period.endDate }) };
 
