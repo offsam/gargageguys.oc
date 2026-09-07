@@ -24,8 +24,8 @@ export type ReviewSnapshot = {
 };
 
 const FALLBACK = {
-  google: { rating: 5.0, review_count: 7 },
-  thumbtack: { rating: 5.0, review_count: 74 },
+  google: { rating: 5.0, review_count: 17 },
+  thumbtack: { rating: 5.0, review_count: 79 },
 } as const;
 
 export async function upsertReviews(rows: ReviewRow[]) {
