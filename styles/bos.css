@@ -1816,7 +1816,7 @@ textarea {
 .sheet-row-num {
   position: sticky;
   left: 0;
-  z-index: 2;
+  z-index: 4;
   background: #f1f5f9;
   color: var(--bos-muted);
   text-align: center;
@@ -1824,6 +1824,45 @@ textarea {
   width: 42px;
   font-weight: 600;
   padding: 0;
+}
+
+.sheet-grid thead .sheet-corner {
+  z-index: 6;
+}
+
+/* Freeze Job # + Client name while scrolling horizontally */
+.sheet-grid th.sheet-col-sticky,
+.sheet-grid td.sheet-col-sticky {
+  position: sticky;
+  z-index: 3;
+  background: #fff;
+}
+
+.sheet-grid thead th.sheet-col-sticky {
+  z-index: 5;
+  background: #eef2f7;
+}
+
+.sheet-grid .sheet-totals-row th.sheet-col-sticky {
+  z-index: 4;
+  background: #f8fafc;
+}
+
+.sheet-grid td.sheet-col-sticky.sheet-cell-muted {
+  background: #e8eef4;
+}
+
+.sheet-grid td.sheet-col-sticky.sheet-cell-need {
+  background: #fff7ed;
+}
+
+.sheet-row-search-hit > td.sheet-col-sticky,
+.sheet-row-search-hit > th.sheet-col-sticky {
+  background: #fffbeb !important;
+}
+
+.sheet-col-sticky-edge {
+  box-shadow: 6px 0 8px -6px rgba(15, 23, 42, 0.28);
 }
 
 .sheet-row-sel,

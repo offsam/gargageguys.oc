@@ -147,12 +147,12 @@ const COLUMNS: Array<{
   money?: boolean;
 }> = [
   { key: "jobNumber", label: "Job #", width: 110 },
+  { key: "clientName", label: "Client name", width: 160 },
   { key: "workSource", label: "Work source", width: 130, kind: "select", options: "workSource" },
   { key: "partnerName", label: "Partner", width: 160, kind: "select", options: "partner" },
   { key: "leadSource", label: "Lead source", width: 140, kind: "combo", options: "leadSource" },
   { key: "leadCost", label: "Lead cost", width: 100, money: true },
   { key: "jobStatus", label: "Status", width: 140, kind: "select", options: "status" },
-  { key: "clientName", label: "Client name", width: 150 },
   { key: "clientAddress", label: "Address", width: 200 },
   { key: "date", label: "Date", width: 130, kind: "date" },
   { key: "time", label: "Time", width: 100, kind: "time" },
@@ -174,6 +174,9 @@ const COLUMNS: Array<{
   { key: "techSalary", label: "Tech salary", width: 110, money: true },
   { key: "description", label: "Description", width: 220 },
 ];
+
+/** Columns frozen on the left when scrolling horizontally (after the row #). */
+const STICKY_COLUMNS: SheetColumnKey[] = ["jobNumber", "clientName"];
 
 const PROFIT_DEFAULT_WIDTH = 110;
 const ROW_NUM_WIDTH = 42;
@@ -918,6 +921,29 @@ export function SheetTable({
     ROW_NUM_WIDTH +
     COLUMNS.reduce((sum, col) => sum + (widths[col.key] || col.width), 0) +
     (widths.__profit || PROFIT_DEFAULT_WIDTH);
+
+  const stickyLeftByKey = useMemo(() => {
+    const map: Partial<Record<SheetColumnKey, number>> = {};
+    let left = ROW_NUM_WIDTH;
+    for (const key of STICKY_COLUMNS) {
+      map[key] = left;
+      left += widths[key] || COLUMNS.find((c) => c.key === key)?.width || 120;
+    }
+    return map;
+  }, [widths]);
+
+  function stickyColProps(key: SheetColumnKey): {
+    className: string;
+    style?: { left: number; width?: number };
+  } {
+    const left = stickyLeftByKey[key];
+    if (left == null) return { className: "" };
+    const isEdge = key === STICKY_COLUMNS[STICKY_COLUMNS.length - 1];
+    return {
+      className: ["sheet-col-sticky", isEdge ? "sheet-col-sticky-edge" : ""].filter(Boolean).join(" "),
+      style: { left, width: widths[key] || COLUMNS.find((c) => c.key === key)?.width },
+    };
+  }
 
   function persistWidths(next: Record<string, number>) {
     try {
@@ -1862,8 +1888,14 @@ export function SheetTable({
           <thead>
             <tr>
               <th className="sheet-corner" title="Click a row number to delete" />
-              {COLUMNS.map((col, idx) => (
-                <th key={col.key} style={{ width: widths[col.key] || col.width }}>
+              {COLUMNS.map((col, idx) => {
+                const sticky = stickyColProps(col.key);
+                return (
+                <th
+                  key={col.key}
+                  className={sticky.className || undefined}
+                  style={{ width: widths[col.key] || col.width, ...sticky.style }}
+                >
                   {col.key === "date" ? (
                     <button
                       type="button"
@@ -1898,7 +1930,8 @@ export function SheetTable({
                     aria-label={`Resize ${col.label}`}
                   />
                 </th>
-              ))}
+                );
+              })}
               <th style={{ width: widths.__profit || PROFIT_DEFAULT_WIDTH }}>
                 <span className="sheet-col-letter">
                   {String.fromCharCode(65 + profitColIndex)}
@@ -1919,11 +1952,23 @@ export function SheetTable({
               </th>
               {COLUMNS.map((col) => {
                 const amount = moneyTotalForColumn(col.key);
+                const sticky = stickyColProps(col.key);
+                const stickyClass = sticky.className;
                 if (amount === null) {
-                  return <th key={`tot-${col.key}`} className="sheet-totals-empty" />;
+                  return (
+                    <th
+                      key={`tot-${col.key}`}
+                      className={["sheet-totals-empty", stickyClass].filter(Boolean).join(" ")}
+                      style={sticky.style}
+                    />
+                  );
                 }
                 return (
-                  <th key={`tot-${col.key}`} className="sheet-totals-cell">
+                  <th
+                    key={`tot-${col.key}`}
+                    className={["sheet-totals-cell", stickyClass].filter(Boolean).join(" ")}
+                    style={sticky.style}
+                  >
                     {formatMoney(amount)}
                   </th>
                 );
@@ -2028,10 +2073,13 @@ export function SheetTable({
                           : undefined),
                       colOpts,
                     );
+                    const sticky = stickyColProps(col.key);
+                    const tdClass = [cellClass, sticky.className].filter(Boolean).join(" ") || undefined;
+                    const tdStyle = sticky.style;
 
                     if (col.key === "service") {
                       return (
-                        <td key={col.key} className={cellClass}>
+                        <td key={col.key} className={tdClass} style={tdStyle}>
                           <button
                             type="button"
                             className="sheet-cell sheet-parts-trigger"
@@ -2051,7 +2099,7 @@ export function SheetTable({
 
                     if (col.key === "parts") {
                       return (
-                        <td key={col.key} className={cellClass}>
+                        <td key={col.key} className={tdClass} style={tdStyle}>
                           <button
                             type="button"
                             className="sheet-cell sheet-parts-trigger"
@@ -2120,7 +2168,7 @@ export function SheetTable({
 
                     if (col.kind === "combo") {
                       return (
-                        <td key={col.key} className={cellClass}>
+                        <td key={col.key} className={tdClass} style={tdStyle}>
                           <input
                             className="sheet-cell sheet-combo"
                             list={
@@ -2150,7 +2198,7 @@ export function SheetTable({
 
                     if (col.kind === "date") {
                       return (
-                        <td key={col.key} className={cellClass}>
+                        <td key={col.key} className={tdClass} style={tdStyle}>
                           <input
                             className="sheet-cell sheet-date"
                             type="date"
@@ -2172,7 +2220,7 @@ export function SheetTable({
                         ? sheetTimeForWindow(window)
                         : normalizeSheetTime(row.time);
                       return (
-                        <td key={col.key} className={cellClass}>
+                        <td key={col.key} className={tdClass} style={tdStyle}>
                           <select
                             className="sheet-cell sheet-select sheet-time"
                             value={timeValue}
@@ -2199,7 +2247,11 @@ export function SheetTable({
 
                     if (col.key === "clientName") {
                       return (
-                        <td key={col.key} className={`${cellClass || ""} sheet-name-cell`.trim()}>
+                        <td
+                          key={col.key}
+                          className={[tdClass, "sheet-name-cell"].filter(Boolean).join(" ")}
+                          style={tdStyle}
+                        >
                           <ClientAutocomplete
                             className="sheet-cell"
                             value={row.clientName}
@@ -2232,7 +2284,11 @@ export function SheetTable({
 
                     if (col.key === "clientAddress") {
                       return (
-                        <td key={col.key} className={`${cellClass || ""} sheet-addr-cell`.trim()}>
+                        <td
+                          key={col.key}
+                          className={[tdClass, "sheet-addr-cell"].filter(Boolean).join(" ")}
+                          style={tdStyle}
+                        >
                           <AddressAutocomplete
                             className="sheet-cell"
                             value={row.clientAddress}
@@ -2261,7 +2317,7 @@ export function SheetTable({
                     const isMoney = col.money || MONEY_KEYS.has(col.key);
 
                     return (
-                      <td key={col.key} className={cellClass}>
+                      <td key={col.key} className={tdClass} style={tdStyle}>
                         <div className={isMoney ? "sheet-money" : undefined}>
                           {isMoney ? <span className="sheet-money-prefix">$</span> : null}
                           <input
