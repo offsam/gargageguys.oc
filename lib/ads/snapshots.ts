@@ -157,16 +157,34 @@ export async function upsertAdsSnapshot(payload: AdsSnapshotPayload) {
   ].slice(0, 60);
 
   await saveFile(file);
-  await tryTableUpsert(row); // no-op if migration not applied yet
+  try {
+    await tryTableUpsert(row);
+  } catch (err) {
+    // Keep JSON as fallback so a DB glitch does not leave the UI on a stale row.
+    console.error("[upsertAdsSnapshot] DB upsert failed; file snapshot kept", err);
+  }
   return { id: row.id };
 }
 
 export async function listAdsSnapshots(limit = 12, platform?: string) {
-  const fromTable = await tryTableList(limit, platform);
-  if (fromTable) return fromTable;
-
   const file = await loadFile();
-  let rows = file.snapshots.slice().sort((a, b) => b.period_end.localeCompare(a.period_end));
-  if (platform) rows = rows.filter((r) => r.platform === platform);
-  return rows.slice(0, limit);
+  let fileRows = file.snapshots.slice().sort((a, b) => b.period_end.localeCompare(a.period_end));
+  if (platform) fileRows = fileRows.filter((r) => r.platform === platform);
+  fileRows = fileRows.slice(0, limit);
+
+  let fromTable: AdsSnapshotRow[] | null = null;
+  try {
+    fromTable = await tryTableList(limit, platform);
+  } catch (err) {
+    console.error("[listAdsSnapshots] DB list failed; using file", err);
+  }
+
+  if (!fromTable?.length) return fileRows;
+  if (!fileRows.length) return fromTable;
+
+  // Prefer whichever store has the newer sync for the top row of this platform.
+  const tableTop = fromTable[0]?.synced_at || "";
+  const fileTop = fileRows[0]?.synced_at || "";
+  if (fileTop && (!tableTop || fileTop > tableTop)) return fileRows;
+  return fromTable;
 }

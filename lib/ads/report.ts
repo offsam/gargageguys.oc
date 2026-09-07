@@ -253,16 +253,21 @@ export function aggregateAdsReport(
   const metaSpend = Number(input.metaAds?.spend) || 0;
   const googleSpend = Number(input.googleAds?.spend) || 0;
 
-  if (metaSpend > 0 && metaLeadCount > 0 && !input.estimateMetaSpend) {
+  if (metaSpend > 0 && !input.estimateMetaSpend) {
     const fbRow = rows.get("Facebook")!;
     const igRow = rows.get("Instagram")!;
-    if (facebookCount > 0) {
-      fbRow.spend = metaSpend * (facebookCount / metaLeadCount);
-    }
-    if (instagramCount > 0) {
-      igRow.spend = metaSpend * (instagramCount / metaLeadCount);
-    }
-    if (facebookCount === 0 && instagramCount === 0) {
+    if (metaLeadCount > 0) {
+      if (facebookCount > 0) {
+        fbRow.spend = metaSpend * (facebookCount / metaLeadCount);
+      }
+      if (instagramCount > 0) {
+        igRow.spend = metaSpend * (instagramCount / metaLeadCount);
+      }
+      if (facebookCount === 0 && instagramCount === 0) {
+        fbRow.spend = metaSpend;
+      }
+    } else {
+      // Snapshot has spend but CRM has no Meta leads in this window — still show spend.
       fbRow.spend = metaSpend;
     }
   }

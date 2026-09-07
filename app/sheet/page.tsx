@@ -1,7 +1,6 @@
 import { BosShell } from "@/components/bos/BosShell";
 import { SheetTable, type SheetRow } from "@/components/bos/SheetTable";
 import { requireRouteAccess } from "@/lib/auth/require";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { loadStockState, masterQty, partnerMasterQty } from "@/lib/stock/store";
 import { SEED_STOCK_ITEMS } from "@/lib/stock/seed-catalog";
@@ -38,18 +37,17 @@ function pick(meta: Record<string, unknown>, ...keys: string[]): string {
 export default async function SheetPage() {
   const user = await requireRouteAccess("/sheet");
 
-  const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();
 
   const [{ data: leads }, { data: techProfiles }, { data: jobsForNumbers }, stockState, partners, catalog, metaSnapshots] =
     await Promise.all([
-    supabase
+    admin
       .from("leads")
       .select(
         "id, name, phone, zip, address, stage, source, message, created_at, deal_title, deal_price, lead_type, metadata, assigned_to",
       )
       .order("created_at", { ascending: false })
-      .limit(300),
+      .limit(500),
     admin
       .from("profiles")
       .select("id, full_name, email")

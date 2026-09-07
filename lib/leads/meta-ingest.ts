@@ -118,7 +118,7 @@ async function notifyNewMetaLead(input: MetaIngestFields, leadId: string, channe
   if (!hasRealPhone) {
     lines.push("", "<i>Form had no phone — still saved to CRM Waiting.</i>");
   }
-  lines.push("", `<a href="${siteBase()}/crm">Open CRM Waiting</a>`);
+  lines.push("", `<a href="${siteBase()}/sheet">Open Sheet</a> · <a href="${siteBase()}/crm">CRM</a>`);
   void leadId;
   await sendTelegram(lines.join("\n"));
 }
@@ -176,6 +176,14 @@ export async function ingestMetaLeadToCrm(input: MetaIngestFields): Promise<{
     .filter(Boolean)
     .join("\n");
 
+  const sheetDateFromMeta = (() => {
+    const raw = String(input.createdTime || "").trim();
+    if (!raw) return "";
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toISOString().slice(0, 10);
+  })();
+
   const created = await ingestLead({
     name: String(input.name || "").trim() || `${channel} lead`,
     phone,
@@ -186,8 +194,10 @@ export async function ingestMetaLeadToCrm(input: MetaIngestFields): Promise<{
     leadType: "meta_lead_ad",
     dealTitle: String(input.message || "").trim() || `${channel} Lead Ad`,
     jobStatus: "Waiting",
+    preferredDate: sheetDateFromMeta || undefined,
     metadata: {
       ...leadMeta,
+      ...(sheetDateFromMeta ? { sheetDate: sheetDateFromMeta } : {}),
       ...(leadCost ? { leadCost } : {}),
       ...(metaPricing.accountCpl != null
         ? { metaAccountCpl: formatLeadCostUsd(metaPricing.accountCpl) }

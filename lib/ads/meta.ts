@@ -209,10 +209,12 @@ export async function getMetaPageWebhookSubscriptions(): Promise<{
 }
 
 export function getDefaultAdsPeriod(days = 28): AdsPeriod {
+  // Local calendar days (same as Ads period bar) so Sync period matches "28d".
   const end = new Date();
-  const start = new Date();
-  start.setUTCDate(end.getUTCDate() - (days - 1));
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const start = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  start.setDate(start.getDate() - (days - 1));
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   return { startDate: iso(start), endDate: iso(end) };
 }
 
