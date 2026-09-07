@@ -93,9 +93,41 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  body.page-home-unified .home-hero-stack .hero-phone-big {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
   body.page-home-unified .home-hero-stack .hero-phone-number {
-    font-size: clamp(20px, 5.8vw, 30px);
+    font-size: clamp(18px, 5.2vw, 28px) !important;
+    letter-spacing: 0.35px !important;
+    gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  body.page-home-unified .home-hero-stack .hero-phone-icon svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  /* City / service heroes (no home-screens wrapper) */
+  .hero .hero-phone-big,
+  .hero-phone-big {
+    width: 100%;
     max-width: 100%;
+    min-width: 0;
+  }
+
+  .hero .hero-phone-number,
+  .hero-phone-number {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
 
   body.page-home-unified .home-hero-stack .stat-label {

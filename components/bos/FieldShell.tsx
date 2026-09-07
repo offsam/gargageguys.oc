@@ -3,6 +3,7 @@ import type { SessionUser } from "@/lib/auth/session";
 import { techRankLabel } from "@/lib/auth/tech-rank";
 import { signOutAction } from "@/app/actions/auth";
 import { FieldSessionKeeper } from "@/components/bos/FieldSessionKeeper";
+import { FieldPwaRegister } from "@/components/bos/FieldPwaRegister";
 
 type TabId = "schedule" | "calendar" | "report" | "stock" | "attention";
 
@@ -44,6 +45,7 @@ export function FieldShell({
 
   return (
     <div className={`field-app${wide ? " field-app--wide" : ""}`}>
+      <FieldPwaRegister />
       <FieldSessionKeeper />
       <header className="field-top">
         <div>

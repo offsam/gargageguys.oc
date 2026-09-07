@@ -80,7 +80,7 @@ export function renderUnifiedCityPage(page, pagesByPath, cityMaps, problemPages 
 <meta property="og:url" content="${pageUrl}">
 <meta property="og:title" content="${page.ogTitle ?? page.title}">
 <meta property="og:description" content="${page.description}">
-<meta property="og:image" content="https://garageguysoc.com/favicon-192x192.png">
+<meta property="og:image" content="https://garageguysoc.com/brand/og-share.jpg">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="${page.ogTitle ?? page.title}">
 <meta name="twitter:description" content="${page.description}">

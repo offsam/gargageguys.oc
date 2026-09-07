@@ -36,7 +36,7 @@ function headBlock({ title, description, canonical, ogTitle, schema }) {
 <meta property="og:url" content="${canonical}">
 <meta property="og:title" content="${ogTitle}">
 <meta property="og:description" content="${description}">
-<meta property="og:image" content="https://garageguysoc.com/favicon-192x192.png">
+<meta property="og:image" content="https://garageguysoc.com/brand/og-share.jpg">
 <meta name="theme-color" content="#0f2340">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">

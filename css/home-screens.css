@@ -216,8 +216,9 @@ body.page-home-unified .fab-bar {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
-    width: max-content;
+    width: 100%;
     max-width: 100%;
+    min-width: 0;
     box-sizing: border-box;
   }
 
@@ -243,13 +244,17 @@ body.page-home-unified .fab-bar {
   }
 
   body.page-home-unified .home-hero-stack .hero-phone-number {
-    font-size: clamp(22px, 6.5vw, 34px);
+    font-size: clamp(20px, 5.4vw, 30px);
     flex-wrap: nowrap;
     white-space: nowrap;
-    width: auto;
+    width: 100%;
     max-width: 100%;
-    gap: 8px;
+    min-width: 0;
+    gap: 6px;
+    letter-spacing: 0.5px;
     justify-content: flex-start;
+    box-sizing: border-box;
+    overflow: hidden;
     text-shadow:
       0 1px 2px rgba(0, 0, 0, 0.9),
       0 2px 10px rgba(0, 0, 0, 0.65),

@@ -83,7 +83,7 @@ export function localBusinessFields(overrides = {}) {
     name: BUSINESS_NAME,
     telephone: BUSINESS_PHONE_E164,
     url: `${SITE_ORIGIN}/`,
-    image: `${SITE_ORIGIN}/favicon-192x192.png`,
+    image: `${SITE_ORIGIN}/brand/og-share.jpg`,
     priceRange: '$$',
     address: BUSINESS_ADDRESS,
     serviceType: BUSINESS_SERVICES,

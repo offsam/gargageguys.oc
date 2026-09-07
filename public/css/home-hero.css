@@ -791,4 +791,44 @@
 
 @media (max-width: 600px) {
   .stats-inner { grid-template-columns: repeat(2, 1fr); }
+
+  .hero-phone-big {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .hero-phone-number {
+    font-size: clamp(22px, 6vw, 34px);
+    letter-spacing: 0.6px;
+    gap: 8px;
+    max-width: 100%;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .hero-phone-icon {
+    flex-shrink: 0;
+  }
+
+  .hero-phone-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (max-width: 390px) {
+  .hero-phone-number {
+    font-size: clamp(18px, 5.2vw, 26px);
+    letter-spacing: 0.2px;
+    gap: 6px;
+  }
+
+  .hero-phone-icon svg {
+    width: 18px;
+    height: 18px;
+  }
 }

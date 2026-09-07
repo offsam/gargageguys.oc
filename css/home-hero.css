@@ -281,39 +281,6 @@
   transform: translateY(-1px);
 }
 
-/* Homepage stats: Handyman is a plain label on the warranty tile */
-.stats-bar .hero-handyman {
-  display: inline;
-  margin-top: 6px;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-  font-size: 11px;
-  letter-spacing: 0.7px;
-  color: #7ec4ef;
-  white-space: nowrap;
-}
-
-.stats-bar .hero-handyman::before {
-  content: none;
-}
-
-.stats-bar .hero-handyman:hover {
-  color: #f5a623;
-  background: none;
-  border: none;
-  transform: none;
-}
-
-.stats-bar .stat-item--parts-warranty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
 .hero-title {
   font-family: 'Bebas Neue', sans-serif;
   font-size: clamp(34px, 5.2vw, 68px);
@@ -824,4 +791,44 @@
 
 @media (max-width: 600px) {
   .stats-inner { grid-template-columns: repeat(2, 1fr); }
+
+  .hero-phone-big {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .hero-phone-number {
+    font-size: clamp(22px, 6vw, 34px);
+    letter-spacing: 0.6px;
+    gap: 8px;
+    max-width: 100%;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .hero-phone-icon {
+    flex-shrink: 0;
+  }
+
+  .hero-phone-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (max-width: 390px) {
+  .hero-phone-number {
+    font-size: clamp(18px, 5.2vw, 26px);
+    letter-spacing: 0.2px;
+    gap: 6px;
+  }
+
+  .hero-phone-icon svg {
+    width: 18px;
+    height: 18px;
+  }
 }

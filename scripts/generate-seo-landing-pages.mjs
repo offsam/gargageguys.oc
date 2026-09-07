@@ -146,7 +146,8 @@ ${relatedLinks.map((r) => `        <a href="${r.href}">${r.label}</a>`).join('\n
     : '';
   const stylesheets = isCity
     ? `<link rel="stylesheet" href="/css/service-page.css">
-<link rel="stylesheet" href="/css/home-hero.css">`
+<link rel="stylesheet" href="/css/home-hero.css">
+<link rel="stylesheet" href="/css/mobile-polish.css">`
     : `<link rel="stylesheet" href="/css/service-page.css">`;
   const vanBg = isCity
     ? `<div class="site-van-bg" data-tone="hero" aria-hidden="true"></div>`
@@ -179,7 +180,7 @@ ${heroActionsBlock()}
 <meta property="og:url" content="${canonical}">
 <meta property="og:title" content="${page.ogTitle}">
 <meta property="og:description" content="${page.description}">
-<meta property="og:image" content="https://garageguysoc.com/favicon-192x192.png">
+<meta property="og:image" content="https://garageguysoc.com/brand/og-share.jpg">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="${page.ogTitle}">
 <meta name="twitter:description" content="${page.description}">
@@ -251,7 +252,7 @@ ${page.related.map((r) => `        <a href="${r.href}">${r.label}</a>`).join('\n
 <meta property="og:url" content="${canonical}">
 <meta property="og:title" content="${page.ogTitle}">
 <meta property="og:description" content="${page.description}">
-<meta property="og:image" content="https://garageguysoc.com/favicon-192x192.png">
+<meta property="og:image" content="https://garageguysoc.com/brand/og-share.jpg">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="${page.ogTitle}">
 <meta name="twitter:description" content="${page.description}">
