@@ -159,27 +159,32 @@ export async function subscribeMetaPageLeadWebhooks(): Promise<{
   const cfg = getMetaAdsConfig();
   if (!cfg.token) throw new Error("META_ADS_ACCESS_TOKEN is required");
   const pageAuth = await resolveLeadAccessToken(cfg.token, cfg.pageId);
-  const fields = [
-    "leadgen",
-    "messages",
-    "messaging_postbacks",
-    "messaging_optins",
-    "message_deliveries",
+
+  // Prefer leadgen (Instant Forms). Messaging fields need pages_messaging — try, then fall back.
+  const fieldSets = [
+    ["leadgen", "messages", "messaging_postbacks", "messaging_optins"],
+    ["leadgen", "messages"],
+    ["leadgen"],
   ];
-  const url = new URL(`https://graph.facebook.com/v21.0/${pageAuth.pageId}/subscribed_apps`);
-  url.searchParams.set("access_token", pageAuth.token);
-  url.searchParams.set("subscribed_fields", fields.join(","));
-  const res = await fetch(url.toString(), { method: "POST", cache: "no-store" });
-  const json = (await res.json()) as { success?: boolean; error?: { message?: string } };
-  if (!res.ok || json.error) {
-    throw new Error(json.error?.message || `subscribed_apps failed (${res.status})`);
+
+  let lastError = "subscribed_apps failed";
+  for (const fields of fieldSets) {
+    const url = new URL(`https://graph.facebook.com/v21.0/${pageAuth.pageId}/subscribed_apps`);
+    url.searchParams.set("access_token", pageAuth.token);
+    url.searchParams.set("subscribed_fields", fields.join(","));
+    const res = await fetch(url.toString(), { method: "POST", cache: "no-store" });
+    const json = (await res.json()) as { success?: boolean; error?: { message?: string } };
+    if (res.ok && !json.error) {
+      return {
+        pageId: pageAuth.pageId,
+        pageName: pageAuth.pageName,
+        fields,
+        result: json,
+      };
+    }
+    lastError = json.error?.message || `subscribed_apps failed (${res.status})`;
   }
-  return {
-    pageId: pageAuth.pageId,
-    pageName: pageAuth.pageName,
-    fields,
-    result: json,
-  };
+  throw new Error(lastError);
 }
 
 export async function getMetaPageWebhookSubscriptions(): Promise<{
