@@ -27,14 +27,32 @@ update profiles set role = 'owner' where email = 'you@example.com';
 
 Office lead alerts still use `TELEGRAM_CHAT_ID`.
 
-## Telegram job alerts for technicians
+## Champion jobs from Telegram → Sheet
 
-1. Keep `TELEGRAM_BOT_TOKEN` set (same bot as lead alerts).
-2. Each tech opens the bot and sends `/start`.
-3. Owner → **Employees** → paste the tech’s numeric Telegram chat id and Save.
-4. When a job is **Scheduled** (Sheet / CRM / Dispatch / Field assign), that tech gets a Telegram message.
+Paste Champion-style messages into the bot; they become **Partner → Champion** Sheet rows.
 
-Office lead alerts still use `TELEGRAM_CHAT_ID`.
+Example:
+
+```
+130pm or after
+
+402 Beryl Cove Way, Seal Beach, CA 90740
+
+Christina
+
+** Call before
+```
+
+1. Set `TELEGRAM_WEBHOOK_SECRET` (random string) in Vercel env.
+2. Add your personal Telegram chat id to `TELEGRAM_ALLOWED_CHAT_IDS` (comma-separated) if you DM the bot. The office `TELEGRAM_CHAT_ID` is always allowed.
+3. Register the webhook once:
+
+```bash
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
+  https://garageguysoc.com/api/webhooks/telegram/setup
+```
+
+4. Send `/start` to the bot for the format reminder, then paste a job.
 
 ## Routes
 
