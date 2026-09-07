@@ -1,13 +1,19 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { findLeadIdByMetaLeadgen, ingestMetaLeadToCrm } from "@/lib/leads/meta-ingest";
-import { isSupabaseConfigured } from "@/lib/supabase/admin";
 import { PHONE_FIELD_NAMES } from "@/lib/ads/meta";
+import {
+  findLeadIdByMetaLeadgen,
+  ingestMetaInboxMessageToCrm,
+  ingestMetaLeadToCrm,
+} from "@/lib/leads/meta-ingest";
+import { isMetaInboxLeadFormText } from "@/lib/leads/meta-inbox-parse";
+import { isSupabaseConfigured } from "@/lib/supabase/admin";
 
 /**
- * Meta Lead Ads webhook.
- * Subscribe the Page to leadgen in App → Webhooks.
- * Env: META_WEBHOOK_VERIFY_TOKEN, META_APP_SECRET, META_ADS_ACCESS_TOKEN
+ * Meta Lead Ads + Messenger/Instagram inbox forms webhook.
+ * App → Webhooks: Page leadgen + messages (and Instagram messages if used).
+ * Callback URL: https://garageguysoc.com/api/ads/meta-leads
+ * Env: META_WEBHOOK_VERIFY_TOKEN, META_APP_SECRET, META_ADS_ACCESS_TOKEN, META_PAGE_ID
  */
 
 type LeadField = { name?: string; values?: string[] };
@@ -106,6 +112,62 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
 
+type MessagingEvent = {
+  sender?: { id?: string };
+  recipient?: { id?: string };
+  message?: { mid?: string; text?: string; is_echo?: boolean };
+};
+
+async function ingestLeadgenId(leadgenId: string) {
+  if (await findLeadIdByMetaLeadgen(leadgenId)) {
+    return { leadgenId, ok: true as const, error: "duplicate" };
+  }
+  const data = await fetchLeadData(leadgenId);
+  const fields = data.field_data || [];
+  const name =
+    fieldValue(fields, ["full_name", "full name", "name"]) ||
+    [fieldValue(fields, ["first_name"]), fieldValue(fields, ["last_name"])]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
+    "Meta lead";
+  const phone = fieldValue(fields, PHONE_FIELD_NAMES);
+  const email = fieldValue(fields, ["email", "email_address"]);
+  const zip = fieldValue(fields, ["zip_code", "zip", "post_code", "postal_code"]);
+  const address = fieldValue(fields, ["street_address", "address"]);
+  const message = fieldValue(fields, [
+    "message",
+    "notes",
+    "description",
+    "what_do_you_need_help_with",
+    "what_do_you_need",
+    "problem",
+    "task",
+  ]);
+  const campaignName =
+    String(data.campaign_name || "").trim() || (await resolveCampaignName(data.campaign_id));
+
+  const lead = await ingestMetaLeadToCrm({
+    leadgenId,
+    name,
+    phone,
+    email,
+    zip,
+    address,
+    message,
+    formId: data.form_id || null,
+    adId: data.ad_id || null,
+    adsetId: data.adset_id || null,
+    campaignId: data.campaign_id || null,
+    campaignName: campaignName || null,
+    adName: data.ad_name || null,
+    createdTime: data.created_time || null,
+    fields: fieldsMap(fields),
+  });
+
+  return { leadgenId, ok: true as const, leadId: lead.leadId };
+}
+
 export async function POST(request: NextRequest) {
   if (!isSupabaseConfigured() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return NextResponse.json({ error: "Supabase is not configured" }, { status: 503 });
@@ -121,11 +183,14 @@ export async function POST(request: NextRequest) {
   }
 
   let body: {
+    object?: string;
     entry?: Array<{
+      id?: string;
       changes?: Array<{
         field?: string;
         value?: { leadgen_id?: string; page_id?: string; form_id?: string; ad_id?: string };
       }>;
+      messaging?: MessagingEvent[];
     }>;
   };
   try {
@@ -134,68 +199,61 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const leadgenIds: string[] = [];
+  const results: Array<Record<string, unknown>> = [];
+  const objectKind = String(body.object || "page").toLowerCase();
+  const inboxChannel =
+    objectKind === "instagram" ? ("Instagram" as const) : ("Messenger" as const);
+
   for (const entry of body.entry || []) {
     for (const change of entry.changes || []) {
       if (change.field !== "leadgen") continue;
       const id = change.value?.leadgen_id;
-      if (id) leadgenIds.push(id);
-    }
-  }
-
-  const results: Array<{ leadgenId: string; ok: boolean; leadId?: string; error?: string }> = [];
-
-  for (const leadgenId of leadgenIds) {
-    try {
-      if (await findLeadIdByMetaLeadgen(leadgenId)) {
-        results.push({ leadgenId, ok: true, error: "duplicate" });
-        continue;
+      if (!id) continue;
+      try {
+        results.push(await ingestLeadgenId(id));
+      } catch (error) {
+        results.push({
+          leadgenId: id,
+          ok: false,
+          error: error instanceof Error ? error.message : "ingest failed",
+        });
       }
-      const data = await fetchLeadData(leadgenId);
-      const fields = data.field_data || [];
-      const name =
-        fieldValue(fields, ["full_name", "full name", "name"]) ||
-        [fieldValue(fields, ["first_name"]), fieldValue(fields, ["last_name"])]
-          .filter(Boolean)
-          .join(" ")
-          .trim() ||
-        "Meta lead";
-      const phone = fieldValue(fields, PHONE_FIELD_NAMES);
-      const email = fieldValue(fields, ["email", "email_address"]);
-      const zip = fieldValue(fields, ["zip_code", "zip", "post_code", "postal_code"]);
-      const address = fieldValue(fields, ["street_address", "address"]);
-      const message = fieldValue(fields, ["message", "notes", "description", "what_do_you_need"]);
-      const campaignName =
-        String(data.campaign_name || "").trim() || (await resolveCampaignName(data.campaign_id));
+    }
 
-      const lead = await ingestMetaLeadToCrm({
-        leadgenId,
-        name,
-        phone,
-        email,
-        zip,
-        address,
-        message,
-        formId: data.form_id || null,
-        adId: data.ad_id || null,
-        adsetId: data.adset_id || null,
-        campaignId: data.campaign_id || null,
-        campaignName: campaignName || null,
-        adName: data.ad_name || null,
-        createdTime: data.created_time || null,
-        fields: fieldsMap(fields),
-      });
-
-      results.push({ leadgenId, ok: true, leadId: lead.leadId });
-    } catch (error) {
-      results.push({
-        leadgenId,
-        ok: false,
-        error: error instanceof Error ? error.message : "ingest failed",
-      });
+    for (const event of entry.messaging || []) {
+      const text = String(event.message?.text || "").trim();
+      const mid = String(event.message?.mid || "").trim();
+      if (!text || !mid || event.message?.is_echo) continue;
+      if (!isMetaInboxLeadFormText(text)) continue;
+      try {
+        const lead = await ingestMetaInboxMessageToCrm({
+          messageId: mid,
+          text,
+          channel: inboxChannel,
+          senderId: event.sender?.id,
+        });
+        if (lead.skipped) {
+          results.push({ messageId: mid, ok: true, skipped: true });
+          continue;
+        }
+        results.push({
+          messageId: mid,
+          ok: true,
+          leadId: lead.leadId,
+          duplicate: lead.duplicate,
+          channel: inboxChannel,
+        });
+      } catch (error) {
+        results.push({
+          messageId: mid,
+          ok: false,
+          error: error instanceof Error ? error.message : "inbox ingest failed",
+        });
+      }
     }
   }
 
-  const retryable = results.some((r) => !r.ok);
+  const retryable = results.some((r) => r.ok === false);
+  // Always 200 for empty messaging pings so Meta does not disable the webhook.
   return NextResponse.json({ ok: !retryable, results }, { status: retryable ? 500 : 200 });
 }

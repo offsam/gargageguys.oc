@@ -10,6 +10,7 @@ import {
   formatLeadCostUsd,
   resolveMetaLeadCost,
 } from "@/lib/ads/meta-lead-cost";
+import { parseMetaInboxLeadFormText } from "@/lib/leads/meta-inbox-parse";
 
 export type MetaIngestFields = {
   leadgenId: string;
@@ -27,6 +28,8 @@ export type MetaIngestFields = {
   adName?: string | null;
   createdTime?: string | null;
   fields?: Record<string, string>;
+  messageId?: string;
+  inboxChannel?: string;
 };
 
 function siteBase() {
@@ -44,6 +47,18 @@ export async function findLeadIdByMetaLeadgen(leadgenId: string): Promise<string
     .from("leads")
     .select("id")
     .contains("metadata", { metaLeadgenId: leadgenId })
+    .limit(1)
+    .maybeSingle();
+  return data?.id || null;
+}
+
+export async function findLeadIdByMetaMessageId(messageId: string): Promise<string | null> {
+  if (!messageId) return null;
+  const admin = getSupabaseAdmin();
+  const { data } = await admin
+    .from("leads")
+    .select("id")
+    .contains("metadata", { metaMessageId: messageId })
     .limit(1)
     .maybeSingle();
   return data?.id || null;
@@ -147,6 +162,8 @@ export async function ingestMetaLeadToCrm(input: MetaIngestFields): Promise<{
     metaEmail: input.email || null,
     metaMissingPhone: missingPhone,
     leadSource: channel,
+    ...(input.messageId ? { metaMessageId: input.messageId } : {}),
+    ...(input.inboxChannel ? { metaInboxChannel: input.inboxChannel } : {}),
     ...(input.fields ? { metaFields: input.fields } : {}),
   };
   const leadCost = resolveMetaLeadCost(leadMeta, metaPricing);
@@ -194,4 +211,78 @@ export async function ingestMetaLeadToCrm(input: MetaIngestFields): Promise<{
 
   revalidateLeadPaths();
   return { leadId: created.leadId, duplicate: false, missingPhone };
+}
+
+/** Inbox Messenger/Instagram lead-form message (Click-to-Message Instant Forms). */
+export async function ingestMetaInboxMessageToCrm(input: {
+  messageId: string;
+  text: string;
+  channel: "Facebook" | "Instagram" | "Messenger";
+  senderId?: string;
+}): Promise<{ leadId: string; duplicate: boolean; missingPhone: boolean; skipped?: boolean }> {
+  const mid = String(input.messageId || "").trim();
+  if (!mid) throw new Error("Missing Meta message id");
+
+  const existing = await findLeadIdByMetaMessageId(mid);
+  if (existing) return { leadId: existing, duplicate: true, missingPhone: false };
+
+  const parsed = parseMetaInboxLeadFormText(input.text);
+  if (!parsed.ok) return { leadId: "", duplicate: false, missingPhone: false, skipped: true };
+
+  // Prefer Instant Form leadgen id when catch-up already stored the same phone today.
+  const phoneDigits = parsed.phone.replace(/\D/g, "");
+  if (phoneDigits.length >= 10) {
+    const admin = getSupabaseAdmin();
+    const { data: recent } = await admin
+      .from("leads")
+      .select("id, phone, metadata, created_at")
+      .order("created_at", { ascending: false })
+      .limit(40);
+    const hit = (recent || []).find((row) => {
+      const p = String(row.phone || "").replace(/\D/g, "");
+      if (!p.endsWith(phoneDigits.slice(-10))) return false;
+      const meta =
+        row.metadata && typeof row.metadata === "object"
+          ? (row.metadata as Record<string, unknown>)
+          : {};
+      return Boolean(meta.metaLeadgenId || meta.metaMessageId);
+    });
+    if (hit?.id) {
+      const meta =
+        hit.metadata && typeof hit.metadata === "object"
+          ? (hit.metadata as Record<string, unknown>)
+          : {};
+      await admin
+        .from("leads")
+        .update({
+          metadata: { ...meta, metaMessageId: mid, metaInboxChannel: input.channel },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", hit.id);
+      return { leadId: hit.id, duplicate: true, missingPhone: false };
+    }
+  }
+
+  const channel =
+    input.channel === "Instagram"
+      ? "Instagram"
+      : input.channel === "Messenger"
+        ? "Facebook"
+        : "Facebook";
+
+  return ingestMetaLeadToCrm({
+    leadgenId: `msg-${mid}`,
+    name: parsed.name,
+    phone: parsed.phone,
+    email: parsed.email,
+    zip: parsed.zip,
+    message: parsed.message,
+    campaignName: `${channel} inbox form`,
+    messageId: mid,
+    inboxChannel: input.channel,
+    fields: {
+      ...parsed.fields,
+      ...(input.senderId ? { metaSenderId: input.senderId } : {}),
+    },
+  });
 }

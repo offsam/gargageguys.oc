@@ -149,6 +149,60 @@ async function resolveLeadAccessToken(userToken: string, preferredPageId?: strin
   );
 }
 
+/** Subscribe the Facebook Page so Meta pushes Instant Form + Messenger lead events. */
+export async function subscribeMetaPageLeadWebhooks(): Promise<{
+  pageId: string;
+  pageName: string;
+  fields: string[];
+  result: unknown;
+}> {
+  const cfg = getMetaAdsConfig();
+  if (!cfg.token) throw new Error("META_ADS_ACCESS_TOKEN is required");
+  const pageAuth = await resolveLeadAccessToken(cfg.token, cfg.pageId);
+  const fields = [
+    "leadgen",
+    "messages",
+    "messaging_postbacks",
+    "messaging_optins",
+    "message_deliveries",
+  ];
+  const url = new URL(`https://graph.facebook.com/v21.0/${pageAuth.pageId}/subscribed_apps`);
+  url.searchParams.set("access_token", pageAuth.token);
+  url.searchParams.set("subscribed_fields", fields.join(","));
+  const res = await fetch(url.toString(), { method: "POST", cache: "no-store" });
+  const json = (await res.json()) as { success?: boolean; error?: { message?: string } };
+  if (!res.ok || json.error) {
+    throw new Error(json.error?.message || `subscribed_apps failed (${res.status})`);
+  }
+  return {
+    pageId: pageAuth.pageId,
+    pageName: pageAuth.pageName,
+    fields,
+    result: json,
+  };
+}
+
+export async function getMetaPageWebhookSubscriptions(): Promise<{
+  pageId: string;
+  pageName: string;
+  data: unknown;
+}> {
+  const cfg = getMetaAdsConfig();
+  if (!cfg.token) throw new Error("META_ADS_ACCESS_TOKEN is required");
+  const pageAuth = await resolveLeadAccessToken(cfg.token, cfg.pageId);
+  const url = new URL(`https://graph.facebook.com/v21.0/${pageAuth.pageId}/subscribed_apps`);
+  url.searchParams.set("access_token", pageAuth.token);
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  const json = await res.json();
+  if (!res.ok || (json as { error?: { message?: string } }).error) {
+    throw new Error(
+      (json as { error?: { message?: string } }).error?.message ||
+        `subscribed_apps read failed (${res.status})`,
+    );
+  }
+  return { pageId: pageAuth.pageId, pageName: pageAuth.pageName, data: json };
+}
+
 export function getDefaultAdsPeriod(days = 28): AdsPeriod {
   const end = new Date();
   const start = new Date();
@@ -256,7 +310,15 @@ function mapLeadRow(raw: Record<string, unknown>): MetaLeadRow {
     email: pickField(fields, ["email", "email_address"]),
     zip: pickField(fields, ["zip_code", "zip", "postal_code", "post_code"]),
     address: pickField(fields, ["street_address", "address", "city"]),
-    message: pickField(fields, ["message", "notes", "description", "what_do_you_need", "problem"]),
+    message: pickField(fields, [
+      "message",
+      "notes",
+      "description",
+      "what_do_you_need_help_with",
+      "what_do_you_need",
+      "problem",
+      "task",
+    ]),
     fields,
   };
 }
