@@ -1,7 +1,16 @@
 import { revalidatePath } from "next/cache";
+import { zonedWallTimeToUtc } from "@/lib/datetime";
+import type { FieldJob } from "@/lib/field/days";
 import { ensureLeadWorkOrder } from "@/lib/field/job-invoice";
 import { formatJobNumber } from "@/lib/field/job-invoice-types";
 import { notifyTechnicianJobAssigned } from "@/lib/notify/tech-job";
+import {
+  findWindowForSheetTime,
+  nextArrivalWindow,
+  resolveOpenArrivalWindow,
+  sheetTimeForWindow,
+  type ScheduleWindow,
+} from "@/lib/schedule/windows";
 import { syncSheetLeadToFieldJob } from "@/lib/sheet/sync-job-from-sheet";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -81,6 +90,55 @@ export async function findLeadIdByTelegramMessage(
   return data?.id || null;
 }
 
+async function loadTechJobsAround(techId: string, dayKey: string): Promise<FieldJob[]> {
+  const admin = getSupabaseAdmin();
+  const [y, mo, d] = dayKey.split("-").map(Number);
+  const start = zonedWallTimeToUtc(y, mo, d, 0, 0, 0);
+  const end = new Date(start.getTime() + 3 * 24 * 60 * 60 * 1000);
+  const { data } = await admin
+    .from("jobs")
+    .select(
+      "id, title, status, zip, address, notes, scheduled_start, scheduled_end, technician_id",
+    )
+    .eq("technician_id", techId)
+    .neq("status", "cancelled")
+    .gte("scheduled_start", start.toISOString())
+    .lt("scheduled_start", end.toISOString());
+  return (data || []) as FieldJob[];
+}
+
+function preferredWindowForParsed(
+  parsed: ChampionTelegramParsed,
+  now: Date,
+): { window: ScheduleWindow; dayKey: string } {
+  const dayKey = championSheetDateForParse(parsed, now);
+  const fromSheet = findWindowForSheetTime(parsed.sheetTime);
+  if (fromSheet) return { window: fromSheet, dayKey };
+  const next = nextArrivalWindow(now, 60);
+  return { window: next.window, dayKey: next.dayKey };
+}
+
+function reserveSlotJob(
+  techId: string,
+  dayKey: string,
+  window: ScheduleWindow,
+  index: number,
+): FieldJob {
+  const [y, mo, d] = dayKey.split("-").map(Number);
+  const start = zonedWallTimeToUtc(y, mo, d, window.startHour, 0, 0);
+  return {
+    id: `reserve-${index}-${dayKey}-${window.id}`,
+    title: "Reserved",
+    status: "assigned",
+    zip: null,
+    address: null,
+    notes: null,
+    scheduled_start: start.toISOString(),
+    scheduled_end: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
+    technician_id: techId,
+  };
+}
+
 async function ingestOneChampionJob(input: {
   text: string;
   chatId: string;
@@ -88,6 +146,7 @@ async function ingestOneChampionJob(input: {
   jobIndex: number;
   fromUsername?: string;
   now?: Date;
+  reservedSlots?: FieldJob[];
 }): Promise<ChampionTelegramIngestResult> {
   const now = input.now || new Date();
   const parsed = parseChampionTelegramMessage(input.text, now);
@@ -103,7 +162,34 @@ async function ingestOneChampionJob(input: {
   );
   const tech = await resolveChampionTechnician();
   const technicianName = tech?.name || process.env.TELEGRAM_CHAMPION_TECH_NAME || DEFAULT_TECH;
-  const sheetDate = championSheetDateForParse(parsed, now);
+
+  const preferred = preferredWindowForParsed(parsed, now);
+  let sheetDate = preferred.dayKey;
+  let sheetTime = sheetTimeForWindow(preferred.window);
+  let windowLabel = preferred.window.label;
+
+  if (tech?.id) {
+    const dbJobs = await loadTechJobsAround(tech.id, preferred.dayKey);
+    const open = resolveOpenArrivalWindow({
+      jobs: [...dbJobs, ...(input.reservedSlots || [])],
+      techId: tech.id,
+      dayKey: preferred.dayKey,
+      preferred: preferred.window,
+    });
+    sheetDate = open.dayKey;
+    sheetTime = open.sheetTime;
+    windowLabel = open.window.label;
+    input.reservedSlots?.push(
+      reserveSlotJob(tech.id, open.dayKey, open.window, input.jobIndex),
+    );
+  }
+
+  const parsedWithSlot: ChampionTelegramParsed = {
+    ...parsed,
+    sheetTime,
+    windowLabel,
+    timeAuto: parsed.timeAuto || sheetTime !== parsed.sheetTime,
+  };
 
   if (existingId) {
     let jobNumber = "";
@@ -120,9 +206,9 @@ async function ingestOneChampionJob(input: {
       partnerName: await resolveChampionPartnerName(),
       technician: technicianName,
       sheetDate,
-      sheetTime: parsed.sheetTime,
-      windowLabel: parsed.windowLabel,
-      parsed,
+      sheetTime,
+      windowLabel,
+      parsed: parsedWithSlot,
       duplicate: true,
     };
   }
@@ -134,7 +220,7 @@ async function ingestOneChampionJob(input: {
     leadSource: "",
     leadCost: "",
     sheetDate,
-    sheetTime: parsed.sheetTime,
+    sheetTime,
     clientName: parsed.clientName,
     clientAddress: parsed.clientAddress,
     jobStatus: "Scheduled",
@@ -156,8 +242,8 @@ async function ingestOneChampionJob(input: {
     telegramFrom: input.fromUsername || "",
     telegramText: input.text.trim(),
     telegramIngest: "champion",
-    timeAuto: parsed.timeAuto,
-    windowLabel: parsed.windowLabel,
+    timeAuto: parsedWithSlot.timeAuto,
+    windowLabel,
     jobCostHint: parsed.jobCostHint,
   };
 
@@ -194,7 +280,7 @@ async function ingestOneChampionJob(input: {
     return {
       ok: false,
       error: insErr?.message || "Could not create Sheet row",
-      parsed,
+      parsed: parsedWithSlot,
     };
   }
 
@@ -210,7 +296,7 @@ async function ingestOneChampionJob(input: {
     const synced = await syncSheetLeadToFieldJob({
       leadId: createdLead.id,
       date: sheetDate,
-      time: parsed.sheetTime,
+      time: sheetTime,
       technicianId: tech.id,
       technicianName,
       jobStatus: "Scheduled",
@@ -233,7 +319,7 @@ async function ingestOneChampionJob(input: {
       address: parsed.clientAddress,
       zip: parsed.zip,
       date: sheetDate,
-      timeLabel: parsed.windowLabel || parsed.sheetTime,
+      timeLabel: windowLabel || sheetTime,
       service: parsed.description.slice(0, 80) || "Champion job",
       jobNumber,
     }).catch((err) => console.error("[champion-telegram] tech notify", err));
@@ -254,9 +340,9 @@ async function ingestOneChampionJob(input: {
     partnerName,
     technician: technicianName,
     sheetDate,
-    sheetTime: parsed.sheetTime,
-    windowLabel: parsed.windowLabel,
-    parsed,
+    sheetTime,
+    windowLabel,
+    parsed: parsedWithSlot,
   };
 }
 
@@ -267,7 +353,7 @@ export async function ingestChampionTelegramJob(input: {
   fromUsername?: string;
   now?: Date;
 }): Promise<ChampionTelegramIngestResult> {
-  return ingestOneChampionJob({ ...input, jobIndex: 0 });
+  return ingestOneChampionJob({ ...input, jobIndex: 0, reservedSlots: [] });
 }
 
 export async function ingestChampionTelegramJobs(input: {
@@ -279,6 +365,7 @@ export async function ingestChampionTelegramJobs(input: {
 }): Promise<ChampionTelegramIngestResult[]> {
   const now = input.now || new Date();
   const texts = splitChampionTelegramJobs(input.text);
+  const reservedSlots: FieldJob[] = [];
   const results: ChampionTelegramIngestResult[] = [];
   for (let i = 0; i < texts.length; i++) {
     results.push(
@@ -289,6 +376,7 @@ export async function ingestChampionTelegramJobs(input: {
         jobIndex: i,
         fromUsername: input.fromUsername,
         now,
+        reservedSlots,
       }),
     );
   }

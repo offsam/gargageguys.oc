@@ -106,6 +106,68 @@ export function sheetTimeForWindow(window: ScheduleWindow): string {
 }
 
 /**
+ * Snap a wall clock to Garage Guys arrival windows.
+ * - :00–:29 at hour H → window that starts at H (9:00 / 9am → 9–11)
+ * - :30–:59 at hour H → next window after H (1:30 → 2–4)
+ * Never returns a non-window clock.
+ */
+export function snapToScheduleWindow(
+  hour: number,
+  minute: number,
+): ScheduleWindow | null {
+  const h = Number(hour);
+  const m = Number(minute) || 0;
+  if (!Number.isFinite(h) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+
+  if (m >= 30) {
+    return SCHEDULE_WINDOWS.find((w) => w.startHour > h) || null;
+  }
+  return (
+    SCHEDULE_WINDOWS.find((w) => w.startHour === h) ||
+    SCHEDULE_WINDOWS.find((w) => w.startHour > h) ||
+    null
+  );
+}
+
+/**
+ * Prefer `preferred` if free for the tech; otherwise the next free window that day,
+ * then first window tomorrow.
+ */
+export function resolveOpenArrivalWindow(input: {
+  jobs: FieldJob[];
+  techId: string;
+  dayKey: string;
+  preferred: ScheduleWindow;
+}): { window: ScheduleWindow; dayKey: string; sheetTime: string } {
+  const { jobs, techId, preferred } = input;
+  let dayKey = input.dayKey;
+
+  const tryDay = (key: string, fromIndex: number) => {
+    for (let i = fromIndex; i < SCHEDULE_WINDOWS.length; i++) {
+      const window = SCHEDULE_WINDOWS[i]!;
+      if (slotStatusForTech(jobs, techId, key, window).status === "free") {
+        return { window, dayKey: key, sheetTime: sheetTimeForWindow(window) };
+      }
+    }
+    return null;
+  };
+
+  const startIdx = SCHEDULE_WINDOWS.findIndex((w) => w.id === preferred.id);
+  const idx = startIdx >= 0 ? startIdx : 0;
+  const today = tryDay(dayKey, idx);
+  if (today) return today;
+
+  const [y, mo, d] = dayKey.split("-").map(Number);
+  const noon = zonedWallTimeToUtc(y, mo, d, 12, 0, 0);
+  dayKey = dayKeyInBusinessTz(new Date(noon.getTime() + 24 * 60 * 60 * 1000));
+  const tomorrow = tryDay(dayKey, 0);
+  if (tomorrow) return tomorrow;
+
+  const first = SCHEDULE_WINDOWS[0]!;
+  return { window: first, dayKey, sheetTime: sheetTimeForWindow(first) };
+}
+
+/**
  * Next arrival window at least `minLeadMinutes` ahead (Pacific).
  * Example: message at 12:00 → 1–3 (starts 13:00).
  * If none left today, returns first window (8–10) for the next calendar day.

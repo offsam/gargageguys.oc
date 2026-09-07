@@ -2,6 +2,7 @@ import {
   findWindowForSheetTime,
   nextArrivalWindow,
   sheetTimeForWindow,
+  snapToScheduleWindow,
 } from "@/lib/schedule/windows";
 import { dayKeyInBusinessTz } from "@/lib/datetime";
 
@@ -62,7 +63,7 @@ function extractJobCostHint(text: string): string {
 
 /**
  * Champion often writes `130pm`, `Around 9am`, `8-9am`, or window labels `1-3`.
- * Returns `HH:mm` (window start when a range matches) or "".
+ * Always returns a schedule-window start (`HH:mm`) or "".
  */
 export function parseChampionClock(raw: string): string {
   const v = String(raw || "")
@@ -70,6 +71,8 @@ export function parseChampionClock(raw: string): string {
     .toLowerCase()
     .replace(/^around\s+/i, "");
   if (!v || /\$/.test(v)) return "";
+
+  const orAfter = /\bor\s+after\b/i.test(v);
 
   // Explicit schedule window ids / labels: 8-10, 1–3, 8-9am
   const range = v.match(
@@ -82,24 +85,22 @@ export function parseChampionClock(raw: string): string {
     const mer = startMer || endMer;
     if (mer === "pm" && startH < 12) startH += 12;
     if (mer === "am" && startH === 12) startH = 0;
-    // Bare "8-9" without meridiem: morning hours
-    if (!mer && startH >= 1 && startH <= 7) {
-      /* keep as-is; windows use 8–20 */
-    }
     const byStart =
       findWindowForSheetTime(`${String(startH).padStart(2, "0")}:00`) ||
       findWindowForSheetTime(v.replace(/–/g, "-").replace(/\s+/g, ""));
     if (byStart) return sheetTimeForWindow(byStart);
-    return `${String(startH).padStart(2, "0")}:00`;
+    const snapped = snapToScheduleWindow(startH, 0);
+    return snapped ? sheetTimeForWindow(snapped) : "";
   }
 
   const withColon = v.match(/\b(\d{1,2}):(\d{2})\s*(am|pm)\b/i);
   if (withColon) {
     let h = Number(withColon[1]);
-    const m = Number(withColon[2]);
+    let m = Number(withColon[2]);
     const meridiem = withColon[3].toLowerCase();
     if (meridiem === "pm" && h < 12) h += 12;
     if (meridiem === "am" && h === 12) h = 0;
+    if (orAfter && m < 30) m = 30;
     if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
       return snapClockToWindowStart(h, m);
     }
@@ -120,6 +121,7 @@ export function parseChampionClock(raw: string): string {
     }
     if (mer === "pm" && h < 12) h += 12;
     if (mer === "am" && h === 12) h = 0;
+    if (orAfter && m < 30) m = 30;
     if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
       return snapClockToWindowStart(h, m);
     }
@@ -131,8 +133,23 @@ export function parseChampionClock(raw: string): string {
     const mer = hourOnly[2].toLowerCase();
     if (mer === "pm" && h < 12) h += 12;
     if (mer === "am" && h === 12) h = 0;
+    const m = orAfter ? 30 : 0;
     if (h >= 0 && h <= 23) {
-      return snapClockToWindowStart(h, 0);
+      return snapClockToWindowStart(h, m);
+    }
+  }
+
+  // Bare hour in a short time line: "9" / "13"
+  const bareHour = v.match(/^(\d{1,2})$/);
+  if (bareHour) {
+    const h = Number(bareHour[1]);
+    if (h >= 1 && h <= 12) {
+      // Champion morning hours without am/pm: 8–11 → am, 12–7 → treat as listed
+      const hour24 = h;
+      return snapClockToWindowStart(hour24, orAfter ? 30 : 0);
+    }
+    if (h >= 13 && h <= 20) {
+      return snapClockToWindowStart(h, orAfter ? 30 : 0);
     }
   }
 
@@ -142,13 +159,13 @@ export function parseChampionClock(raw: string): string {
   return "";
 }
 
-/** Prefer a schedule window start for Sheet Time (hour-only). Keep :30 etc. as-is. */
+/**
+ * Map clock → Sheet window start.
+ * :00–:29 → window starting that hour; :30+ → next window (1:30 → 2–4).
+ */
 function snapClockToWindowStart(hour: number, minute: number): string {
-  const hhmm = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-  if (minute !== 0) return hhmm;
-  const atHour = findWindowForSheetTime(hhmm);
-  if (atHour) return sheetTimeForWindow(atHour);
-  return hhmm;
+  const window = snapToScheduleWindow(hour, minute);
+  return window ? sheetTimeForWindow(window) : "";
 }
 
 function looksLikeTimeLine(line: string): boolean {
@@ -372,7 +389,8 @@ export function parseChampionTelegramMessages(
 
 export function championTelegramHelpText(): string {
   return [
-    "Send Champion job(s). Assigned to Sam. Missing time → next window (≥1h, e.g. noon → 1–3).",
+    "Send Champion job(s). Assigned to Sam on schedule windows only.",
+    "9 / 9am → 9–11 · 1:30 / 130pm → 2–4 · no time → next free ≥1h window.",
     "",
     "130pm or after",
     "",

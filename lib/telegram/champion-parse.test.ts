@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { zonedWallTimeToUtc } from "@/lib/datetime";
-import { nextArrivalWindow } from "@/lib/schedule/windows";
+import { nextArrivalWindow, snapToScheduleWindow } from "@/lib/schedule/windows";
 import {
   parseChampionClock,
   parseChampionTelegramMessage,
@@ -10,12 +10,20 @@ import {
 } from "@/lib/telegram/champion-parse";
 
 describe("parseChampionClock", () => {
-  it("parses compact 130pm", () => {
-    assert.equal(parseChampionClock("130pm or after"), "13:30");
+  it("parses compact 130pm → 2–4 window", () => {
+    assert.equal(parseChampionClock("130pm or after"), "14:00");
   });
 
   it("parses Around 9am → 9–11 window", () => {
     assert.equal(parseChampionClock("Around 9am"), "09:00");
+  });
+
+  it("parses bare 9 → 9–11", () => {
+    assert.equal(parseChampionClock("9"), "09:00");
+  });
+
+  it("parses 1:30pm → 2–4", () => {
+    assert.equal(parseChampionClock("1:30pm"), "14:00");
   });
 
   it("parses 8-9am → 8–10 window", () => {
@@ -34,6 +42,14 @@ describe("nextArrivalWindow", () => {
     assert.equal(next.window.id, "1-3");
     assert.equal(next.sheetTime, "13:00");
     assert.equal(next.dayKey, "2026-09-07");
+  });
+});
+
+describe("snapToScheduleWindow", () => {
+  it("maps :00–:29 to that hour window and :30+ to the next", () => {
+    assert.equal(snapToScheduleWindow(9, 0)?.id, "9-11");
+    assert.equal(snapToScheduleWindow(13, 0)?.id, "1-3");
+    assert.equal(snapToScheduleWindow(13, 30)?.id, "2-4");
   });
 });
 
