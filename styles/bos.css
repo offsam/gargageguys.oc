@@ -1812,6 +1812,17 @@ textarea {
   overflow: hidden;
 }
 
+/* Day / week separators along the bottom edge of the last row in each group */
+.sheet-grid tr.sheet-day-end > th,
+.sheet-grid tr.sheet-day-end > td {
+  border-bottom: 2px solid #94a3b8;
+}
+
+.sheet-grid tr.sheet-week-end > th,
+.sheet-grid tr.sheet-week-end > td {
+  border-bottom: 3px solid #1e293b;
+}
+
 .sheet-corner,
 .sheet-row-num {
   position: sticky;

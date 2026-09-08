@@ -235,6 +235,16 @@ function startOfWeekMonday(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() - diff);
 }
 
+function parseYmdLocal(ymd: string): Date {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+/** Monday YMD for the week containing this date (Sheet day/week separators). */
+function weekStartYmd(ymd: string): string {
+  return ymdLocal(startOfWeekMonday(parseYmdLocal(ymd)));
+}
+
 function periodRange(
   period: SheetPeriod,
   customFrom: string,
@@ -2003,6 +2013,13 @@ export function SheetTable({
               const profitTone =
                 profitN < 0 ? "is-neg" : profitN > 0 ? "is-pos" : "";
 
+              const nextRow = displayRows[rowIndex + 1];
+              const rowDate = toDateInputValue(row.date);
+              const nextDate = nextRow ? toDateInputValue(nextRow.date) : "";
+              const dayBoundary = Boolean(nextRow) && rowDate !== nextDate;
+              const weekBoundary =
+                dayBoundary && weekStartYmd(rowDate) !== weekStartYmd(nextDate);
+
               return (
                 <tr
                   key={rowKey(row)}
@@ -2014,6 +2031,7 @@ export function SheetTable({
                         ? "sheet-row-partner"
                         : "sheet-row-own",
                     searchHitKey === rowKey(row) ? "sheet-row-search-hit" : "",
+                    weekBoundary ? "sheet-week-end" : dayBoundary ? "sheet-day-end" : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
