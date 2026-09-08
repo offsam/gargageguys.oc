@@ -148,12 +148,12 @@ const COLUMNS: Array<{
 }> = [
   { key: "jobNumber", label: "Job #", width: 110 },
   { key: "clientName", label: "Client name", width: 160 },
+  { key: "clientAddress", label: "Address", width: 200 },
   { key: "workSource", label: "Work source", width: 130, kind: "select", options: "workSource" },
   { key: "partnerName", label: "Partner", width: 160, kind: "select", options: "partner" },
   { key: "leadSource", label: "Lead source", width: 140, kind: "combo", options: "leadSource" },
   { key: "leadCost", label: "Lead cost", width: 100, money: true },
   { key: "jobStatus", label: "Status", width: 140, kind: "select", options: "status" },
-  { key: "clientAddress", label: "Address", width: 200 },
   { key: "date", label: "Date", width: 130, kind: "date" },
   { key: "time", label: "Time", width: 100, kind: "time" },
   { key: "jobType", label: "Issue", width: 180 },
