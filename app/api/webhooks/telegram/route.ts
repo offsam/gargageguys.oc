@@ -8,9 +8,15 @@ import {
 } from "@/lib/telegram/auth";
 import { ingestChampionTelegramJobs } from "@/lib/telegram/champion-ingest";
 import { championTelegramHelpText } from "@/lib/telegram/champion-parse";
+import { looksLikeStockOrderText, stockOrderHelpText } from "@/lib/telegram/stock-order-parse";
+import {
+  dryRunStockOrderFromTelegramPhoto,
+  dryRunStockOrderFromText,
+  formatStockOrderDryRunReply,
+} from "@/lib/telegram/stock-order-pipe";
 
 /**
- * Telegram Bot API webhook — Champion job → Sheet (Partner / Champion).
+ * Telegram Bot API webhook — Champion job → Sheet + Stock order photo dry-run.
  * Register with POST /api/webhooks/telegram/setup (CRON_SECRET).
  * Fail-closed: missing TELEGRAM_WEBHOOK_SECRET → 503.
  */
@@ -20,17 +26,26 @@ export async function GET() {
     ok: true,
     webhook: "/api/webhooks/telegram",
     hint: "POST Telegram updates here after setWebhook",
+    modes: ["champion-sheet", "stock-order-dry-run"],
   });
 }
 
 type TelegramChat = { id: number; type?: string };
 type TelegramUser = { id: number; username?: string; first_name?: string };
+type TelegramPhotoSize = {
+  file_id: string;
+  file_unique_id?: string;
+  width?: number;
+  height?: number;
+  file_size?: number;
+};
 type TelegramMessage = {
   message_id: number;
   chat: TelegramChat;
   from?: TelegramUser;
   text?: string;
   caption?: string;
+  photo?: TelegramPhotoSize[];
 };
 
 type TelegramUpdate = {
@@ -42,6 +57,14 @@ type TelegramUpdate = {
 
 function messageFromUpdate(body: TelegramUpdate): TelegramMessage | null {
   return body.message || body.edited_message || body.channel_post || null;
+}
+
+function largestPhotoFileId(photos: TelegramPhotoSize[] | undefined): string | null {
+  if (!photos?.length) return null;
+  const sorted = [...photos].sort(
+    (a, b) => (b.file_size || b.width || 0) - (a.file_size || a.width || 0),
+  );
+  return sorted[0]?.file_id || null;
 }
 
 async function reply(chatId: number | string, text: string) {
@@ -74,7 +97,9 @@ export async function POST(request: NextRequest) {
 
   const chatId = msg.chat.id;
   const text = String(msg.text || msg.caption || "").trim();
-  if (!text) {
+  const photoFileId = largestPhotoFileId(msg.photo);
+
+  if (!text && !photoFileId) {
     return NextResponse.json({ ok: true, ignored: "empty" });
   }
 
@@ -82,19 +107,65 @@ export async function POST(request: NextRequest) {
     if (/^\/start\b/i.test(text) || /^\/help\b/i.test(text)) {
       await reply(
         chatId,
-        `This chat is not authorized for Champion → Sheet.\n\nYour chat id: <code>${escapeHtml(String(chatId))}</code>\nAdd it to TELEGRAM_ALLOWED_CHAT_IDS (or paste jobs in the office TELEGRAM_CHAT_ID chat).`,
+        `This chat is not authorized.\n\nYour chat id: <code>${escapeHtml(String(chatId))}</code>\nAdd it to TELEGRAM_ALLOWED_CHAT_IDS.`,
       );
     }
     return NextResponse.json({ ok: true, ignored: "chat not allowed" });
   }
 
   if (/^\/start\b/i.test(text) || /^\/help\b/i.test(text)) {
-    await reply(chatId, escapeHtml(championTelegramHelpText()));
+    await reply(
+      chatId,
+      [
+        escapeHtml(championTelegramHelpText()),
+        "",
+        escapeHtml(stockOrderHelpText()),
+      ].join("\n"),
+    );
     return NextResponse.json({ ok: true, help: true });
   }
 
-  if (text.startsWith("/")) {
+  if (text.startsWith("/") && !photoFileId) {
     return NextResponse.json({ ok: true, ignored: "command" });
+  }
+
+  // --- Stock order dry-run (photo or Order: text) ---
+  const wantStock =
+    Boolean(photoFileId) || looksLikeStockOrderText(text);
+  if (wantStock) {
+    try {
+      const result = photoFileId
+        ? await dryRunStockOrderFromTelegramPhoto({
+            fileId: photoFileId,
+            caption: text,
+          })
+        : await dryRunStockOrderFromText(text);
+
+      await reply(chatId, formatStockOrderDryRunReply(result));
+      return NextResponse.json({
+        ok: result.ok,
+        mode: "stock-order-dry-run",
+        applied: false,
+        source: result.source,
+        ocrProvider: result.ocrProvider || null,
+        lineCount: result.matched.length,
+        error: result.error || null,
+      });
+    } catch (err) {
+      console.error("[telegram-webhook] stock-order", err);
+      await reply(
+        chatId,
+        `Stock order dry-run failed: ${escapeHtml(err instanceof Error ? err.message : "unknown")}`,
+      );
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Stock order failed" },
+        { status: 500 },
+      );
+    }
+  }
+
+  if (!text) {
+    return NextResponse.json({ ok: true, ignored: "empty text" });
   }
 
   if (!isSupabaseConfigured() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
