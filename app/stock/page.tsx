@@ -14,6 +14,7 @@ import {
   techQty,
   warehouseQty,
 } from "@/lib/stock/store";
+import { buildStockReceiveHistory } from "@/lib/stock/receive-history";
 import { getFieldAttentionCount } from "@/lib/field/load-attention";
 
 export default async function StockPage({
@@ -31,7 +32,15 @@ export default async function StockPage({
     .eq("role", "technician")
     .order("created_at", { ascending: true });
 
+  const { data: allProfiles } = await admin
+    .from("profiles")
+    .select("id, full_name, email");
+
   const technicians = techs || [];
+  const profileLabels = (allProfiles || []).map((p) => ({
+    id: p.id,
+    label: p.full_name || p.email || "Staff",
+  }));
   const seedTechId = technicians[0]?.id;
   const attentionCount =
     user.role === "technician" ? await getFieldAttentionCount(user.id) : 0;
@@ -169,13 +178,22 @@ export default async function StockPage({
     };
   });
 
+  const techLabels = technicians.map((t) => ({
+    id: t.id,
+    label: t.full_name || t.email,
+  }));
+  const receiveHistory = buildStockReceiveHistory({
+    movements: state.movements,
+    items: state.items,
+    technicians: profileLabels.length ? profileLabels : techLabels,
+    technicianId: isTechOnly ? user.id : null,
+    limitDays: 90,
+  });
+
   const board = (
     <StockBoard
       rows={rows}
-      technicians={technicians.map((t) => ({
-        id: t.id,
-        label: t.full_name || t.email,
-      }))}
+      technicians={techLabels}
       selectedTechId={selectedTechId}
       showPrices={showPrices}
       canManage={canManage}
@@ -184,6 +202,7 @@ export default async function StockPage({
       stockOwner={stockOwner}
       ownerTotals={ownerTotals}
       partnerWarehouseCount={partnerWarehouses.length}
+      receiveHistory={receiveHistory}
     />
   );
 

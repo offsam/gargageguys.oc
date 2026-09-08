@@ -2890,6 +2890,109 @@ body.sheet-col-resizing * {
   padding: 1.5rem 0.5rem !important;
 }
 
+.stock-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.stock-history-lead {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.stock-history-empty {
+  padding: 1rem 1.1rem;
+  color: var(--bos-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.stock-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.stock-history-day {
+  border: 1px solid var(--bos-border);
+  border-radius: 10px;
+  background: var(--bos-surface);
+  overflow: hidden;
+}
+
+.stock-history-day-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0.85rem;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--bos-text);
+  font: inherit;
+}
+
+.stock-history-day-head:hover {
+  background: color-mix(in srgb, var(--bos-accent-2) 8%, transparent);
+}
+
+.stock-history-day-chevron {
+  color: var(--bos-muted);
+  width: 0.9rem;
+}
+
+.stock-history-day-label {
+  font-weight: 700;
+  flex: 1 1 auto;
+}
+
+.stock-history-day-stat {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--bos-accent-2);
+}
+
+.stock-history-day-stat.muted {
+  color: var(--bos-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.stock-history-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.85rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  border-top: 1px solid var(--bos-border);
+  padding-top: 0.65rem;
+}
+
+.stock-history-line-main {
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.stock-history-line-main strong {
+  color: var(--bos-accent-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.stock-history-line-meta {
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--bos-muted);
+  line-height: 1.35;
+}
+
 .stock-services {
   display: flex;
   flex-direction: column;

@@ -10,6 +10,8 @@ import {
   receiveStockAction,
   saveItemCostAction,
 } from "@/app/actions/stock";
+import { StockReceiveHistory } from "@/components/bos/StockReceiveHistory";
+import type { StockReceiveHistoryDay } from "@/lib/stock/receive-history";
 
 export type StockRow = {
   id: string;
@@ -26,7 +28,7 @@ export type StockRow = {
 
 type Tech = { id: string; label: string };
 
-type View = "master" | "warehouse" | "tech";
+type View = "master" | "warehouse" | "tech" | "history";
 
 const CATEGORY_ORDER = [
   "Motors",
@@ -131,6 +133,7 @@ export function StockBoard({
   ownerTotals = {},
   partnerWarehouseCount = 0,
   notice = "",
+  receiveHistory = [],
 }: {
   rows: StockRow[];
   technicians: Tech[];
@@ -143,6 +146,7 @@ export function StockBoard({
   ownerTotals?: Record<string, number>;
   partnerWarehouseCount?: number;
   notice?: string;
+  receiveHistory?: StockReceiveHistoryDay[];
 }) {
   const router = useRouter();
   const partnerMode = stockOwner !== "gg";
@@ -293,6 +297,7 @@ export function StockBoard({
               ["master", "Master"],
               ["warehouse", "Warehouse"],
               ["tech", "Technicians"],
+              ["history", "History"],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -307,8 +312,33 @@ export function StockBoard({
             </button>
           ))}
         </div>
+      ) : (
+        <div className="stock-tabs" role="tablist">
+          {(
+            [
+              ["tech", "My van"],
+              ["history", "When added"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={view === key}
+              className={view === key ? "active" : undefined}
+              onClick={() => setView(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {view === "history" ? (
+        <StockReceiveHistory days={receiveHistory} isTechOnly={isTechOnly} />
       ) : null}
 
+      {view !== "history" ? (
       <div className="stock-toolbar">
         <input
           className="stock-search"
@@ -352,14 +382,15 @@ export function StockBoard({
           {pending ? " · saving…" : ""}
         </span>
       </div>
+      ) : null}
 
-      {receiveError && isTechOnly ? (
+      {view !== "history" && receiveError && isTechOnly ? (
         <p className="stock-add-error" role="alert">
           {receiveError}
         </p>
       ) : null}
 
-      {addOpen && canManage ? (
+      {view !== "history" && addOpen && canManage ? (
         <form
           className="stock-add-form bos-card"
           onSubmit={(e) => {
@@ -408,6 +439,7 @@ export function StockBoard({
         </form>
       ) : null}
 
+      {view !== "history" ? (
       <div className="stock-wrap">
         <table className="stock-table">
           <thead>
@@ -618,6 +650,7 @@ export function StockBoard({
           </tbody>
         </table>
       </div>
+      ) : null}
     </div>
   );
 }
