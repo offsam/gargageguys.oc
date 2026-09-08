@@ -481,9 +481,11 @@ export function StockBoard({
                     <tr
                       key={row.id}
                       className={
-                        (techVanOnly ? row.vans[techId] ?? row.van : row.master) === 0
-                          ? "stock-zero"
-                          : undefined
+                        (techVanOnly ? row.vans[techId] ?? row.van : row.master) < 0
+                          ? "stock-neg"
+                          : (techVanOnly ? row.vans[techId] ?? row.van : row.master) === 0
+                            ? "stock-zero"
+                            : undefined
                       }
                     >
                       <td className="stock-col-item">

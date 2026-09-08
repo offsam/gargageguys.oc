@@ -30,16 +30,16 @@ describe("stock balance clamp", () => {
     assert.equal(getBalanceQty(state, "atom", "tech", "tech-1"), -1);
   });
 
-  it("never stores negative qty on warehouse", () => {
+  it("allows negative qty on warehouse", () => {
     const state = emptyState();
     setBalanceQty(state, "atom", "warehouse", -3);
-    assert.equal(getBalanceQty(state, "atom", "warehouse"), 0);
+    assert.equal(getBalanceQty(state, "atom", "warehouse"), -3);
   });
 
-  it("never stores negative qty on partner warehouse", () => {
+  it("allows negative qty on partner warehouse", () => {
     const state = emptyState();
     setBalanceQty(state, "atom", "partner", -2, undefined, "partner-1");
-    assert.equal(getBalanceQty(state, "atom", "partner", undefined, "partner-1"), 0);
+    assert.equal(getBalanceQty(state, "atom", "partner", undefined, "partner-1"), -2);
   });
 
   it("sums duplicate tech buckets and collapses on write", () => {

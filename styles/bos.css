@@ -2736,6 +2736,11 @@ body.sheet-col-resizing * {
   color: #94a3b8;
 }
 
+.stock-neg .stock-name,
+.stock-neg .stock-master {
+  color: #b91c1c;
+}
+
 .stock-cost {
   display: inline-flex;
   align-items: center;

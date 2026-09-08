@@ -65,11 +65,8 @@ export function SheetPartsPicker({
     [qtyByName],
   );
 
-  function setQty(name: string, qty: number, stock?: number) {
-    let next = Math.max(0, Math.floor(qty));
-    if (typeof stock === "number" && Number.isFinite(stock)) {
-      next = Math.min(next, Math.max(0, stock));
-    }
+  function setQty(name: string, qty: number) {
+    const next = Math.max(0, Math.floor(qty));
     setQtyByName((prev) => {
       const copy = { ...prev };
       if (next <= 0) delete copy[name];
@@ -87,7 +84,7 @@ export function SheetPartsPicker({
         <header className="sheet-parts-head">
           <div>
             <strong>{title}</strong>
-            <p>Pick parts by category. Use + / − for quantity.</p>
+            <p>Pick parts by category. Use + / − for quantity (ok to go over stock).</p>
           </div>
           <button type="button" className="sheet-parts-close" onClick={onClose}>
             ✕
@@ -127,19 +124,27 @@ export function SheetPartsPicker({
                     {parts.map((part) => {
                       const qty = qtyByName[part.name] || 0;
                       const stock = part.qty;
+                      const over =
+                        typeof stock === "number" && Number.isFinite(stock) && qty > stock;
+                      const remaining =
+                        typeof stock === "number" && Number.isFinite(stock) ? stock - qty : null;
                       return (
                         <li key={part.name} className={qty > 0 ? "is-picked" : undefined}>
                           <div className="sheet-parts-name">
                             <strong>{part.name}</strong>
                             <span>
-                              {stock == null ? "—" : `in stock ${stock}`}
+                              {stock == null
+                                ? "—"
+                                : over && remaining != null
+                                  ? `in stock ${stock} · → ${remaining}`
+                                  : `in stock ${stock}`}
                               {part.unitCost ? ` · $${part.unitCost}` : ""}
                             </span>
                           </div>
                           <div className="sheet-parts-qty">
                             <button
                               type="button"
-                              onClick={() => setQty(part.name, qty - 1, stock)}
+                              onClick={() => setQty(part.name, qty - 1)}
                               disabled={qty <= 0}
                               aria-label={`Decrease ${part.name}`}
                             >
@@ -148,17 +153,15 @@ export function SheetPartsPicker({
                             <input
                               type="number"
                               min={0}
-                              max={stock ?? undefined}
                               value={qty}
                               onChange={(e) =>
-                                setQty(part.name, Number(e.target.value) || 0, stock)
+                                setQty(part.name, Number(e.target.value) || 0)
                               }
                               aria-label={`${part.name} quantity`}
                             />
                             <button
                               type="button"
-                              onClick={() => setQty(part.name, qty + 1, stock)}
-                              disabled={stock != null && qty >= stock}
+                              onClick={() => setQty(part.name, qty + 1)}
                               aria-label={`Increase ${part.name}`}
                             >
                               +

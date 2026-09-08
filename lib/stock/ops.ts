@@ -30,18 +30,9 @@ function applyDelta(
 ): string | null {
   const current = getBalanceQty(state, itemId, locationType, technicianId, partnerId);
   const next = current + delta;
-  // Tech van may go negative (tech borrowed from another stock). Warehouse/partner cannot.
-  if (next < 0 && locationType !== "tech") {
-    return `Insufficient stock (have ${current}, need ${Math.abs(delta)})`;
-  }
-  setBalanceQty(
-    state,
-    itemId,
-    locationType,
-    locationType === "tech" ? next : Math.max(0, next),
-    technicianId,
-    partnerId,
-  );
+  // Allow negatives everywhere: techs / dispatchers often use or issue parts
+  // before the receive is logged, so stock must go below zero.
+  setBalanceQty(state, itemId, locationType, next, technicianId, partnerId);
   return null;
 }
 
@@ -286,7 +277,7 @@ function planConsumeLegs(
   itemId: string,
   qty: number,
   preferredTechId?: string,
-): SheetStockPullLeg[] | null {
+): SheetStockPullLeg[] {
   let left = qty;
   const legs: SheetStockPullLeg[] = [];
 
@@ -333,7 +324,26 @@ function planConsumeLegs(
     }
   }
 
-  return left > 0 ? null : legs;
+  // Anything still needed goes negative on the preferred van, else primary warehouse.
+  if (left > 0) {
+    if (preferredTechId) {
+      const existing = legs.find(
+        (leg) => leg.locationType === "tech" && leg.technicianId === preferredTechId,
+      );
+      if (existing) existing.qty += left;
+      else legs.push({ locationType: "tech", technicianId: preferredTechId, qty: left });
+    } else if (owner === "gg") {
+      const existing = legs.find((leg) => leg.locationType === "warehouse");
+      if (existing) existing.qty += left;
+      else legs.push({ locationType: "warehouse", qty: left });
+    } else {
+      const existing = legs.find((leg) => leg.locationType === "partner");
+      if (existing) existing.qty += left;
+      else legs.push({ locationType: "partner", qty: left });
+    }
+  }
+
+  return legs;
 }
 
 function consumePull(
@@ -344,9 +354,6 @@ function consumePull(
   const legs =
     pull.legs ||
     planConsumeLegs(state, pull.owner, pull.itemId, pull.qty, preferredTechId);
-  if (!legs) {
-    return `Not enough stock for “${pull.itemName}” (need ${pull.qty})`;
-  }
   pull.legs = legs;
   const applied: SheetStockPullLeg[] = [];
   for (const leg of legs) {

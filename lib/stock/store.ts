@@ -218,12 +218,10 @@ export function getBalanceQty(
   partnerId?: string,
 ): number {
   // Sum matching rows so duplicate balance lines stay consistent.
-  const total = state.balances
+  // Negatives are allowed (use / issue before receive is logged).
+  return state.balances
     .filter((b) => matchBalance(b, itemId, locationType, technicianId, partnerId))
     .reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
-  // Tech van may go negative (borrowed from another stock). Warehouse/partner stay ≥ 0.
-  if (locationType === "tech") return total;
-  return Math.max(0, total);
 }
 
 export function setBalanceQty(
@@ -234,9 +232,7 @@ export function setBalanceQty(
   technicianId?: string,
   partnerId?: string,
 ): void {
-  const raw = Number(qty) || 0;
-  // Tech van presence may be negative; warehouse / partner warehouse cannot.
-  const safeQty = locationType === "tech" ? raw : Math.max(0, raw);
+  const safeQty = Number(qty) || 0;
   const matches = state.balances
     .map((b, idx) => ({ b, idx }))
     .filter(({ b }) => matchBalance(b, itemId, locationType, technicianId, partnerId));
