@@ -1,0 +1,31 @@
+# Hobby Vercel only allows daily crons. This keeps Meta Instant Form catch-up
+# every 2 hours as a safety net when the realtime webhook misses a lead.
+name: Meta leads catch-up
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"
+  workflow_dispatch:
+
+jobs:
+  catchup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Catch up Meta leads (last 2 days)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "CRON_SECRET GitHub secret is missing"
+            exit 1
+          fi
+          code=$(curl -sS -o /tmp/meta-catchup.json -w "%{http_code}" \
+            -X POST "https://garageguysoc.com/api/meta-leads-catchup" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json")
+          echo "HTTP ${code}"
+          cat /tmp/meta-catchup.json
+          echo
+          test "$code" = "200"
