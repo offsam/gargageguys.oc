@@ -37,16 +37,16 @@ export function AdsLeadsFeed({
     <div className="ads-board" style={{ marginBottom: "2rem" }}>
       <h2 style={{ marginTop: 0 }}>Lead feed</h2>
       <p className="field-muted">
-        All inbound leads in order — Thumbtack, Meta, Google, website, and the rest. Newest first
-        for {periodStart} → {periodEnd}.
+        Paid ads leads only — Thumbtack, Meta, Google (and Yelp). Champion / Partner jobs stay out
+        of this list. Newest first for {periodStart} → {periodEnd}.
       </p>
       <div className="ads-lead-summary">
         <strong>{leads.length}</strong> lead{leads.length === 1 ? "" : "s"} in this period
       </div>
       {!leads.length ? (
         <div className="bos-card">
-          No leads in this period yet. When webhooks or forms create CRM rows, they show up here as a
-          single list.
+          No paid ads leads in this period yet. Thumbtack / Meta / Google rows show up here when
+          webhooks create them.
         </div>
       ) : (
         <table className="bos-table ads-feed-table">

@@ -1,6 +1,8 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { isMetaLeadSource } from "@/lib/ads/meta-lead-cost";
 import { canonicalLeadSource, sheetLeadCostFor } from "@/lib/leads/source";
 import { sheetStatusFromLead } from "@/lib/leads/stage-sync";
+import { isPartnerWork } from "@/lib/sheet/work-source";
 
 export type AdsFeedLead = {
   id: string;
@@ -39,7 +41,36 @@ function startOfDayIso(ymd: string): string {
   return `${ymd}T00:00:00.000Z`;
 }
 
-/** Chronological inbound lead feed for Ads — all sources, newest first. */
+/** Paid ad channels that belong on Ads → Lead feed (not Partner / Champion jobs). */
+export function isPaidAdsFeedLead(input: {
+  source: string;
+  metadata?: Record<string, unknown> | null;
+}): boolean {
+  const meta = asMeta(input.metadata);
+  const workSource = metaString(meta, "workSource", "work_source", "owner");
+  if (isPartnerWork(workSource)) return false;
+
+  const partner = metaString(meta, "partnerName", "partner_name", "partner");
+  const source = String(input.source || "").trim();
+  if (/champion/i.test(partner) || /champion/i.test(source)) return false;
+
+  const canonical = canonicalLeadSource(source, {
+    campaignName: metaString(meta, "metaCampaignName", "googleCampaignName", "campaignName"),
+    adName: metaString(meta, "metaAdName", "adName"),
+  });
+  if (isMetaLeadSource(canonical) || isMetaLeadSource(source)) return true;
+  const key = canonical.toLowerCase();
+  return (
+    key === "thumbtack" ||
+    key === "google" ||
+    key === "yelp" ||
+    key.includes("thumbtack") ||
+    key.includes("google") ||
+    key.includes("yelp")
+  );
+}
+
+/** Chronological paid inbound lead feed for Ads — newest first. Excludes Champion / Partner. */
 export async function listAdsLeadFeed(input: {
   periodStart: string;
   periodEnd: string;
@@ -47,6 +78,7 @@ export async function listAdsLeadFeed(input: {
 }): Promise<AdsFeedLead[]> {
   const limit = Math.min(Math.max(input.limit ?? 80, 1), 200);
   const admin = getSupabaseAdmin();
+  // Over-fetch, then keep only paid ads leads (Partner/Champion rows share the leads table).
   const { data, error } = await admin
     .from("leads")
     .select(
@@ -55,10 +87,11 @@ export async function listAdsLeadFeed(input: {
     .gte("created_at", startOfDayIso(input.periodStart))
     .lte("created_at", endOfDayIso(input.periodEnd))
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(Math.min(limit * 4, 400));
   if (error) throw error;
 
-  return (data || []).map((row) => {
+  const out: AdsFeedLead[] = [];
+  for (const row of data || []) {
     const meta = asMeta(row.metadata);
     const campaign =
       metaString(meta, "metaCampaignName", "googleCampaignName", "campaignName") || "";
@@ -68,6 +101,8 @@ export async function listAdsLeadFeed(input: {
       campaignName: campaign,
       adName,
     });
+    if (!isPaidAdsFeedLead({ source, metadata: { ...meta, leadSource: source } })) continue;
+
     const channelDetail = [campaign, adName || formName].filter(Boolean).join(" · ");
     const leadCost = sheetLeadCostFor(source, metaString(meta, "leadCost") || null);
     const sheetStatus = sheetStatusFromLead({
@@ -75,7 +110,7 @@ export async function listAdsLeadFeed(input: {
       metadata: row.metadata,
     });
 
-    return {
+    out.push({
       id: row.id,
       createdAt: row.created_at,
       source,
@@ -88,6 +123,8 @@ export async function listAdsLeadFeed(input: {
       stage: row.stage || "",
       sheetStatus,
       leadCost,
-    };
-  });
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
 }
