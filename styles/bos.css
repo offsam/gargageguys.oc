@@ -1941,6 +1941,22 @@ textarea {
   color: var(--bos-text);
 }
 
+.sheet-grid thead th[draggable="true"] {
+  cursor: grab;
+}
+
+.sheet-grid thead th[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.sheet-grid thead th.is-col-dragging {
+  opacity: 0.55;
+}
+
+.sheet-grid thead th.is-col-drop {
+  box-shadow: inset 3px 0 0 var(--bos-accent-2);
+}
+
 .sheet-col-resize {
   position: absolute;
   top: 0;

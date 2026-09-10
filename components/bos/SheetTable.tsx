@@ -106,6 +106,7 @@ const LEAD_SOURCES = [
   "Yelp",
 ] as const;
 const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths-v4";
+const ORDER_STORAGE_KEY = "bos-sheet-col-order-v1";
 const SORT_STORAGE_KEY = "bos-sheet-date-sort";
 const PERIOD_STORAGE_KEY = "bos-sheet-period-v1";
 const LEAD_SOURCE_LIST_ID = "sheet-lead-source-list";
@@ -177,6 +178,41 @@ const COLUMNS: Array<{
 
 /** Columns frozen on the left when scrolling horizontally (after the row #). */
 const STICKY_COLUMNS: SheetColumnKey[] = ["jobNumber", "clientName"];
+const COLUMN_BY_KEY = new Map(COLUMNS.map((col) => [col.key, col]));
+const DEFAULT_COLUMN_ORDER = COLUMNS.map((col) => col.key);
+
+function normalizeColumnOrder(keys: SheetColumnKey[]): SheetColumnKey[] {
+  const valid = keys.filter((key) => COLUMN_BY_KEY.has(key));
+  const sticky = STICKY_COLUMNS.filter((key) => valid.includes(key) || COLUMN_BY_KEY.has(key));
+  const rest = valid.filter((key) => !STICKY_COLUMNS.includes(key));
+  const seen = new Set([...sticky, ...rest]);
+  for (const key of DEFAULT_COLUMN_ORDER) {
+    if (seen.has(key)) continue;
+    if (STICKY_COLUMNS.includes(key)) sticky.push(key);
+    else rest.push(key);
+  }
+  return [...sticky, ...rest];
+}
+
+function loadColumnOrder(): SheetColumnKey[] {
+  try {
+    const raw = localStorage.getItem(ORDER_STORAGE_KEY);
+    if (!raw) return [...DEFAULT_COLUMN_ORDER];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [...DEFAULT_COLUMN_ORDER];
+    return normalizeColumnOrder(parsed.filter((k): k is SheetColumnKey => typeof k === "string"));
+  } catch {
+    return [...DEFAULT_COLUMN_ORDER];
+  }
+}
+
+function persistColumnOrder(keys: SheetColumnKey[]) {
+  try {
+    localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(normalizeColumnOrder(keys)));
+  } catch {
+    /* ignore */
+  }
+}
 
 const PROFIT_DEFAULT_WIDTH = 110;
 const ROW_NUM_WIDTH = 42;
@@ -753,6 +789,9 @@ export function SheetTable({
   const frozenIdsRef = useRef<string[] | null>(null);
   const focusGenRef = useRef(0);
   const [widths, setWidths] = useState<Record<string, number>>(defaultWidths);
+  const [columnOrder, setColumnOrder] = useState<SheetColumnKey[]>(DEFAULT_COLUMN_ORDER);
+  const [draggingCol, setDraggingCol] = useState<SheetColumnKey | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<SheetColumnKey | null>(null);
   const dragRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
   const rowsRef = useRef(rows);
   const inFlightRef = useRef(0);
@@ -843,6 +882,7 @@ export function SheetTable({
 
   useEffect(() => {
     setWidths(loadWidths());
+    setColumnOrder(loadColumnOrder());
     try {
       const saved = localStorage.getItem(SORT_STORAGE_KEY);
       if (saved === "oldest" || saved === "newest") setDateSort(saved);
@@ -926,21 +966,30 @@ export function SheetTable({
     return map;
   }, [partnerStockParts]);
 
-  const profitColIndex = COLUMNS.length;
+  const orderedColumns = useMemo(
+    () =>
+      normalizeColumnOrder(columnOrder)
+        .map((key) => COLUMN_BY_KEY.get(key))
+        .filter((col): col is (typeof COLUMNS)[number] => Boolean(col)),
+    [columnOrder],
+  );
+
+  const profitColIndex = orderedColumns.length;
   const tableWidth =
     ROW_NUM_WIDTH +
-    COLUMNS.reduce((sum, col) => sum + (widths[col.key] || col.width), 0) +
+    orderedColumns.reduce((sum, col) => sum + (widths[col.key] || col.width), 0) +
     (widths.__profit || PROFIT_DEFAULT_WIDTH);
 
   const stickyLeftByKey = useMemo(() => {
     const map: Partial<Record<SheetColumnKey, number>> = {};
     let left = ROW_NUM_WIDTH;
-    for (const key of STICKY_COLUMNS) {
-      map[key] = left;
-      left += widths[key] || COLUMNS.find((c) => c.key === key)?.width || 120;
+    for (const col of orderedColumns) {
+      if (!STICKY_COLUMNS.includes(col.key)) continue;
+      map[col.key] = left;
+      left += widths[col.key] || col.width;
     }
     return map;
-  }, [widths]);
+  }, [orderedColumns, widths]);
 
   function stickyColProps(key: SheetColumnKey): {
     className: string;
@@ -948,11 +997,33 @@ export function SheetTable({
   } {
     const left = stickyLeftByKey[key];
     if (left == null) return { className: "" };
-    const isEdge = key === STICKY_COLUMNS[STICKY_COLUMNS.length - 1];
+    const stickyInOrder = orderedColumns.filter((col) => STICKY_COLUMNS.includes(col.key));
+    const isEdge = key === stickyInOrder[stickyInOrder.length - 1]?.key;
     return {
       className: ["sheet-col-sticky", isEdge ? "sheet-col-sticky-edge" : ""].filter(Boolean).join(" "),
-      style: { left, width: widths[key] || COLUMNS.find((c) => c.key === key)?.width },
+      style: { left, width: widths[key] || COLUMN_BY_KEY.get(key)?.width },
     };
+  }
+
+  function moveColumn(fromKey: SheetColumnKey, toKey: SheetColumnKey) {
+    if (fromKey === toKey) return;
+    // Sticky columns stay on the left; only reorder within sticky or within the rest.
+    const fromSticky = STICKY_COLUMNS.includes(fromKey);
+    const toSticky = STICKY_COLUMNS.includes(toKey);
+    if (fromSticky !== toSticky) return;
+
+    setColumnOrder((prev) => {
+      const next = normalizeColumnOrder(prev);
+      const from = next.indexOf(fromKey);
+      const to = next.indexOf(toKey);
+      if (from < 0 || to < 0 || from === to) return prev;
+      const copy = [...next];
+      copy.splice(from, 1);
+      copy.splice(to, 0, fromKey);
+      const normalized = normalizeColumnOrder(copy);
+      persistColumnOrder(normalized);
+      return normalized;
+    });
   }
 
   function persistWidths(next: Record<string, number>) {
@@ -1890,7 +1961,7 @@ export function SheetTable({
         <table className="sheet-grid" style={{ width: tableWidth }}>
           <colgroup>
             <col style={{ width: ROW_NUM_WIDTH }} />
-            {COLUMNS.map((col) => (
+            {orderedColumns.map((col) => (
               <col key={col.key} style={{ width: widths[col.key] || col.width }} />
             ))}
             <col style={{ width: widths.__profit || PROFIT_DEFAULT_WIDTH }} />
@@ -1898,13 +1969,53 @@ export function SheetTable({
           <thead>
             <tr>
               <th className="sheet-corner" title="Click a row number to delete" />
-              {COLUMNS.map((col, idx) => {
+              {orderedColumns.map((col, idx) => {
                 const sticky = stickyColProps(col.key);
+                const canDrag = true;
                 return (
                 <th
                   key={col.key}
-                  className={sticky.className || undefined}
+                  className={[
+                    sticky.className || "",
+                    draggingCol === col.key ? "is-col-dragging" : "",
+                    dragOverCol === col.key && draggingCol && draggingCol !== col.key
+                      ? "is-col-drop"
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ") || undefined}
                   style={{ width: widths[col.key] || col.width, ...sticky.style }}
+                  draggable={canDrag}
+                  onDragStart={(e) => {
+                    if ((e.target as HTMLElement).closest(".sheet-col-resize")) {
+                      e.preventDefault();
+                      return;
+                    }
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", col.key);
+                    setDraggingCol(col.key);
+                  }}
+                  onDragEnd={() => {
+                    setDraggingCol(null);
+                    setDragOverCol(null);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    if (dragOverCol !== col.key) setDragOverCol(col.key);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverCol === col.key) setDragOverCol(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const from =
+                      (e.dataTransfer.getData("text/plain") as SheetColumnKey) || draggingCol;
+                    if (from) moveColumn(from, col.key);
+                    setDraggingCol(null);
+                    setDragOverCol(null);
+                  }}
+                  title="Drag to reorder columns"
                 >
                   {col.key === "date" ? (
                     <button
@@ -1935,6 +2046,7 @@ export function SheetTable({
                   <span
                     className="sheet-col-resize"
                     onMouseDown={(e) => startResize(col.key, e)}
+                    draggable={false}
                     role="separator"
                     aria-orientation="vertical"
                     aria-label={`Resize ${col.label}`}
@@ -1960,7 +2072,7 @@ export function SheetTable({
               <th className="sheet-corner sheet-totals-corner" title={`Totals · ${periodTotalsLabel}`}>
                 Σ
               </th>
-              {COLUMNS.map((col) => {
+              {orderedColumns.map((col) => {
                 const amount = moneyTotalForColumn(col.key);
                 const sticky = stickyColProps(col.key);
                 const stickyClass = sticky.className;
@@ -2072,7 +2184,7 @@ export function SheetTable({
                       </button>
                     )}
                   </th>
-                  {COLUMNS.map((col) => {
+                  {orderedColumns.map((col) => {
                     const editable = isColumnEditable(row.workSource, col.key, colOpts);
                     const payDimmed =
                       paymentColumnState(row.paymentType, col.key, row.workSource) === "dim";
