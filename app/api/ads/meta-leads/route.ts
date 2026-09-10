@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { PHONE_FIELD_NAMES } from "@/lib/ads/meta";
+import { PHONE_FIELD_NAMES, fetchMetaLeadgenById } from "@/lib/ads/meta";
 import {
   findLeadIdByMetaLeadgen,
   ingestMetaInboxMessageToCrm,
@@ -10,10 +10,12 @@ import { isMetaInboxLeadFormText } from "@/lib/leads/meta-inbox-parse";
 import { isSupabaseConfigured } from "@/lib/supabase/admin";
 
 /**
- * Meta Lead Ads + Messenger/Instagram inbox forms webhook.
+ * Meta Lead Ads + Messenger/Instagram inbox forms webhook (realtime).
  * App → Webhooks: Page leadgen + messages (and Instagram messages if used).
  * Callback URL: https://garageguysoc.com/api/ads/meta-leads
  * Env: META_WEBHOOK_VERIFY_TOKEN, META_APP_SECRET, META_ADS_ACCESS_TOKEN, META_PAGE_ID
+ *
+ * Backup: /api/meta-leads-catchup every 2 hours if a push is missed.
  */
 
 type LeadField = { name?: string; values?: string[] };
@@ -56,31 +58,7 @@ function fieldsMap(fields: LeadField[]): Record<string, string> {
 }
 
 async function fetchLeadData(leadgenId: string) {
-  const token = process.env.META_ADS_ACCESS_TOKEN?.trim();
-  if (!token) throw new Error("META_ADS_ACCESS_TOKEN missing");
-  const url = new URL(`https://graph.facebook.com/v21.0/${leadgenId}`);
-  url.searchParams.set("access_token", token);
-  url.searchParams.set(
-    "fields",
-    "id,created_time,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,field_data",
-  );
-  const res = await fetch(url.toString(), { cache: "no-store" });
-  const json = (await res.json()) as {
-    id?: string;
-    created_time?: string;
-    ad_id?: string;
-    ad_name?: string;
-    adset_id?: string;
-    campaign_id?: string;
-    campaign_name?: string;
-    form_id?: string;
-    field_data?: LeadField[];
-    error?: { message?: string };
-  };
-  if (!res.ok || json.error) {
-    throw new Error(json.error?.message || `Failed to load lead ${leadgenId}`);
-  }
-  return json;
+  return fetchMetaLeadgenById(leadgenId);
 }
 
 async function resolveCampaignName(campaignId: string | null | undefined): Promise<string> {
@@ -212,10 +190,12 @@ export async function POST(request: NextRequest) {
       try {
         results.push(await ingestLeadgenId(id));
       } catch (error) {
+        const message = error instanceof Error ? error.message : "ingest failed";
+        console.error("[meta-leads-webhook] leadgen failed", id, message);
         results.push({
           leadgenId: id,
           ok: false,
-          error: error instanceof Error ? error.message : "ingest failed",
+          error: message,
         });
       }
     }

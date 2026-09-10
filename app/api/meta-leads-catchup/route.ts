@@ -16,7 +16,7 @@ async function handle(request: NextRequest) {
   }
 
   try {
-    const result = await catchUpMetaLeads(7);
+    const result = await catchUpMetaLeads(2);
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     return NextResponse.json(

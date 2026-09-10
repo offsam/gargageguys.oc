@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/meta-leads-catchup",
-      "schedule": "45 16 * * *"
+      "schedule": "0 */2 * * *"
     }
   ]
 }

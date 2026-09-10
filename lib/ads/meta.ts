@@ -678,6 +678,53 @@ export async function fetchMetaCampaignLeads(
   );
 }
 
+export type MetaLeadgenGraphRow = {
+  id?: string;
+  created_time?: string;
+  ad_id?: string;
+  ad_name?: string;
+  adset_id?: string;
+  campaign_id?: string;
+  campaign_name?: string;
+  form_id?: string;
+  field_data?: Array<{ name?: string; values?: string[] }>;
+};
+
+/**
+ * Load one Instant Form lead for the realtime webhook.
+ * Uses Page access token (system-user token alone often cannot read leadgen).
+ * Retries briefly — Meta sometimes returns the id before field_data is ready.
+ */
+export async function fetchMetaLeadgenById(
+  leadgenId: string,
+  attempts = 4,
+): Promise<MetaLeadgenGraphRow> {
+  const id = String(leadgenId || "").trim();
+  if (!id) throw new Error("Missing leadgen id");
+
+  const cfg = getMetaAdsConfig();
+  if (!cfg.token) throw new Error("META_ADS_ACCESS_TOKEN missing");
+  const pageAuth = await resolveLeadAccessToken(cfg.token, cfg.pageId);
+
+  let lastError: Error | null = null;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const json = (await graphGet(id, pageAuth.token, {
+        fields:
+          "id,created_time,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,field_data",
+      })) as MetaLeadgenGraphRow & { error?: { message?: string } };
+      if (json.error?.message) throw new Error(json.error.message);
+      return json;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+      }
+    }
+  }
+  throw lastError || new Error(`Failed to load lead ${id}`);
+}
+
 /** Page Instant Form leads for catch-up (webhook miss). Not a browser poll. */
 export async function fetchRecentPageLeads(period: AdsPeriod): Promise<MetaLeadRow[]> {
   const cfg = getMetaAdsConfig();
