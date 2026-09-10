@@ -132,15 +132,31 @@ export async function ocrStockOrderImage(bytes: Buffer, mimeType: string): Promi
   provider: "groq" | "openai";
 }> {
   const dataUrl = `data:${mimeType};base64,${bytes.toString("base64")}`;
+  const errors: string[] = [];
+
   if (process.env.GROQ_API_KEY?.trim()) {
     try {
       return { text: await ocrWithGroq(dataUrl), provider: "groq" };
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`Groq: ${msg}`);
       console.warn("[stock-order-ocr] groq failed, trying openai", err);
     }
+  } else {
+    errors.push("Groq: GROQ_API_KEY not set");
   }
+
   if (process.env.OPENAI_API_KEY?.trim()) {
-    return { text: await ocrWithOpenAI(dataUrl), provider: "openai" };
+    try {
+      return { text: await ocrWithOpenAI(dataUrl), provider: "openai" };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`OpenAI: ${msg}`);
+      console.warn("[stock-order-ocr] openai failed", err);
+    }
+  } else {
+    errors.push("OpenAI: OPENAI_API_KEY not set");
   }
-  throw new Error("No vision OCR key (set GROQ_API_KEY or OPENAI_API_KEY)");
+
+  throw new Error(`Vision OCR failed (${errors.join(" · ")})`);
 }
