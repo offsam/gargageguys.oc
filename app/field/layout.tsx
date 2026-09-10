@@ -13,10 +13,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f2340",
+  themeColor: "#071018",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  colorScheme: "dark",
 };
 
 export default function FieldLayout({ children }: { children: React.ReactNode }) {
