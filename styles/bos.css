@@ -1941,11 +1941,12 @@ textarea {
   color: var(--bos-text);
 }
 
-.sheet-grid thead th[draggable="true"] {
+.sheet-grid thead th[data-sheet-col] {
   cursor: grab;
 }
 
-.sheet-grid thead th[draggable="true"]:active {
+.sheet-grid thead th[data-sheet-col]:active,
+body.sheet-col-reordering .sheet-grid thead th[data-sheet-col] {
   cursor: grabbing;
 }
 
@@ -1955,6 +1956,16 @@ textarea {
 
 .sheet-grid thead th.is-col-drop {
   box-shadow: inset 3px 0 0 var(--bos-accent-2);
+}
+
+body.sheet-col-reordering {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+body.sheet-col-reordering * {
+  cursor: grabbing !important;
+  user-select: none !important;
 }
 
 .sheet-col-resize {

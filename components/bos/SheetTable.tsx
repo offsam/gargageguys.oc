@@ -793,6 +793,12 @@ export function SheetTable({
   const [draggingCol, setDraggingCol] = useState<SheetColumnKey | null>(null);
   const [dragOverCol, setDragOverCol] = useState<SheetColumnKey | null>(null);
   const dragRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
+  const colReorderRef = useRef<{
+    key: SheetColumnKey;
+    startX: number;
+    active: boolean;
+  } | null>(null);
+  const dragOverColRef = useRef<SheetColumnKey | null>(null);
   const rowsRef = useRef(rows);
   const inFlightRef = useRef(0);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
@@ -1007,23 +1013,83 @@ export function SheetTable({
 
   function moveColumn(fromKey: SheetColumnKey, toKey: SheetColumnKey) {
     if (fromKey === toKey) return;
-    // Sticky columns stay on the left; only reorder within sticky or within the rest.
-    const fromSticky = STICKY_COLUMNS.includes(fromKey);
-    const toSticky = STICKY_COLUMNS.includes(toKey);
-    if (fromSticky !== toSticky) return;
 
     setColumnOrder((prev) => {
       const next = normalizeColumnOrder(prev);
-      const from = next.indexOf(fromKey);
-      const to = next.indexOf(toKey);
-      if (from < 0 || to < 0 || from === to) return prev;
-      const copy = [...next];
-      copy.splice(from, 1);
-      copy.splice(to, 0, fromKey);
-      const normalized = normalizeColumnOrder(copy);
+      if (!next.includes(fromKey) || !next.includes(toKey)) return prev;
+
+      const fromSticky = STICKY_COLUMNS.includes(fromKey);
+      const toSticky = STICKY_COLUMNS.includes(toKey);
+
+      // Job # / Client stay on the left; only reorder within sticky or within the rest.
+      let targetKey = toKey;
+      if (fromSticky && !toSticky) return prev;
+      if (!fromSticky && toSticky) {
+        const firstMovable = next.find((key) => !STICKY_COLUMNS.includes(key));
+        if (!firstMovable || firstMovable === fromKey) return prev;
+        targetKey = firstMovable;
+      }
+
+      const without = next.filter((key) => key !== fromKey);
+      const insertAt = without.indexOf(targetKey);
+      if (insertAt < 0) return prev;
+      without.splice(insertAt, 0, fromKey);
+      const normalized = normalizeColumnOrder(without);
+      if (normalized.join("|") === next.join("|")) return prev;
       persistColumnOrder(normalized);
       return normalized;
     });
+  }
+
+  const moveColumnRef = useRef(moveColumn);
+  moveColumnRef.current = moveColumn;
+
+  function colKeyFromPoint(clientX: number, clientY: number): SheetColumnKey | null {
+    const el = document.elementFromPoint(clientX, clientY);
+    const th = el?.closest?.("th[data-sheet-col]") as HTMLElement | null;
+    const key = th?.dataset?.sheetCol;
+    return key && COLUMN_BY_KEY.has(key as SheetColumnKey) ? (key as SheetColumnKey) : null;
+  }
+
+  const onColReorderMove = useCallback((e: PointerEvent) => {
+    const drag = colReorderRef.current;
+    if (!drag) return;
+    if (!drag.active) {
+      if (Math.abs(e.clientX - drag.startX) < 6) return;
+      drag.active = true;
+      setDraggingCol(drag.key);
+      document.body.classList.add("sheet-col-reordering");
+    }
+    const over = colKeyFromPoint(e.clientX, e.clientY);
+    const nextOver = over && over !== drag.key ? over : null;
+    dragOverColRef.current = nextOver;
+    setDragOverCol(nextOver);
+  }, []);
+
+  const onColReorderEnd = useCallback(
+    (e: PointerEvent) => {
+      const drag = colReorderRef.current;
+      colReorderRef.current = null;
+      window.removeEventListener("pointermove", onColReorderMove);
+      window.removeEventListener("pointerup", onColReorderEnd);
+      window.removeEventListener("pointercancel", onColReorderEnd);
+      document.body.classList.remove("sheet-col-reordering");
+      const over = colKeyFromPoint(e.clientX, e.clientY) || dragOverColRef.current;
+      dragOverColRef.current = null;
+      if (drag?.active && over) moveColumnRef.current(drag.key, over);
+      setDraggingCol(null);
+      setDragOverCol(null);
+    },
+    [onColReorderMove],
+  );
+
+  function startColReorder(key: SheetColumnKey, e: React.PointerEvent) {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest(".sheet-col-resize")) return;
+    colReorderRef.current = { key, startX: e.clientX, active: false };
+    window.addEventListener("pointermove", onColReorderMove);
+    window.addEventListener("pointerup", onColReorderEnd);
+    window.addEventListener("pointercancel", onColReorderEnd);
   }
 
   function persistWidths(next: Record<string, number>) {
@@ -1055,7 +1121,7 @@ export function SheetTable({
     }
   }, [onResizeMove]);
 
-  function startResize(key: string, e: React.MouseEvent) {
+  function startResize(key: string, e: React.PointerEvent | React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     dragRef.current = {
@@ -1072,9 +1138,13 @@ export function SheetTable({
     return () => {
       window.removeEventListener("mousemove", onResizeMove);
       window.removeEventListener("mouseup", onResizeEnd);
+      window.removeEventListener("pointermove", onColReorderMove);
+      window.removeEventListener("pointerup", onColReorderEnd);
+      window.removeEventListener("pointercancel", onColReorderEnd);
       document.body.classList.remove("sheet-col-resizing");
+      document.body.classList.remove("sheet-col-reordering");
     };
-  }, [onResizeMove, onResizeEnd]);
+  }, [onResizeMove, onResizeEnd, onColReorderMove, onColReorderEnd]);
 
   function removeRow(row: SheetRow) {
     const key = rowKey(row);
@@ -1971,10 +2041,10 @@ export function SheetTable({
               <th className="sheet-corner" title="Click a row number to delete" />
               {orderedColumns.map((col, idx) => {
                 const sticky = stickyColProps(col.key);
-                const canDrag = true;
                 return (
                 <th
                   key={col.key}
+                  data-sheet-col={col.key}
                   className={[
                     sticky.className || "",
                     draggingCol === col.key ? "is-col-dragging" : "",
@@ -1985,45 +2055,17 @@ export function SheetTable({
                     .filter(Boolean)
                     .join(" ") || undefined}
                   style={{ width: widths[col.key] || col.width, ...sticky.style }}
-                  draggable={canDrag}
-                  onDragStart={(e) => {
-                    if ((e.target as HTMLElement).closest(".sheet-col-resize")) {
-                      e.preventDefault();
-                      return;
-                    }
-                    e.dataTransfer.effectAllowed = "move";
-                    e.dataTransfer.setData("text/plain", col.key);
-                    setDraggingCol(col.key);
-                  }}
-                  onDragEnd={() => {
-                    setDraggingCol(null);
-                    setDragOverCol(null);
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = "move";
-                    if (dragOverCol !== col.key) setDragOverCol(col.key);
-                  }}
-                  onDragLeave={() => {
-                    if (dragOverCol === col.key) setDragOverCol(null);
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const from =
-                      (e.dataTransfer.getData("text/plain") as SheetColumnKey) || draggingCol;
-                    if (from) moveColumn(from, col.key);
-                    setDraggingCol(null);
-                    setDragOverCol(null);
-                  }}
-                  title="Drag to reorder columns"
+                  onPointerDown={(e) => startColReorder(col.key, e)}
+                  title="Drag header to reorder columns"
                 >
                   {col.key === "date" ? (
                     <button
                       type="button"
                       className="sheet-sort-head"
-                      onClick={() =>
-                        changeDateSort(dateSort === "newest" ? "oldest" : "newest")
-                      }
+                      onClick={() => {
+                        if (colReorderRef.current?.active) return;
+                        changeDateSort(dateSort === "newest" ? "oldest" : "newest");
+                      }}
                       title={
                         dateSort === "newest"
                           ? "Newest on top — click for oldest"
@@ -2045,8 +2087,10 @@ export function SheetTable({
                   )}
                   <span
                     className="sheet-col-resize"
-                    onMouseDown={(e) => startResize(col.key, e)}
-                    draggable={false}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      startResize(col.key, e);
+                    }}
                     role="separator"
                     aria-orientation="vertical"
                     aria-label={`Resize ${col.label}`}
@@ -2061,7 +2105,10 @@ export function SheetTable({
                 <span className="sheet-col-label">$ Clear profit</span>
                 <span
                   className="sheet-col-resize"
-                  onMouseDown={(e) => startResize("__profit", e)}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    startResize("__profit", e);
+                  }}
                   role="separator"
                   aria-orientation="vertical"
                   aria-label="Resize Clear profit"
