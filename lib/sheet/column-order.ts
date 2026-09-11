@@ -5,8 +5,15 @@ export function isStickySheetColumn(key: string, sticky: readonly string[] = STI
   return sticky.includes(key);
 }
 
+export type SheetColumnDropPlace = "before" | "after";
+
+export type SheetColumnDropTarget<T extends string> = {
+  key: T;
+  place: SheetColumnDropPlace;
+};
+
 /**
- * Returns a new column order after moving `fromKey` before `toKey`.
+ * Returns a new column order after moving `fromKey` before/after `toKey`.
  * Returns null when the move is a no-op or crosses the sticky boundary.
  */
 export function moveSheetColumnOrder<T extends string>(
@@ -14,6 +21,7 @@ export function moveSheetColumnOrder<T extends string>(
   fromKey: T,
   toKey: T,
   sticky: readonly string[] = STICKY_SHEET_COLUMNS,
+  place: SheetColumnDropPlace = "before",
 ): T[] | null {
   if (fromKey === toKey) return null;
   if (!order.includes(fromKey) || !order.includes(toKey)) return null;
@@ -24,8 +32,9 @@ export function moveSheetColumnOrder<T extends string>(
   const next = order.slice();
   const fromIdx = next.indexOf(fromKey);
   next.splice(fromIdx, 1);
-  const insertAt = next.indexOf(toKey);
+  let insertAt = next.indexOf(toKey);
   if (insertAt < 0) return null;
+  if (place === "after") insertAt += 1;
   next.splice(insertAt, 0, fromKey);
 
   // Keep sticky keys first, preserve relative order within each group.
@@ -39,29 +48,45 @@ export function moveSheetColumnOrder<T extends string>(
 /**
  * Pick a drop target column by X, only among the same sticky/non-sticky group
  * as the dragged column — avoids sticky headers stealing hits after H-scroll.
+ * Place is before/after based on which half of the header the pointer is over
+ * so adjacent right-drags actually swap instead of no-op.
  */
+export function sheetColumnDropAtX<T extends string>(
+  clientX: number,
+  dragKey: T,
+  headers: Array<{ key: T; left: number; right: number }>,
+  sticky: readonly string[] = STICKY_SHEET_COLUMNS,
+): SheetColumnDropTarget<T> | null {
+  const dragSticky = isStickySheetColumn(dragKey, sticky);
+  const group = headers.filter((h) => isStickySheetColumn(h.key, sticky) === dragSticky);
+  if (group.length === 0) return null;
+
+  let hit: { key: T; left: number; right: number } | null = null;
+  let best: { key: T; left: number; right: number; dist: number } | null = null;
+  for (const h of group) {
+    if (h.key === dragKey) continue;
+    const width = h.right - h.left;
+    if (width <= 0) continue;
+    if (clientX >= h.left && clientX <= h.right) hit = h;
+    const mid = (h.left + h.right) / 2;
+    const dist = Math.abs(clientX - mid);
+    if (!best || dist < best.dist) best = { ...h, dist };
+  }
+  const target = hit || (best && best.dist < 220 ? best : null);
+  if (!target) return null;
+  const mid = (target.left + target.right) / 2;
+  return {
+    key: target.key,
+    place: clientX < mid ? "before" : "after",
+  };
+}
+
+/** @deprecated Prefer sheetColumnDropAtX — kept for call sites that only need the key. */
 export function sheetColumnKeyAtX<T extends string>(
   clientX: number,
   dragKey: T,
   headers: Array<{ key: T; left: number; right: number }>,
   sticky: readonly string[] = STICKY_SHEET_COLUMNS,
 ): T | null {
-  const dragSticky = isStickySheetColumn(dragKey, sticky);
-  const group = headers.filter((h) => isStickySheetColumn(h.key, sticky) === dragSticky);
-  if (group.length === 0) return null;
-
-  let hit: T | null = null;
-  let best: { key: T; dist: number } | null = null;
-  for (const h of group) {
-    if (h.key === dragKey) continue;
-    const width = h.right - h.left;
-    if (width <= 0) continue;
-    if (clientX >= h.left && clientX <= h.right) hit = h.key;
-    const mid = (h.left + h.right) / 2;
-    const dist = Math.abs(clientX - mid);
-    if (!best || dist < best.dist) best = { key: h.key, dist };
-  }
-  if (hit) return hit;
-  if (best && best.dist < 220) return best.key;
-  return null;
+  return sheetColumnDropAtX(clientX, dragKey, headers, sticky)?.key ?? null;
 }

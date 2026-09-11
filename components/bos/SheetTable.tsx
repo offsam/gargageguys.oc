@@ -35,8 +35,9 @@ import {
 } from "@/lib/sheet/work-source";
 import {
   moveSheetColumnOrder,
-  sheetColumnKeyAtX,
+  sheetColumnDropAtX,
   STICKY_SHEET_COLUMNS,
+  type SheetColumnDropPlace,
 } from "@/lib/sheet/column-order";
 import { normalizeSheetTime } from "@/lib/sheet/sync-job-from-sheet";
 import {
@@ -797,6 +798,7 @@ export function SheetTable({
   const [columnOrder, setColumnOrder] = useState<SheetColumnKey[]>(DEFAULT_COLUMN_ORDER);
   const [draggingCol, setDraggingCol] = useState<SheetColumnKey | null>(null);
   const [dragOverCol, setDragOverCol] = useState<SheetColumnKey | null>(null);
+  const [dragOverPlace, setDragOverPlace] = useState<SheetColumnDropPlace | null>(null);
   const dragRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
   const colReorderRef = useRef<{
     key: SheetColumnKey;
@@ -804,6 +806,7 @@ export function SheetTable({
     active: boolean;
   } | null>(null);
   const dragOverColRef = useRef<SheetColumnKey | null>(null);
+  const dragOverPlaceRef = useRef<SheetColumnDropPlace | null>(null);
   const rowsRef = useRef(rows);
   const inFlightRef = useRef(0);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
@@ -1016,10 +1019,14 @@ export function SheetTable({
     };
   }
 
-  function moveColumn(fromKey: SheetColumnKey, toKey: SheetColumnKey) {
+  function moveColumn(
+    fromKey: SheetColumnKey,
+    toKey: SheetColumnKey,
+    place: SheetColumnDropPlace = "before",
+  ) {
     setColumnOrder((prev) => {
       const next = normalizeColumnOrder(prev);
-      const moved = moveSheetColumnOrder(next, fromKey, toKey, STICKY_COLUMNS);
+      const moved = moveSheetColumnOrder(next, fromKey, toKey, STICKY_COLUMNS, place);
       if (!moved) return prev;
       persistColumnOrder(moved);
       return moved;
@@ -1033,18 +1040,23 @@ export function SheetTable({
    * Hit-test by X among the same sticky/non-sticky group as the dragged column.
    * Sticky Job#/Client sit on top after H-scroll and used to steal drop targets.
    */
-  function colKeyFromPoint(clientX: number, dragKey: SheetColumnKey): SheetColumnKey | null {
+  function colDropFromPoint(
+    clientX: number,
+    dragKey: SheetColumnKey,
+  ): { key: SheetColumnKey; place: SheetColumnDropPlace } | null {
     const headers = Array.from(
       document.querySelectorAll<HTMLElement>(".sheet-grid thead th[data-sheet-col]"),
-    ).map((th) => {
-      const key = th.dataset.sheetCol as SheetColumnKey | undefined;
-      const rect = th.getBoundingClientRect();
-      return key && COLUMN_BY_KEY.has(key)
-        ? { key, left: rect.left, right: rect.right }
-        : null;
-    }).filter((row): row is { key: SheetColumnKey; left: number; right: number } => Boolean(row));
+    )
+      .map((th) => {
+        const key = th.dataset.sheetCol as SheetColumnKey | undefined;
+        const rect = th.getBoundingClientRect();
+        return key && COLUMN_BY_KEY.has(key)
+          ? { key, left: rect.left, right: rect.right }
+          : null;
+      })
+      .filter((row): row is { key: SheetColumnKey; left: number; right: number } => Boolean(row));
 
-    return sheetColumnKeyAtX(clientX, dragKey, headers, STICKY_COLUMNS);
+    return sheetColumnDropAtX(clientX, dragKey, headers, STICKY_COLUMNS);
   }
 
   const onColReorderMove = useCallback((e: PointerEvent) => {
@@ -1060,11 +1072,14 @@ export function SheetTable({
         document.body.classList.add("sheet-col-reordering-scroll");
       }
     }
-    const over = colKeyFromPoint(e.clientX, drag.key);
-    const nextOver = over && over !== drag.key ? over : null;
-    if (dragOverColRef.current === nextOver) return;
+    const drop = colDropFromPoint(e.clientX, drag.key);
+    const nextOver = drop && drop.key !== drag.key ? drop.key : null;
+    const nextPlace = drop && drop.key !== drag.key ? drop.place : null;
+    if (dragOverColRef.current === nextOver && dragOverPlaceRef.current === nextPlace) return;
     dragOverColRef.current = nextOver;
+    dragOverPlaceRef.current = nextPlace;
     setDragOverCol(nextOver);
+    setDragOverPlace(nextPlace);
   }, []);
 
   const onColReorderEnd = useCallback(
@@ -1076,14 +1091,19 @@ export function SheetTable({
       window.removeEventListener("pointercancel", onColReorderEnd);
       document.body.classList.remove("sheet-col-reordering");
       document.body.classList.remove("sheet-col-reordering-scroll");
-      const over =
-        (drag ? colKeyFromPoint(e.clientX, drag.key) : null) || dragOverColRef.current;
+      const drop =
+        (drag ? colDropFromPoint(e.clientX, drag.key) : null) ||
+        (dragOverColRef.current && dragOverPlaceRef.current
+          ? { key: dragOverColRef.current, place: dragOverPlaceRef.current }
+          : null);
       dragOverColRef.current = null;
-      if (drag?.active && over && over !== drag.key) {
-        moveColumnRef.current(drag.key, over);
+      dragOverPlaceRef.current = null;
+      if (drag?.active && drop && drop.key !== drag.key) {
+        moveColumnRef.current(drag.key, drop.key, drop.place);
       }
       setDraggingCol(null);
       setDragOverCol(null);
+      setDragOverPlace(null);
     },
     [onColReorderMove],
   );
@@ -2057,7 +2077,7 @@ export function SheetTable({
                     sticky.className || "",
                     draggingCol === col.key ? "is-col-dragging" : "",
                     dragOverCol === col.key && draggingCol && draggingCol !== col.key
-                      ? "is-col-drop"
+                      ? `is-col-drop is-col-drop-${dragOverPlace || "before"}`
                       : "",
                   ]
                     .filter(Boolean)

@@ -2044,8 +2044,15 @@ body.sheet-col-reordering .sheet-grid thead th[data-sheet-col] {
 }
 
 .sheet-grid thead th.is-col-drop {
-  box-shadow: inset 3px 0 0 var(--bos-accent-2);
   background: #e8f0fe !important;
+}
+
+.sheet-grid thead th.is-col-drop-before {
+  box-shadow: inset 3px 0 0 var(--bos-accent-2);
+}
+
+.sheet-grid thead th.is-col-drop-after {
+  box-shadow: inset -3px 0 0 var(--bos-accent-2);
 }
 
 body.sheet-col-reordering {
