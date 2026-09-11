@@ -523,6 +523,33 @@
   background: rgba(226, 232, 240, 0.75);
 }
 
+.field-app .field-seg--view {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 11rem;
+  align-self: flex-end;
+  margin-left: auto;
+}
+
+.field-app .field-map-panel__caption {
+  margin: 0;
+  padding: 0 0.15rem;
+  font-size: var(--field-fs-xs);
+  font-weight: 650;
+  color: var(--field-muted) !important;
+}
+
+.field-app .field-map-legend__swatch--you {
+  background: #2f6bff;
+}
+
+.field-app .field-map-user--stale .field-map-user__dot {
+  background: #64748b;
+}
+
+.field-app .field-map-user--stale .field-map-user__pulse {
+  background: rgba(100, 116, 139, 0.28);
+}
+
 .field-app .field-seg button {
   appearance: none;
   border: 0;
@@ -626,6 +653,9 @@
 }
 .field-app .field-map-legend__swatch--cancel {
   background: #ef4444;
+}
+.field-app .field-map-legend__swatch--you {
+  background: #2f6bff;
 }
 
 .field-app .field-map-pin {

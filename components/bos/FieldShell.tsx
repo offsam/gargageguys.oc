@@ -6,6 +6,7 @@ import { signOutAction } from "@/app/actions/auth";
 import { FieldSessionKeeper } from "@/components/bos/FieldSessionKeeper";
 import { FieldPwaRegister } from "@/components/bos/FieldPwaRegister";
 import { FieldWeather } from "@/components/bos/FieldWeather";
+import { FieldLocationBeacon } from "@/components/bos/FieldLocationBeacon";
 import { BUSINESS_TZ } from "@/lib/datetime";
 
 type TabId = "schedule" | "calendar" | "report" | "stock" | "attention";
@@ -142,6 +143,7 @@ export function FieldShell({
       <div className="field-app-glow" aria-hidden />
       <FieldPwaRegister />
       <FieldSessionKeeper />
+      <FieldLocationBeacon enabled={user.role === "technician"} />
       <header className="field-top field-top--profile">
         <div className="field-profile">
           <div className="field-avatar" aria-hidden>

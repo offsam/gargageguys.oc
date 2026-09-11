@@ -6,20 +6,30 @@ import type { FieldJob } from "@/lib/field/days";
 import { formatTime } from "@/lib/field/days";
 import { isBusyJob } from "@/lib/field/busy";
 import { fieldStatusLabel } from "@/lib/field/job-status";
-import { formatJobAddress, googleMapsFallbackUrl, mapsAppUrl } from "@/lib/field/maps";
+import {
+  formatJobAddress,
+  googleMapsFallbackUrl,
+  mapsAppUrl,
+  type GeoPoint,
+} from "@/lib/field/maps";
 import { FieldDayClients } from "@/components/bos/FieldDayClients";
 import { FieldDayMap, type FieldMapPin } from "@/components/bos/FieldDayMap";
 
-type Mode = "today" | "all" | "map" | "list";
+export type FieldDayFilter = "yesterday" | "today" | "tomorrow" | "all";
+type ViewMode = "map" | "list";
+
+export type FieldDayBucket = {
+  jobs: FieldJob[];
+  pins: FieldMapPin[];
+  label: string;
+  count: number;
+};
 
 type Props = {
-  todayJobs: FieldJob[];
-  allJobs: FieldJob[];
-  todayPins: FieldMapPin[];
-  allPins: FieldMapPin[];
-  isToday: boolean;
-  heading: string;
-  todayHref?: string;
+  buckets: Record<FieldDayFilter, FieldDayBucket>;
+  initialFilter?: FieldDayFilter;
+  lastKnownTech?: GeoPoint | null;
+  lastKnownTechAt?: string | null;
 };
 
 function homeStatusLabel(status: string): string {
@@ -62,10 +72,7 @@ function MapsNavButton({ address }: { address: string }) {
       onClick={(e) => e.stopPropagation()}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path
-          d="M12 3.5 5.5 19.2l6.5-3.1 6.5 3.1L12 3.5Z"
-          fill="currentColor"
-        />
+        <path d="M12 3.5 5.5 19.2l6.5-3.1 6.5 3.1L12 3.5Z" fill="currentColor" />
       </svg>
     </a>
   );
@@ -182,63 +189,88 @@ function NextJobCard({ jobs }: { jobs: FieldJob[] }) {
   );
 }
 
+const FILTERS: Array<{ id: FieldDayFilter; short: string }> = [
+  { id: "yesterday", short: "Yesterday" },
+  { id: "today", short: "Today" },
+  { id: "tomorrow", short: "Tomorrow" },
+  { id: "all", short: "All" },
+];
+
 export function FieldTodayHome({
-  todayJobs,
-  allJobs,
-  todayPins,
-  allPins,
-  isToday,
-  heading,
-  todayHref = "/field",
+  buckets,
+  initialFilter = "today",
+  lastKnownTech = null,
+  lastKnownTechAt = null,
 }: Props) {
-  const [mode, setMode] = useState<Mode>("today");
+  const [filter, setFilter] = useState<FieldDayFilter>(initialFilter);
+  const [view, setView] = useState<ViewMode>("map");
   const [focusId, setFocusId] = useState<string | null>(null);
 
-  const filter: "today" | "all" = mode === "all" ? "all" : "today";
-  const view: "map" | "list" = mode === "list" ? "list" : "map";
-  const jobs = filter === "all" ? allJobs : todayJobs;
-  const pins = filter === "all" ? allPins : todayPins;
+  const bucket = buckets[filter] || buckets.today;
+  const jobs = bucket.jobs;
+  const pins = bucket.pins;
 
   return (
     <div className="field-home field-home--glass">
-      <NextJobCard jobs={todayJobs} />
+      <NextJobCard jobs={jobs} />
 
       <section className="field-map-panel field-glass-card">
-        <div className="field-seg" role="tablist" aria-label="Schedule view">
-          {(
-            [
-              { id: "today", label: `Today (${todayJobs.length})` },
-              { id: "all", label: "All" },
-              { id: "map", label: "Map" },
-              { id: "list", label: "List" },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={mode === tab.id}
-              className={mode === tab.id ? "active" : undefined}
-              onClick={() => setMode(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="field-seg field-seg--days" role="tablist" aria-label="Day filter">
+          {FILTERS.map((tab) => {
+            const count = buckets[tab.id]?.count ?? 0;
+            const label =
+              tab.id === "all" ? `All (${count})` : `${tab.short}${count ? ` (${count})` : ""}`;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={filter === tab.id}
+                className={filter === tab.id ? "active" : undefined}
+                onClick={() => setFilter(tab.id)}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
-        {!isToday && filter === "today" ? (
-          <div className="field-map-panel__jump">
-            <span>{heading}</span>
-            <a href={todayHref}>Jump to today</a>
-          </div>
-        ) : null}
+        <div className="field-seg field-seg--view" role="tablist" aria-label="View">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "map"}
+            className={view === "map" ? "active" : undefined}
+            onClick={() => setView("map")}
+          >
+            Map
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "list"}
+            className={view === "list" ? "active" : undefined}
+            onClick={() => setView("list")}
+          >
+            List
+          </button>
+        </div>
+
+        <p className="field-map-panel__caption">{bucket.label}</p>
 
         {view === "list" ? (
           <div className="field-map-panel__list">
             <FieldDayClients jobs={jobs} onHoverJob={setFocusId} />
           </div>
         ) : (
-          <FieldDayMap pins={pins} focusId={focusId} showLegend showLocate />
+          <FieldDayMap
+            pins={pins}
+            focusId={focusId}
+            showLegend
+            showLocate
+            lastKnownTech={lastKnownTech}
+            lastKnownTechAt={lastKnownTechAt}
+          />
         )}
       </section>
     </div>

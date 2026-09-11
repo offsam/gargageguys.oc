@@ -1,7 +1,7 @@
 import { BosShell } from "@/components/bos/BosShell";
 import { FieldScheduleFab } from "@/components/bos/FieldScheduleFab";
 import { FieldShell } from "@/components/bos/FieldShell";
-import { FieldTodayHome } from "@/components/bos/FieldTodayHome";
+import { FieldTodayHome, type FieldDayBucket, type FieldDayFilter } from "@/components/bos/FieldTodayHome";
 import { requireRouteAccess } from "@/lib/auth/require";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFieldAttentionCount } from "@/lib/field/load-attention";
@@ -9,7 +9,7 @@ import {
   dayKeyFromIso,
   formatDayHeading,
   jobsForDay,
-  parseDayKey,
+  shiftDayKey,
   startOfToday,
   toDayKey,
   type FieldJob,
@@ -19,8 +19,12 @@ import { geocodeMany } from "@/lib/field/geocode";
 import { formatJobAddress } from "@/lib/field/maps";
 import type { FieldMapPin } from "@/components/bos/FieldDayMap";
 import { ensureTechFieldJobsFromSheet } from "@/lib/sheet/sync-job-from-sheet";
+import { getTechLocation } from "@/lib/field/tech-location-store";
 
-function buildPins(jobs: FieldJob[], points: Record<string, { lat: number; lng: number }>): FieldMapPin[] {
+function buildPins(
+  jobs: FieldJob[],
+  points: Record<string, { lat: number; lng: number }>,
+): FieldMapPin[] {
   return jobs
     .filter((j) => points[j.id] && !isBusyJob(j))
     .map((j) => {
@@ -36,16 +40,22 @@ function buildPins(jobs: FieldJob[], points: Record<string, { lat: number; lng: 
     });
 }
 
-export default async function FieldPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ day?: string }>;
-}) {
+function jobsForDayIncludingCancelled(jobs: FieldJob[], dayKey: string): FieldJob[] {
+  return jobs
+    .filter((j) => dayKeyFromIso(j.scheduled_start) === dayKey)
+    .sort((a, b) => {
+      const ta = a.scheduled_start ? new Date(a.scheduled_start).getTime() : 0;
+      const tb = b.scheduled_start ? new Date(b.scheduled_start).getTime() : 0;
+      return ta - tb;
+    });
+}
+
+export default async function FieldPage() {
   const user = await requireRouteAccess("/field");
 
-  const params = await searchParams;
   const todayKey = toDayKey(startOfToday());
-  const selectedDay = params.day && parseDayKey(params.day) ? params.day : todayKey;
+  const yesterdayKey = shiftDayKey(todayKey, -1);
+  const tomorrowKey = shiftDayKey(todayKey, 1);
 
   const supabase = await createSupabaseServerClient();
 
@@ -71,32 +81,30 @@ export default async function FieldPage({
   const { data: jobsRaw } = await query.limit(800);
   const jobs = (jobsRaw || []) as FieldJob[];
 
-  const dayJobs = jobsForDay(jobs, selectedDay);
-  const dayJobsWithCancelled = jobs
-    .filter((j) => dayKeyFromIso(j.scheduled_start) === selectedDay)
-    .sort((a, b) => {
-      const ta = a.scheduled_start ? new Date(a.scheduled_start).getTime() : 0;
-      const tb = b.scheduled_start ? new Date(b.scheduled_start).getTime() : 0;
-      return ta - tb;
-    });
-
-  const upcoming = jobs
+  const todayJobs = jobsForDay(jobs, todayKey);
+  const yesterdayJobs = jobsForDay(jobs, yesterdayKey);
+  const tomorrowJobs = jobsForDay(jobs, tomorrowKey);
+  const allJobs = jobs
     .filter((j) => j.status !== "cancelled")
     .sort((a, b) => {
       const ta = a.scheduled_start ? new Date(a.scheduled_start).getTime() : 0;
       const tb = b.scheduled_start ? new Date(b.scheduled_start).getTime() : 0;
       return ta - tb;
     })
-    .slice(0, 40);
+    .slice(0, 60);
 
-  const isToday = selectedDay === todayKey;
-  const heading = isToday ? "Today" : formatDayHeading(selectedDay);
+  const mapJobs = [
+    ...jobsForDayIncludingCancelled(jobs, yesterdayKey),
+    ...jobsForDayIncludingCancelled(jobs, todayKey),
+    ...jobsForDayIncludingCancelled(jobs, tomorrowKey),
+    ...allJobs,
+  ];
+
   const attentionCount =
     user.role === "technician" ? await getFieldAttentionCount(user.id) : 0;
 
-  const geocodeSource = [...dayJobsWithCancelled, ...upcoming];
   const seen = new Set<string>();
-  const geocodeQueries = geocodeSource
+  const geocodeQueries = mapJobs
     .filter((j) => {
       if (seen.has(j.id) || isBusyJob(j)) return false;
       seen.add(j.id);
@@ -108,20 +116,45 @@ export default async function FieldPage({
     })
     .filter((row): row is { id: string; text: string } => Boolean(row));
 
-  const points = await geocodeMany(geocodeQueries);
-  const todayPins = buildPins(dayJobsWithCancelled, points);
-  const allPins = buildPins(upcoming, points);
+  const [points, techLoc] = await Promise.all([
+    geocodeMany(geocodeQueries),
+    user.role === "technician" ? getTechLocation(user.id).catch(() => null) : Promise.resolve(null),
+  ]);
+
+  function bucket(
+    list: FieldJob[],
+    dayKey: string | null,
+    label: string,
+  ): FieldDayBucket {
+    const withCancel = dayKey ? jobsForDayIncludingCancelled(jobs, dayKey) : list;
+    return {
+      jobs: list,
+      pins: buildPins(withCancel, points),
+      label,
+      count: list.length,
+    };
+  }
+
+  const buckets: Record<FieldDayFilter, FieldDayBucket> = {
+    yesterday: bucket(yesterdayJobs, yesterdayKey, formatDayHeading(yesterdayKey)),
+    today: bucket(todayJobs, todayKey, "Today"),
+    tomorrow: bucket(tomorrowJobs, tomorrowKey, formatDayHeading(tomorrowKey)),
+    all: bucket(allJobs, null, "All upcoming / recent jobs"),
+  };
+
+  const lastKnownTech =
+    techLoc && Number.isFinite(techLoc.lat) && Number.isFinite(techLoc.lng)
+      ? { lat: techLoc.lat, lng: techLoc.lng }
+      : null;
 
   const body = (
     <div className="field-home-wrap">
       {user.role === "technician" ? <FieldScheduleFab /> : null}
       <FieldTodayHome
-        todayJobs={dayJobs}
-        allJobs={upcoming}
-        todayPins={todayPins}
-        allPins={allPins}
-        isToday={isToday}
-        heading={heading}
+        buckets={buckets}
+        initialFilter="today"
+        lastKnownTech={lastKnownTech}
+        lastKnownTechAt={techLoc?.updatedAt || null}
       />
     </div>
   );
@@ -131,7 +164,7 @@ export default async function FieldPage({
       <FieldShell
         user={user}
         title="Schedule"
-        subtitle={heading}
+        subtitle="Today"
         active="schedule"
         attentionCount={attentionCount}
       >
@@ -141,7 +174,7 @@ export default async function FieldPage({
   }
 
   return (
-    <BosShell user={user} active="/field" title="Field" subtitle={heading}>
+    <BosShell user={user} active="/field" title="Field" subtitle="Today">
       {body}
     </BosShell>
   );

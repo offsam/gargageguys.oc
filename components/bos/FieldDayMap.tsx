@@ -19,6 +19,9 @@ type Props = {
   focusId?: string | null;
   showLegend?: boolean;
   showLocate?: boolean;
+  /** Last known tech GPS from server (shown until live GPS arrives). */
+  lastKnownTech?: GeoPoint | null;
+  lastKnownTechAt?: string | null;
 };
 
 function pinTone(status?: string): "wait" | "active" | "done" | "cancel" {
@@ -43,11 +46,14 @@ export function FieldDayMap({
   focusId = null,
   showLegend = false,
   showLocate = false,
+  lastKnownTech = null,
+  lastKnownTechAt = null,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markersRef = useRef<Map<string, LeafletMarker>>(new Map());
   const userMarkerRef = useRef<LeafletMarker | null>(null);
+  const hasLiveFixRef = useRef(false);
   const pinKey = useMemo(
     () =>
       pins
@@ -147,31 +153,38 @@ export function FieldDayMap({
     if (!showLocate) return;
     let watchId: number | null = null;
     let cancelled = false;
+    hasLiveFixRef.current = false;
 
-    async function placeUser(lat: number, lng: number) {
+    async function placeUser(lat: number, lng: number, live: boolean) {
       const L = await import("leaflet");
       const map = mapRef.current;
       if (cancelled || !map) return;
+      if (live) hasLiveFixRef.current = true;
       const icon = L.divIcon({
-        className: "field-map-user",
+        className: live ? "field-map-user" : "field-map-user field-map-user--stale",
         html: `<span class="field-map-user__pulse"></span><span class="field-map-user__dot"></span>`,
         iconSize: [24, 24],
         iconAnchor: [12, 12],
       });
       if (userMarkerRef.current) {
         userMarkerRef.current.setLatLng([lat, lng]);
+        userMarkerRef.current.setIcon(icon);
       } else {
         userMarkerRef.current = L.marker([lat, lng], { icon, interactive: false }).addTo(map);
       }
     }
 
+    if (lastKnownTech && !hasLiveFixRef.current) {
+      void placeUser(lastKnownTech.lat, lastKnownTech.lng, false);
+    }
+
     if (typeof navigator !== "undefined" && navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          void placeUser(pos.coords.latitude, pos.coords.longitude);
+          void placeUser(pos.coords.latitude, pos.coords.longitude, true);
         },
         () => {
-          /* permission denied — skip */
+          /* permission denied — keep last known */
         },
         { enableHighAccuracy: true, maximumAge: 15000, timeout: 12000 },
       );
@@ -183,7 +196,7 @@ export function FieldDayMap({
       userMarkerRef.current?.remove();
       userMarkerRef.current = null;
     };
-  }, [showLocate, pinKey]);
+  }, [showLocate, pinKey, lastKnownTech?.lat, lastKnownTech?.lng]);
 
   useEffect(() => {
     return () => {
@@ -216,8 +229,8 @@ export function FieldDayMap({
             Completed
           </li>
           <li>
-            <span className="field-map-legend__swatch field-map-legend__swatch--cancel" />
-            Canceled
+            <span className="field-map-legend__swatch field-map-legend__swatch--you" />
+            You
           </li>
         </ul>
       ) : null}
