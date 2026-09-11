@@ -7,17 +7,17 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "GG Field",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
   manifest: "/field.webmanifest",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#071018",
+  themeColor: "#eef4fb",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  colorScheme: "dark",
+  colorScheme: "light",
 };
 
 export default function FieldLayout({ children }: { children: React.ReactNode }) {

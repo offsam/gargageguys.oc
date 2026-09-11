@@ -1,13 +1,13 @@
 {
   "name": "Garage Guys Field",
   "short_name": "GG Field",
-  "description": "Technician schedule, jobs, and alerts for Garage Guys",
+  "description": "Technician schedule, jobs, and events for Garage Guys",
   "start_url": "/field",
   "scope": "/field/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#071018",
-  "theme_color": "#071018",
+  "background_color": "#eef4fb",
+  "theme_color": "#eef4fb",
   "icons": [
     {
       "src": "/favicon-192x192.png",

@@ -1,12 +1,12 @@
-import Link from "next/link";
 import { BosShell } from "@/components/bos/BosShell";
-import { FieldDayBoard } from "@/components/bos/FieldDayBoard";
 import { FieldScheduleFab } from "@/components/bos/FieldScheduleFab";
 import { FieldShell } from "@/components/bos/FieldShell";
+import { FieldTodayHome } from "@/components/bos/FieldTodayHome";
 import { requireRouteAccess } from "@/lib/auth/require";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFieldAttentionCount } from "@/lib/field/load-attention";
 import {
+  dayKeyFromIso,
   formatDayHeading,
   jobsForDay,
   parseDayKey,
@@ -19,6 +19,22 @@ import { geocodeMany } from "@/lib/field/geocode";
 import { formatJobAddress } from "@/lib/field/maps";
 import type { FieldMapPin } from "@/components/bos/FieldDayMap";
 import { ensureTechFieldJobsFromSheet } from "@/lib/sheet/sync-job-from-sheet";
+
+function buildPins(jobs: FieldJob[], points: Record<string, { lat: number; lng: number }>): FieldMapPin[] {
+  return jobs
+    .filter((j) => points[j.id] && !isBusyJob(j))
+    .map((j) => {
+      const address = formatJobAddress(j.address, j.zip);
+      return {
+        id: j.id,
+        title: j.title || "Client",
+        label: `${j.title || "Client"}${address ? ` · ${address}` : ""}`,
+        href: `/field/jobs/${j.id}`,
+        point: points[j.id],
+        status: j.status,
+      };
+    });
+}
 
 export default async function FieldPage({
   searchParams,
@@ -56,15 +72,36 @@ export default async function FieldPage({
   const jobs = (jobsRaw || []) as FieldJob[];
 
   const dayJobs = jobsForDay(jobs, selectedDay);
-  const open = dayJobs.filter((j) => j.status !== "done");
-  const done = dayJobs.filter((j) => j.status === "done");
+  const dayJobsWithCancelled = jobs
+    .filter((j) => dayKeyFromIso(j.scheduled_start) === selectedDay)
+    .sort((a, b) => {
+      const ta = a.scheduled_start ? new Date(a.scheduled_start).getTime() : 0;
+      const tb = b.scheduled_start ? new Date(b.scheduled_start).getTime() : 0;
+      return ta - tb;
+    });
+
+  const upcoming = jobs
+    .filter((j) => j.status !== "cancelled")
+    .sort((a, b) => {
+      const ta = a.scheduled_start ? new Date(a.scheduled_start).getTime() : 0;
+      const tb = b.scheduled_start ? new Date(b.scheduled_start).getTime() : 0;
+      return ta - tb;
+    })
+    .slice(0, 40);
+
   const isToday = selectedDay === todayKey;
   const heading = isToday ? "Today" : formatDayHeading(selectedDay);
   const attentionCount =
     user.role === "technician" ? await getFieldAttentionCount(user.id) : 0;
 
-  const geocodeQueries = dayJobs
-    .filter((j) => !isBusyJob(j))
+  const geocodeSource = [...dayJobsWithCancelled, ...upcoming];
+  const seen = new Set<string>();
+  const geocodeQueries = geocodeSource
+    .filter((j) => {
+      if (seen.has(j.id) || isBusyJob(j)) return false;
+      seen.add(j.id);
+      return true;
+    })
     .map((j) => {
       const text = formatJobAddress(j.address, j.zip);
       return text ? { id: j.id, text } : null;
@@ -72,46 +109,20 @@ export default async function FieldPage({
     .filter((row): row is { id: string; text: string } => Boolean(row));
 
   const points = await geocodeMany(geocodeQueries);
-  const pins: FieldMapPin[] = dayJobs
-    .filter((j) => points[j.id])
-    .map((j) => {
-      const address = formatJobAddress(j.address, j.zip);
-      return {
-        id: j.id,
-        title: j.title || "Client",
-        label: `${j.title || "Client"}${address ? ` · ${address}` : ""}`,
-        href: `/field/jobs/${j.id}`,
-        point: points[j.id],
-      };
-    });
+  const todayPins = buildPins(dayJobsWithCancelled, points);
+  const allPins = buildPins(upcoming, points);
 
   const body = (
-    <div className="field-home field-home--map">
+    <div className="field-home-wrap">
       {user.role === "technician" ? <FieldScheduleFab /> : null}
-
-      <section className="field-section field-section--day">
-        <div className="field-section-head">
-          <h2>{heading}</h2>
-          {!isToday ? (
-            <Link href="/field" className="field-today-link">
-              Jump to today
-            </Link>
-          ) : null}
-        </div>
-
-        <div className="field-summary">
-          <div>
-            <strong>{open.length}</strong>
-            <span>{isToday ? "left today" : "open"}</span>
-          </div>
-          <div>
-            <strong>{done.length}</strong>
-            <span>done</span>
-          </div>
-        </div>
-
-        <FieldDayBoard jobs={dayJobs} pins={pins} />
-      </section>
+      <FieldTodayHome
+        todayJobs={dayJobs}
+        allJobs={upcoming}
+        todayPins={todayPins}
+        allPins={allPins}
+        isToday={isToday}
+        heading={heading}
+      />
     </div>
   );
 

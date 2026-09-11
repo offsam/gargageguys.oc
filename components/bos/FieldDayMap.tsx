@@ -11,22 +11,50 @@ export type FieldMapPin = {
   label: string;
   href: string;
   point: GeoPoint;
+  status?: string;
 };
 
 type Props = {
   pins: FieldMapPin[];
-  /** When set, highlight this pin (e.g. selected client). */
   focusId?: string | null;
+  showLegend?: boolean;
+  showLocate?: boolean;
 };
 
-export function FieldDayMap({ pins, focusId = null }: Props) {
+function pinTone(status?: string): "wait" | "active" | "done" | "cancel" {
+  if (status === "done") return "done";
+  if (status === "cancelled") return "cancel";
+  if (status === "en_route" || status === "on_site") return "active";
+  return "wait";
+}
+
+function pinHtml(tone: ReturnType<typeof pinTone>, focus: boolean): string {
+  const mark =
+    tone === "done"
+      ? `<span class="field-map-pin__mark">✓</span>`
+      : tone === "cancel"
+        ? `<span class="field-map-pin__mark">×</span>`
+        : "";
+  return `<span class="field-map-pin__dot field-map-pin__dot--${tone}${focus ? " is-focus" : ""}">${mark}</span>`;
+}
+
+export function FieldDayMap({
+  pins,
+  focusId = null,
+  showLegend = false,
+  showLocate = false,
+}: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markersRef = useRef<Map<string, LeafletMarker>>(new Map());
+  const userMarkerRef = useRef<LeafletMarker | null>(null);
   const pinKey = useMemo(
     () =>
       pins
-        .map((p) => `${p.id}:${p.point.lat.toFixed(5)},${p.point.lng.toFixed(5)}`)
+        .map(
+          (p) =>
+            `${p.id}:${p.status || ""}:${p.point.lat.toFixed(5)},${p.point.lng.toFixed(5)}`,
+        )
         .join("|"),
     [pins],
   );
@@ -54,7 +82,7 @@ export function FieldDayMap({ pins, focusId = null }: Props) {
           subdomains: "abcd",
         }).addTo(map);
 
-        L.control.zoom({ position: "topright" }).addTo(map);
+        L.control.zoom({ position: "bottomright" }).addTo(map);
         mapRef.current = map;
 
         resizeObserver = new ResizeObserver(() => {
@@ -71,25 +99,18 @@ export function FieldDayMap({ pins, focusId = null }: Props) {
       }
       markersRef.current.clear();
 
-      const icon = L.divIcon({
-        className: "field-map-pin",
-        html: `<span class="field-map-pin__dot"></span>`,
-        iconSize: [22, 22],
-        iconAnchor: [11, 11],
-      });
-
-      const focusIcon = L.divIcon({
-        className: "field-map-pin field-map-pin--focus",
-        html: `<span class="field-map-pin__dot"></span>`,
-        iconSize: [26, 26],
-        iconAnchor: [13, 13],
-      });
-
       const latLngs: Array<[number, number]> = [];
       for (const pin of pins) {
+        const tone = pinTone(pin.status);
         const isFocus = focusId === pin.id;
+        const icon = L.divIcon({
+          className: `field-map-pin field-map-pin--${tone}${isFocus ? " field-map-pin--focus" : ""}`,
+          html: pinHtml(tone, isFocus),
+          iconSize: [28, 36],
+          iconAnchor: [14, 34],
+        });
         const marker = L.marker([pin.point.lat, pin.point.lng], {
-          icon: isFocus ? focusIcon : icon,
+          icon,
           title: pin.title,
         });
         marker.bindPopup(
@@ -107,7 +128,6 @@ export function FieldDayMap({ pins, focusId = null }: Props) {
       } else if (latLngs.length === 1) {
         map.setView(latLngs[0], 14);
       } else {
-        // Pad so ~2 pins read clearly in one map viewport.
         map.fitBounds(L.latLngBounds(latLngs), {
           padding: [36, 36],
           maxZoom: 14,
@@ -124,11 +144,55 @@ export function FieldDayMap({ pins, focusId = null }: Props) {
   }, [pinKey, focusId, pins]);
 
   useEffect(() => {
+    if (!showLocate) return;
+    let watchId: number | null = null;
+    let cancelled = false;
+
+    async function placeUser(lat: number, lng: number) {
+      const L = await import("leaflet");
+      const map = mapRef.current;
+      if (cancelled || !map) return;
+      const icon = L.divIcon({
+        className: "field-map-user",
+        html: `<span class="field-map-user__pulse"></span><span class="field-map-user__dot"></span>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+      });
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setLatLng([lat, lng]);
+      } else {
+        userMarkerRef.current = L.marker([lat, lng], { icon, interactive: false }).addTo(map);
+      }
+    }
+
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          void placeUser(pos.coords.latitude, pos.coords.longitude);
+        },
+        () => {
+          /* permission denied — skip */
+        },
+        { enableHighAccuracy: true, maximumAge: 15000, timeout: 12000 },
+      );
+    }
+
+    return () => {
+      cancelled = true;
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
+    };
+  }, [showLocate, pinKey]);
+
+  useEffect(() => {
     return () => {
       for (const [, marker] of markersRef.current) {
         marker.remove();
       }
       markersRef.current.clear();
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
     };
@@ -137,6 +201,22 @@ export function FieldDayMap({ pins, focusId = null }: Props) {
   return (
     <div className="field-day-map">
       <div ref={containerRef} className="field-day-map__canvas" role="img" aria-label="Job map" />
+      {showLegend ? (
+        <ul className="field-map-legend" aria-label="Map legend">
+          <li>
+            <span className="field-map-legend__swatch field-map-legend__swatch--wait" />
+            Waiting
+          </li>
+          <li>
+            <span className="field-map-legend__swatch field-map-legend__swatch--done" />
+            Completed
+          </li>
+          <li>
+            <span className="field-map-legend__swatch field-map-legend__swatch--cancel" />
+            Canceled
+          </li>
+        </ul>
+      ) : null}
       {pins.length === 0 ? (
         <p className="field-day-map__empty">Add addresses to see pins on the map.</p>
       ) : null}

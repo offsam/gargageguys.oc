@@ -3060,44 +3060,43 @@ body.sheet-col-resizing * {
 
 /* —— Field app (phone / tech) —— */
 .field-app {
-  /* Tokens reinforced in styles/field-mobile.css (imported by FieldShell). */
-  --field-bg0: #050a10;
-  --field-bg1: #0a1420;
-  --field-glass: rgba(255, 255, 255, 0.16);
-  --field-glass-strong: rgba(255, 255, 255, 0.22);
-  --field-glass-soft: rgba(255, 255, 255, 0.1);
-  --field-stroke: rgba(255, 255, 255, 0.18);
-  --field-stroke-strong: rgba(255, 255, 255, 0.28);
-  --field-text: #f8fafc;
-  --field-muted: #94a3b8;
-  --field-accent: #7dd3fc;
-  --field-accent-soft: rgba(125, 211, 252, 0.22);
-  --field-ok: #4ade80;
-  --field-warn: #fbbf24;
-  --field-danger: #fb7185;
+  /* Tokens reinforced in styles/field-mobile.css (imported by root layout). */
+  --field-bg0: #eef4fb;
+  --field-bg1: #f7fafc;
+  --field-glass: rgba(255, 255, 255, 0.72);
+  --field-glass-strong: rgba(255, 255, 255, 0.88);
+  --field-glass-soft: rgba(255, 255, 255, 0.55);
+  --field-stroke: rgba(15, 35, 64, 0.08);
+  --field-stroke-strong: rgba(15, 35, 64, 0.14);
+  --field-text: #0f172a;
+  --field-muted: #64748b;
+  --field-accent: #2f6bff;
+  --field-accent-soft: rgba(47, 107, 255, 0.12);
+  --field-ok: #16a34a;
+  --field-warn: #f59e0b;
+  --field-danger: #ef4444;
   --bos-bg: transparent;
   --bos-text: var(--field-text);
   --bos-muted: var(--field-muted);
   --bos-border: var(--field-stroke);
   --bos-panel: var(--field-glass);
   --bos-panel-soft: var(--field-glass-soft);
-  --bos-accent: #bae6fd;
+  --bos-accent: #1d4ed8;
   --bos-accent-2: var(--field-accent);
   --bos-accent-2-soft: var(--field-accent-soft);
   --bos-ok: var(--field-ok);
-  --bos-ok-soft: rgba(74, 222, 128, 0.18);
+  --bos-ok-soft: rgba(22, 163, 74, 0.14);
   --bos-danger: var(--field-danger);
-  --bos-danger-soft: rgba(251, 113, 133, 0.2);
-  --bos-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  --bos-danger-soft: rgba(239, 68, 68, 0.14);
+  --bos-shadow: 0 14px 40px rgba(15, 40, 80, 0.08);
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
   isolation: isolate;
   background:
-    radial-gradient(920px 480px at 8% -12%, rgba(56, 189, 248, 0.45) 0%, transparent 55%),
-    radial-gradient(780px 420px at 100% 0%, rgba(45, 212, 191, 0.28) 0%, transparent 52%),
-    radial-gradient(640px 380px at 70% 100%, rgba(251, 146, 60, 0.18) 0%, transparent 50%),
+    radial-gradient(900px 520px at 12% -10%, rgba(120, 180, 255, 0.35) 0%, transparent 55%),
+    radial-gradient(760px 480px at 100% 0%, rgba(186, 230, 253, 0.45) 0%, transparent 50%),
     linear-gradient(180deg, var(--field-bg1) 0%, var(--field-bg0) 100%);
   color: var(--field-text);
   padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
@@ -3124,15 +3123,13 @@ body.sheet-col-resizing * {
 .field-glass {
   background: linear-gradient(
     165deg,
-    rgba(255, 255, 255, 0.22) 0%,
-    rgba(255, 255, 255, 0.08) 100%
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(255, 255, 255, 0.72) 100%
   );
   border-color: var(--field-stroke);
-  backdrop-filter: saturate(1.8) blur(26px);
-  -webkit-backdrop-filter: saturate(1.8) blur(26px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    0 12px 32px rgba(0, 0, 0, 0.32);
+  backdrop-filter: saturate(1.4) blur(22px);
+  -webkit-backdrop-filter: saturate(1.4) blur(22px);
+  box-shadow: 0 14px 40px rgba(15, 40, 80, 0.08);
 }
 
 .field-top {
@@ -3144,11 +3141,11 @@ body.sheet-col-resizing * {
   position: sticky;
   top: 0;
   z-index: 5;
-  background: rgba(10, 18, 28, 0.72);
-  backdrop-filter: saturate(1.35) blur(20px);
-  -webkit-backdrop-filter: saturate(1.35) blur(20px);
+  background: rgba(247, 250, 252, 0.88);
+  backdrop-filter: saturate(1.35) blur(16px);
+  -webkit-backdrop-filter: saturate(1.35) blur(16px);
   border-bottom: 1px solid var(--field-stroke);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: none;
 }
 
 .field-top-copy {
@@ -3191,7 +3188,7 @@ body.sheet-col-resizing * {
 }
 
 .field-user-name {
-  color: rgba(243, 247, 251, 0.88);
+  color: var(--field-text);
   font-weight: 600;
   max-width: 100%;
   overflow: hidden;
@@ -3698,14 +3695,12 @@ body.sheet-col-resizing * {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.15rem;
-  background: rgba(8, 14, 22, 0.78);
+  background: rgba(255, 255, 255, 0.86);
   border-top: 1px solid var(--field-stroke);
   padding: 0.35rem 0.4rem calc(0.4rem + env(safe-area-inset-bottom, 0px));
   backdrop-filter: saturate(1.45) blur(24px);
   -webkit-backdrop-filter: saturate(1.45) blur(24px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 -12px 40px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 -10px 30px rgba(15, 40, 80, 0.06);
 }
 
 .field-tabs--5 {
@@ -3723,7 +3718,7 @@ body.sheet-col-resizing * {
   appearance: none;
   border: 0;
   background: transparent;
-  color: rgba(148, 163, 184, 0.95);
+  color: var(--field-muted);
   font: inherit;
   font-size: 0.72rem;
   font-weight: 650;
@@ -3742,9 +3737,9 @@ body.sheet-col-resizing * {
 }
 
 .field-tabs a.active {
-  color: #fff;
-  background: linear-gradient(180deg, rgba(110, 182, 239, 0.28), rgba(110, 182, 239, 0.12));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: var(--field-accent);
+  background: var(--field-accent-soft);
+  box-shadow: none;
 }
 
 .field-tab-icon {

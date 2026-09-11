@@ -1,41 +1,39 @@
 /**
- * Field mobile — dark iOS liquid glass.
- * Loaded with FieldShell (tech PWA + Stock-in-Field).
- * Wins over light `.field-*` leftovers in bos.css.
+ * Field mobile — light iOS liquid glass (matches Field home mock).
+ * Scoped to .field-app so office BosShell stays unchanged.
  */
 
 .field-app {
-  --field-bg0: #050a10;
-  --field-bg1: #0a1420;
-  --field-glass: rgba(255, 255, 255, 0.16);
-  --field-glass-strong: rgba(255, 255, 255, 0.22);
-  --field-glass-soft: rgba(255, 255, 255, 0.1);
-  --field-stroke: rgba(255, 255, 255, 0.18);
-  --field-stroke-strong: rgba(255, 255, 255, 0.28);
-  --field-highlight: rgba(255, 255, 255, 0.32);
+  --field-bg0: #eef4fb;
+  --field-bg1: #f7fafc;
+  --field-glass: rgba(255, 255, 255, 0.72);
+  --field-glass-strong: rgba(255, 255, 255, 0.88);
+  --field-glass-soft: rgba(255, 255, 255, 0.55);
+  --field-stroke: rgba(15, 35, 64, 0.08);
+  --field-stroke-strong: rgba(15, 35, 64, 0.14);
+  --field-highlight: rgba(255, 255, 255, 0.95);
+  --field-shadow: 0 14px 40px rgba(15, 40, 80, 0.08);
+  --field-shadow-soft: 0 8px 24px rgba(15, 40, 80, 0.06);
 
   --field-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
     "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --field-text: #f8fafc;
-  --field-text-secondary: #cbd5e1;
-  --field-muted: #94a3b8;
+  --field-text: #0f172a;
+  --field-text-secondary: #334155;
+  --field-muted: #64748b;
   --field-fs-xs: 0.72rem;
   --field-fs-sm: 0.82rem;
   --field-fs-md: 0.95rem;
-  --field-fs-lg: 1.15rem;
-  --field-fs-xl: 1.55rem;
-  --field-fw-reg: 500;
-  --field-fw-semi: 600;
-  --field-fw-bold: 700;
+  --field-fs-lg: 1.2rem;
+  --field-fs-xl: 1.65rem;
 
-  --field-accent: #7dd3fc;
-  --field-accent-soft: rgba(125, 211, 252, 0.22);
-  --field-ok: #4ade80;
-  --field-ok-soft: rgba(74, 222, 128, 0.18);
-  --field-warn: #fbbf24;
-  --field-warn-soft: rgba(251, 191, 36, 0.18);
-  --field-danger: #fb7185;
-  --field-danger-soft: rgba(251, 113, 133, 0.2);
+  --field-accent: #2f6bff;
+  --field-accent-soft: rgba(47, 107, 255, 0.12);
+  --field-ok: #16a34a;
+  --field-ok-soft: rgba(22, 163, 74, 0.14);
+  --field-warn: #f59e0b;
+  --field-warn-soft: rgba(245, 158, 11, 0.16);
+  --field-danger: #ef4444;
+  --field-danger-soft: rgba(239, 68, 68, 0.14);
 
   --bos-bg: transparent;
   --bos-text: var(--field-text);
@@ -44,7 +42,7 @@
   --bos-border-strong: var(--field-stroke-strong);
   --bos-panel: var(--field-glass);
   --bos-panel-soft: var(--field-glass-soft);
-  --bos-accent: #bae6fd;
+  --bos-accent: #1d4ed8;
   --bos-accent-soft: var(--field-accent-soft);
   --bos-accent-2: var(--field-accent);
   --bos-accent-2-soft: var(--field-accent-soft);
@@ -52,18 +50,17 @@
   --bos-ok-soft: var(--field-ok-soft);
   --bos-danger: var(--field-danger);
   --bos-danger-soft: var(--field-danger-soft);
-  --bos-bg-accent: rgba(125, 211, 252, 0.12);
-  --bos-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  --bos-bg-accent: var(--field-accent-soft);
+  --bos-shadow: var(--field-shadow);
 
   color: var(--field-text) !important;
   font-family: var(--field-font) !important;
   font-size: var(--field-fs-md);
-  font-weight: var(--field-fw-reg);
+  font-weight: 500;
   -webkit-font-smoothing: antialiased;
   background:
-    radial-gradient(920px 480px at 8% -12%, rgba(56, 189, 248, 0.45) 0%, transparent 55%),
-    radial-gradient(780px 420px at 100% 0%, rgba(45, 212, 191, 0.28) 0%, transparent 52%),
-    radial-gradient(640px 380px at 70% 100%, rgba(251, 146, 60, 0.18) 0%, transparent 50%),
+    radial-gradient(900px 520px at 12% -10%, rgba(120, 180, 255, 0.35) 0%, transparent 55%),
+    radial-gradient(760px 480px at 100% 0%, rgba(186, 230, 253, 0.45) 0%, transparent 50%),
     linear-gradient(180deg, var(--field-bg1) 0%, var(--field-bg0) 100%) !important;
 }
 
@@ -78,12 +75,12 @@
 
 .field-app-glow {
   background:
-    radial-gradient(560px 320px at 85% 18%, rgba(125, 211, 252, 0.22), transparent 70%),
-    radial-gradient(480px 280px at 10% 60%, rgba(167, 139, 250, 0.12), transparent 65%) !important;
+    radial-gradient(520px 300px at 80% 12%, rgba(255, 255, 255, 0.65), transparent 70%),
+    radial-gradient(420px 260px at 10% 70%, rgba(147, 197, 253, 0.22), transparent 65%) !important;
   opacity: 1 !important;
 }
 
-/* Shared glass — NOT header/tabs (those stay edge-to-edge) */
+.field-app .field-glass-card,
 .field-app .bos-card,
 .field-app .field-cal,
 .field-app .field-timeline,
@@ -109,395 +106,636 @@
 .field-app .field-fab-menu {
   background: linear-gradient(
     165deg,
-    rgba(255, 255, 255, 0.24) 0%,
-    rgba(255, 255, 255, 0.1) 48%,
-    rgba(255, 255, 255, 0.07) 100%
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(255, 255, 255, 0.72) 100%
   ) !important;
   border: 1px solid var(--field-stroke) !important;
   color: var(--field-text) !important;
-  backdrop-filter: saturate(1.85) blur(28px) !important;
-  -webkit-backdrop-filter: saturate(1.85) blur(28px) !important;
-  box-shadow:
-    inset 0 1px 0 var(--field-highlight),
-    0 14px 36px rgba(0, 0, 0, 0.38) !important;
-  border-radius: 18px !important;
+  backdrop-filter: saturate(1.4) blur(22px) !important;
+  -webkit-backdrop-filter: saturate(1.4) blur(22px) !important;
+  box-shadow: var(--field-shadow) !important;
+  border-radius: 22px !important;
 }
 
-.field-app .field-glass:not(.field-top):not(.field-tabs) {
-  background: linear-gradient(
-    165deg,
-    rgba(255, 255, 255, 0.24) 0%,
-    rgba(255, 255, 255, 0.1) 48%,
-    rgba(255, 255, 255, 0.07) 100%
-  ) !important;
-  border: 1px solid var(--field-stroke) !important;
-  backdrop-filter: saturate(1.85) blur(28px) !important;
-  -webkit-backdrop-filter: saturate(1.85) blur(28px) !important;
-  box-shadow:
-    inset 0 1px 0 var(--field-highlight),
-    0 14px 36px rgba(0, 0, 0, 0.38) !important;
-}
-
-/* Header / tabs — full bleed, no rounded card corners */
-.field-app .field-top,
-.field-app .field-tabs {
-  border-radius: 0 !important;
-}
-
+/* —— Header —— */
 .field-app .field-top {
+  border-radius: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  padding: calc(0.55rem + env(safe-area-inset-top, 0px)) 1rem 0.35rem !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 0.75rem !important;
+  position: sticky;
+  top: 0;
+  z-index: 6;
+}
+
+.field-app .field-top--profile {
   background: linear-gradient(
     180deg,
-    rgba(18, 28, 42, 0.82),
-    rgba(10, 18, 28, 0.7)
+    rgba(247, 250, 252, 0.92) 0%,
+    rgba(247, 250, 252, 0.72) 70%,
+    rgba(247, 250, 252, 0) 100%
   ) !important;
-  backdrop-filter: saturate(1.9) blur(28px) !important;
-  -webkit-backdrop-filter: saturate(1.9) blur(28px) !important;
-  border-bottom: 1px solid var(--field-stroke) !important;
-  box-shadow:
-    inset 0 1px 0 var(--field-highlight),
-    0 10px 30px rgba(0, 0, 0, 0.25) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+.field-app .field-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.field-app .field-avatar {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: linear-gradient(145deg, #dbeafe, #93c5fd);
+  color: #1e3a8a;
+  display: grid;
+  place-items: center;
+  font-weight: 750;
+  font-size: 0.95rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 6px 16px rgba(37, 99, 235, 0.18);
+  flex: 0 0 auto;
+}
+
+.field-app .field-avatar__online {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #22c55e;
+  border: 2px solid #fff;
+}
+
+.field-app .field-profile__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.field-app .field-profile__name {
+  font-size: 1.05rem;
+  font-weight: 750;
   color: var(--field-text) !important;
+  line-height: 1.15;
 }
 
-.field-app .field-brand {
-  color: var(--field-accent) !important;
-  font-size: var(--field-fs-xs) !important;
-  font-weight: var(--field-fw-bold) !important;
-  letter-spacing: 0.1em !important;
-}
-
-.field-app .field-top h1 {
-  color: var(--field-text) !important;
-  font-size: var(--field-fs-xl) !important;
-  font-weight: 760 !important;
-  letter-spacing: -0.025em !important;
-}
-
-.field-app .field-sub,
-.field-app .field-user,
-.field-app .field-muted,
-.field-app .field-cal-weekdays span,
-.field-app .field-cal-legend,
-.field-app .field-timeline-hour span,
-.field-app .stock-meta,
-.field-app .stock-owner-hint,
-.field-app .stock-history-lead,
-.field-app .stock-history-line-meta,
-.field-app .field-status-steps__label {
+.field-app .field-profile__role,
+.field-app .field-profile__date {
+  font-size: var(--field-fs-xs);
   color: var(--field-muted) !important;
+  font-weight: 500;
+  line-height: 1.25;
 }
 
-.field-app .field-user-name {
-  color: var(--field-text-secondary) !important;
-  font-weight: var(--field-fw-semi) !important;
+.field-app .field-top-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
 }
 
-.field-app .field-rank {
-  color: var(--field-accent) !important;
-  background: var(--field-accent-soft) !important;
-  border: 1px solid rgba(125, 211, 252, 0.35) !important;
+.field-app .field-logo {
+  width: auto !important;
+  height: 34px !important;
+  object-fit: contain;
+}
+
+.field-app .field-weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--field-stroke);
+  box-shadow: var(--field-shadow-soft);
+  font-size: var(--field-fs-xs);
+  color: var(--field-text-secondary);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.field-app .field-weather__temp {
+  font-weight: 750;
+  color: var(--field-text);
+}
+
+.field-app .field-weather__place {
+  color: var(--field-muted);
 }
 
 .field-app .field-signout {
-  color: var(--field-text) !important;
-  background: rgba(255, 255, 255, 0.1) !important;
-  border: 1px solid var(--field-stroke) !important;
-  border-radius: 999px !important;
-  padding: 0.3rem 0.65rem !important;
-  font-size: var(--field-fs-xs) !important;
-  font-weight: var(--field-fw-semi) !important;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--field-muted) !important;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  padding: 0.1rem 0 !important;
+  cursor: pointer;
 }
 
+.field-app .field-page-title {
+  padding: 0.15rem 1rem 0.35rem;
+}
+
+.field-app .field-page-title h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+  color: var(--field-text) !important;
+}
+
+.field-app .field-sub,
+.field-app .field-muted {
+  color: var(--field-muted) !important;
+}
+
+.field-app .field-main {
+  padding: 0.35rem 1rem 1.25rem !important;
+}
+
+/* —— Tabs —— */
 .field-app .field-tabs {
-  background: linear-gradient(
-    180deg,
-    rgba(14, 22, 34, 0.78),
-    rgba(6, 12, 20, 0.88)
-  ) !important;
-  backdrop-filter: saturate(1.95) blur(30px) !important;
-  -webkit-backdrop-filter: saturate(1.95) blur(30px) !important;
+  border-radius: 0 !important;
+  background: rgba(255, 255, 255, 0.82) !important;
+  backdrop-filter: saturate(1.6) blur(24px) !important;
+  -webkit-backdrop-filter: saturate(1.6) blur(24px) !important;
   border-top: 1px solid var(--field-stroke) !important;
-  box-shadow:
-    inset 0 1px 0 var(--field-highlight),
-    0 -16px 40px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 -10px 30px rgba(15, 40, 80, 0.06) !important;
 }
 
 .field-app .field-tabs a,
 .field-app .field-tabs button {
   color: var(--field-muted) !important;
   font-size: var(--field-fs-xs) !important;
-  font-weight: var(--field-fw-semi) !important;
-  border-radius: 16px !important;
+  font-weight: 600 !important;
+  border-radius: 14px !important;
 }
 
 .field-app .field-tabs a.active {
+  color: var(--field-accent) !important;
+  background: var(--field-accent-soft) !important;
+  box-shadow: none !important;
+}
+
+.field-app .field-tab-badge {
+  background: #ef4444 !important;
   color: #fff !important;
-  background: linear-gradient(
-    180deg,
-    rgba(125, 211, 252, 0.32),
-    rgba(125, 211, 252, 0.12)
-  ) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28) !important;
 }
 
-.field-app .field-tab-label {
-  font-size: var(--field-fs-xs) !important;
-  letter-spacing: 0.01em !important;
+/* —— Today home —— */
+.field-app .field-home--glass {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
 }
 
-/* Type scale */
-.field-app h2 {
-  color: var(--field-text) !important;
-  letter-spacing: -0.015em !important;
-  font-weight: var(--field-fw-bold) !important;
-  font-size: var(--field-fs-lg) !important;
-}
-
-.field-app .field-section-head h2 {
-  color: var(--field-muted) !important;
-  font-size: var(--field-fs-xs) !important;
-  font-weight: var(--field-fw-bold) !important;
-  letter-spacing: 0.06em !important;
-  text-transform: uppercase !important;
-}
-
-.field-app h3 {
-  color: var(--field-text) !important;
-  letter-spacing: -0.015em !important;
-  font-weight: var(--field-fw-bold) !important;
-}
-
-/* Calendar */
-.field-app .field-cal-cell {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: var(--field-text) !important;
-  border-color: transparent !important;
-}
-
-.field-app .field-cal-cell--empty {
-  background: transparent !important;
-}
-
-.field-app .field-cal-cell.has-jobs {
-  background: rgba(125, 211, 252, 0.22) !important;
-  border-color: rgba(125, 211, 252, 0.4) !important;
-}
-
-.field-app .field-cal-cell.has-jobs-past {
-  background: var(--field-ok-soft) !important;
-  border-color: rgba(74, 222, 128, 0.35) !important;
-}
-
-.field-app .field-cal-cell.is-today {
-  box-shadow: inset 0 0 0 1.5px var(--field-accent) !important;
-}
-
-.field-app .field-cal-cell.is-selected {
-  background: var(--field-warn-soft) !important;
-  border-color: rgba(251, 191, 36, 0.45) !important;
-}
-
-.field-app .field-cal-cell.is-selected .field-cal-count {
-  background: var(--field-warn) !important;
-  color: #1f2937 !important;
-}
-
-.field-app .field-cal-nav button {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: var(--field-stroke) !important;
-  color: var(--field-text) !important;
-}
-
-.field-app .field-cal-nav strong,
-.field-app .field-cal-num {
-  color: var(--field-text) !important;
-}
-
-/* Timeline — colored glass events (Calendar-style), readable on dark */
-.field-app .field-timeline {
-  overflow: visible !important;
-}
-
-.field-app .field-timeline-track {
-  border-radius: 16px;
+.field-app .field-next-job {
+  position: relative;
   overflow: hidden;
+  padding: 0 !important;
+  min-height: 148px;
 }
 
-.field-app .field-timeline-hours {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-right-color: var(--field-stroke) !important;
+.field-app .field-next-job__accent {
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 5px;
+  border-radius: 999px;
+  background: #f5c518;
 }
 
-.field-app .field-timeline-line {
-  border-top-color: rgba(255, 255, 255, 0.1) !important;
+.field-app .field-next-job--ok .field-next-job__accent {
+  background: #22c55e;
+}
+.field-app .field-next-job--danger .field-next-job__accent {
+  background: #ef4444;
+}
+.field-app .field-next-job--wait .field-next-job__accent {
+  background: #fb923c;
 }
 
-.field-app .field-tl-block {
-  background: linear-gradient(
-    165deg,
-    rgba(125, 211, 252, 0.72),
-    rgba(56, 189, 248, 0.48)
-  ) !important;
-  border: 1px solid rgba(125, 211, 252, 0.55) !important;
-  border-radius: 14px !important;
-  color: #0b1220 !important;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3) !important;
+.field-app .field-next-job__body {
+  padding: 0.95rem 1rem 0.95rem 1.15rem;
 }
 
-.field-app .field-tl-block .field-tl-name,
-.field-app .field-tl-block strong,
-.field-app .field-tl-block .field-tl-time,
-.field-app .field-tl-block .field-tl-addr {
-  color: inherit !important;
+.field-app .field-next-job__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
 }
 
-.field-app .field-tl-block .field-tl-time {
-  color: rgba(11, 18, 32, 0.72) !important;
-  font-weight: var(--field-fw-bold) !important;
+.field-app .field-next-job__eyebrow {
+  margin: 0;
+  color: var(--field-accent) !important;
+  font-size: var(--field-fs-sm);
+  font-weight: 750;
 }
 
-.field-app .field-tl-block--en_route,
-.field-app .field-tl-block--on_site {
-  background: linear-gradient(
-    165deg,
-    rgba(251, 191, 36, 0.78),
-    rgba(245, 158, 11, 0.5)
-  ) !important;
-  border-color: rgba(251, 191, 36, 0.6) !important;
-}
-
-.field-app .field-tl-block--done {
-  background: linear-gradient(
-    165deg,
-    rgba(74, 222, 128, 0.7),
-    rgba(34, 197, 94, 0.42)
-  ) !important;
-  border-color: rgba(74, 222, 128, 0.55) !important;
-}
-
-.field-app .field-tl-block--cancelled {
-  background: linear-gradient(
-    165deg,
-    rgba(251, 113, 133, 0.55),
-    rgba(244, 63, 94, 0.32)
-  ) !important;
-  border-color: rgba(251, 113, 133, 0.5) !important;
-}
-
-.field-app .field-tl-block--busy {
-  background: rgba(148, 163, 184, 0.22) !important;
-  color: var(--field-text-secondary) !important;
-  border: 1px dashed rgba(255, 255, 255, 0.25) !important;
-}
-
-.field-app .field-tl-block--busy .field-tl-time {
+.field-app .field-next-job__count {
   color: var(--field-muted) !important;
+  font-size: var(--field-fs-xs);
+  font-weight: 600;
 }
 
-/* Day list / map */
+.field-app .field-next-job__row {
+  display: flex;
+  gap: 0.65rem;
+  align-items: stretch;
+}
+
+.field-app .field-next-job__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.field-app .field-next-job__time-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.25rem;
+}
+
+.field-app .field-next-job__time {
+  font-size: 1.55rem;
+  font-weight: 780;
+  letter-spacing: -0.03em;
+  color: var(--field-text) !important;
+  line-height: 1.1;
+}
+
+.field-app .field-status-badge {
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  background: var(--field-warn-soft);
+  color: #b45309;
+}
+
+.field-app .field-status-badge--en_route,
+.field-app .field-status-badge--on_site {
+  background: #fff4d6;
+  color: #b45309;
+}
+
+.field-app .field-status-badge--assigned,
+.field-app .field-status-badge--queued {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.field-app .field-status-badge--done {
+  background: var(--field-ok-soft);
+  color: #15803d;
+}
+
+.field-app .field-status-badge--cancelled {
+  background: var(--field-danger-soft);
+  color: #b91c1c;
+}
+
+.field-app .field-next-job__client {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 750;
+  color: var(--field-text) !important;
+}
+
+.field-app .field-next-job__addr,
+.field-app .field-next-job__service {
+  margin: 0.12rem 0 0;
+  font-size: var(--field-fs-sm);
+  color: var(--field-muted) !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.field-app .field-next-job__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  flex: 0 0 auto;
+}
+
+.field-app .field-next-job__nav {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #5b8cff, #2f6bff) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 22px rgba(47, 107, 255, 0.35);
+  text-decoration: none !important;
+}
+
+.field-app .field-next-job__open {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: var(--field-muted) !important;
+  text-decoration: none !important;
+}
+
+.field-app .field-next-job__pager {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.field-app .field-next-job__pager button {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--field-stroke);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--field-text-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.field-app .field-next-job--empty {
+  padding: 1rem 1.1rem !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Map panel */
+.field-app .field-map-panel {
+  padding: 0.65rem !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-height: 420px;
+}
+
+.field-app .field-seg {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.2rem;
+  padding: 0.22rem;
+  border-radius: 999px;
+  background: rgba(226, 232, 240, 0.75);
+}
+
+.field-app .field-seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--field-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.48rem 0.2rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.field-app .field-seg button.active {
+  background: #fff;
+  color: var(--field-accent);
+  box-shadow: 0 4px 12px rgba(15, 40, 80, 0.08);
+}
+
+.field-app .field-map-panel__jump {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: var(--field-fs-sm);
+  color: var(--field-muted);
+  padding: 0 0.2rem;
+}
+
+.field-app .field-map-panel__jump a {
+  color: var(--field-accent) !important;
+  font-weight: 700;
+}
+
+.field-app .field-day-map {
+  position: relative;
+  border-radius: 18px !important;
+  overflow: hidden;
+  min-height: 360px;
+  height: min(52vh, 460px);
+  border: 1px solid var(--field-stroke);
+  background: #e8eef5;
+}
+
+.field-app .field-day-map__canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+}
+
+.field-app .field-day-map__empty {
+  position: absolute;
+  inset: auto 12px 12px;
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--field-muted);
+  font-size: var(--field-fs-sm);
+  box-shadow: var(--field-shadow-soft);
+}
+
+.field-app .field-map-legend {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 500;
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  list-style: none;
+  display: grid;
+  gap: 0.25rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid var(--field-stroke);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--field-shadow-soft);
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: var(--field-text-secondary);
+}
+
+.field-app .field-map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.field-app .field-map-legend__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+.field-app .field-map-legend__swatch--wait {
+  background: #f59e0b;
+}
+.field-app .field-map-legend__swatch--done {
+  background: #22c55e;
+}
+.field-app .field-map-legend__swatch--cancel {
+  background: #ef4444;
+}
+
+.field-app .field-map-pin {
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.field-app .field-map-pin__dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px 999px 999px 4px;
+  transform: rotate(-45deg);
+  box-shadow: 0 6px 14px rgba(15, 40, 80, 0.25);
+  border: 2px solid #fff;
+}
+
+.field-app .field-map-pin__dot--wait {
+  background: #f59e0b;
+}
+.field-app .field-map-pin__dot--active {
+  background: #fbbf24;
+}
+.field-app .field-map-pin__dot--done {
+  background: #22c55e;
+}
+.field-app .field-map-pin__dot--cancel {
+  background: #ef4444;
+}
+.field-app .field-map-pin__dot.is-focus {
+  width: 26px;
+  height: 26px;
+}
+
+.field-app .field-map-pin__mark {
+  transform: rotate(45deg);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.field-app .field-map-user {
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.field-app .field-map-user__dot {
+  position: absolute;
+  inset: 6px;
+  border-radius: 999px;
+  background: #2f6bff;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px rgba(47, 107, 255, 0.25);
+}
+
+.field-app .field-map-user__pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(47, 107, 255, 0.28);
+  animation: field-user-pulse 2s ease-out infinite;
+}
+
+@keyframes field-user-pulse {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+.field-app .leaflet-control-zoom a {
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: var(--field-text) !important;
+  border-color: var(--field-stroke) !important;
+}
+
+/* Clients list inside panel */
+.field-app .field-map-panel__list {
+  max-height: min(52vh, 460px);
+  overflow: auto;
+  padding: 0.15rem;
+}
+
 .field-app .field-day-client {
   border-radius: 16px !important;
+  margin-bottom: 0.45rem;
 }
 
 .field-app .field-day-client strong,
-.field-app .field-day-client a {
+.field-app .field-day-client a,
+.field-app .field-day-client__title,
+.field-app .field-day-client__time {
   color: var(--field-text) !important;
 }
 
-.field-app .field-job-owner--gg {
-  background: rgba(125, 211, 252, 0.16) !important;
-  border-color: rgba(125, 211, 252, 0.35) !important;
-  color: #e0f2fe !important;
+.field-app .field-day-client__addr,
+.field-app .field-day-client__addr a {
+  color: var(--field-muted) !important;
 }
 
-.field-app .field-job-owner--partner {
-  background: rgba(251, 146, 60, 0.16) !important;
-  border-color: rgba(251, 146, 60, 0.35) !important;
-  color: #ffedd5 !important;
-}
-
-.field-app .leaflet-container,
-.field-app .field-day-board__map,
-.field-app .field-map-wrap {
-  border-radius: 18px !important;
-  border: 1px solid var(--field-stroke) !important;
-  overflow: hidden;
-}
-
-/* Pills */
 .field-app .field-pill {
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: var(--field-text-secondary) !important;
-  border: 1px solid var(--field-stroke) !important;
+  background: #eef2f7 !important;
+  color: var(--field-muted) !important;
+  border: 0 !important;
 }
 
 .field-app .field-pill--en_route,
 .field-app .field-pill--on_site {
-  background: var(--field-warn-soft) !important;
-  color: #fde68a !important;
-  border-color: rgba(251, 191, 36, 0.4) !important;
+  background: #fff4d6 !important;
+  color: #b45309 !important;
 }
 
 .field-app .field-pill--done {
   background: var(--field-ok-soft) !important;
-  color: #bbf7d0 !important;
-  border-color: rgba(74, 222, 128, 0.35) !important;
+  color: #15803d !important;
 }
 
 .field-app .field-pill--cancelled {
   background: var(--field-danger-soft) !important;
-  color: #fecdd3 !important;
-  border-color: rgba(251, 113, 133, 0.4) !important;
+  color: #b91c1c !important;
 }
 
-/* Job status stepper */
-.field-app .field-status-steps__item {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid var(--field-stroke) !important;
-  color: var(--field-muted) !important;
-}
-
-.field-app .field-status-steps__item.is-done {
-  background: var(--field-ok-soft) !important;
-  border-color: rgba(74, 222, 128, 0.4) !important;
-  color: #bbf7d0 !important;
-}
-
-.field-app .field-status-steps__item.is-active {
-  background: var(--field-accent-soft) !important;
-  border-color: rgba(125, 211, 252, 0.45) !important;
-  color: var(--field-text) !important;
-}
-
-.field-app .field-status-steps__num {
-  background: rgba(255, 255, 255, 0.14) !important;
-  color: var(--field-text) !important;
-}
-
-.field-app .field-status-steps__item.is-done .field-status-steps__num,
-.field-app .field-status-steps__item.is-active .field-status-steps__num {
-  background: var(--field-accent) !important;
-  color: #0b1220 !important;
-}
-
-.field-app .field-status-steps__advance {
-  background: linear-gradient(180deg, #7dd3fc, #2563eb) !important;
-  color: #fff !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 10px 24px rgba(37, 99, 235, 0.4) !important;
-}
-
-.field-app .field-status-steps__items-cta {
-  background: linear-gradient(180deg, #4ade80, #15803d) !important;
-  color: #fff !important;
-}
-
-.field-app .field-status-steps__cancel {
-  color: var(--field-danger) !important;
-}
-
-/* Forms */
+/* Forms / CTAs on light glass */
 .field-app input,
 .field-app select,
 .field-app textarea,
@@ -511,74 +749,72 @@
 .field-app .field-form input,
 .field-app .field-form select,
 .field-app .field-form textarea {
-  background: rgba(0, 0, 0, 0.38) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
   border: 1px solid var(--field-stroke-strong) !important;
   color: var(--field-text) !important;
   border-radius: 14px !important;
-  font-size: var(--field-fs-md) !important;
 }
 
 .field-app input::placeholder,
 .field-app textarea::placeholder {
-  color: rgba(148, 163, 184, 0.85) !important;
+  color: #94a3b8 !important;
 }
 
-/* Primary CTAs — never white-on-white */
 .field-app .field-form button[type="submit"],
 .field-app button.bos-btn,
 .field-app .emp-add-btn,
 .field-app .field-primary,
 .field-app .inv-primary,
-.field-app .inv-sign-clear,
 .field-app .inv-row button[type="submit"],
-.field-app .inv-build button[type="button"]:not(:disabled):not(.inv-remove),
+.field-app .field-status-steps__advance,
+.field-app .stock-add-btn,
+.field-app .stock-act-toggle--plus,
 .field-app button.field-cta {
-  background: linear-gradient(180deg, #7dd3fc, #2563eb) !important;
+  background: linear-gradient(180deg, #5b8cff, #2f6bff) !important;
   color: #fff !important;
   border: 0 !important;
   border-radius: 14px !important;
-  font-weight: var(--field-fw-bold) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 10px 24px rgba(37, 99, 235, 0.4) !important;
+  font-weight: 750 !important;
+  box-shadow: 0 10px 22px rgba(47, 107, 255, 0.28) !important;
 }
 
-.field-app .inv-sign-clear {
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: var(--field-text) !important;
-  box-shadow: inset 0 1px 0 var(--field-highlight) !important;
-}
-
-.field-app .inv-remove,
-.field-app .inv-error {
-  color: #fda4af !important;
-}
-
-.field-app .field-form button[type="submit"]:disabled,
-.field-app button:disabled,
-.field-app .inv-primary:disabled {
-  opacity: 0.45 !important;
-}
-
-.field-app .stock-add-btn,
-.field-app .stock-act-toggle--plus {
-  background: linear-gradient(180deg, #7dd3fc, #2563eb) !important;
-  color: #fff !important;
-  border: 0 !important;
-}
-
-.field-app .stock-act-pop,
-.field-app .stock-act-pop--tech {
-  background: rgba(8, 14, 22, 0.94) !important;
+.field-app .field-status-steps__item {
+  background: rgba(255, 255, 255, 0.85) !important;
   border: 1px solid var(--field-stroke) !important;
+  color: var(--field-muted) !important;
+}
+
+.field-app .field-status-steps__item.is-done {
+  background: var(--field-ok-soft) !important;
+  border-color: rgba(22, 163, 74, 0.3) !important;
+  color: #15803d !important;
+}
+
+.field-app .field-status-steps__item.is-active {
+  background: var(--field-accent-soft) !important;
+  border-color: rgba(47, 107, 255, 0.35) !important;
   color: var(--field-text) !important;
 }
 
-/* Invoice steps — discrete states, not uniform glass */
+.field-app .field-status-steps__num {
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+.field-app .field-status-steps__item.is-done .field-status-steps__num,
+.field-app .field-status-steps__item.is-active .field-status-steps__num {
+  background: var(--field-accent) !important;
+  color: #fff !important;
+}
+
+.field-app .field-status-steps__items-cta {
+  background: #15803d !important;
+  color: #fff !important;
+}
+
 .field-app .inv-step {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: #eef2f7 !important;
   color: var(--field-muted) !important;
-  border-radius: 999px !important;
 }
 
 .field-app .inv-step.is-on {
@@ -588,57 +824,113 @@
 
 .field-app .inv-step.is-current {
   box-shadow: inset 0 0 0 1.5px var(--field-accent) !important;
+}
+
+.field-app .inv-remove,
+.field-app .inv-error {
+  color: #dc2626 !important;
+}
+
+.field-app a {
+  color: var(--field-accent) !important;
+}
+
+.field-app h2,
+.field-app h3 {
   color: var(--field-text) !important;
 }
 
-.field-app .inv-locked {
-  background: var(--field-warn-soft) !important;
-  border-color: rgba(251, 191, 36, 0.4) !important;
-  color: #fde68a !important;
+.field-app .field-section-head h2 {
+  color: var(--field-muted) !important;
+  font-size: var(--field-fs-xs) !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
 }
 
-/* Stock */
-.field-app .stock-tabs button,
-.field-app .stock-owner-tabs a {
-  color: var(--field-muted) !important;
-  background: transparent !important;
+/* Calendar / timeline on light */
+.field-app .field-cal-cell {
+  background: rgba(255, 255, 255, 0.7) !important;
+  color: var(--field-text) !important;
+}
+
+.field-app .field-cal-cell.has-jobs {
+  background: rgba(47, 107, 255, 0.12) !important;
+  border-color: rgba(47, 107, 255, 0.28) !important;
+}
+
+.field-app .field-cal-cell.has-jobs-past {
+  background: var(--field-ok-soft) !important;
+}
+
+.field-app .field-cal-cell.is-selected {
+  background: var(--field-warn-soft) !important;
+}
+
+.field-app .field-tl-block {
+  background: #dbeafe !important;
+  border: 1px solid #93c5fd !important;
+  color: #0f172a !important;
+  border-radius: 14px !important;
+}
+
+.field-app .field-tl-block--en_route,
+.field-app .field-tl-block--on_site {
+  background: #fef3c7 !important;
+  border-color: #fcd34d !important;
+}
+
+.field-app .field-tl-block--done {
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+}
+
+.field-app .field-tl-block--cancelled {
+  background: #fee2e2 !important;
+  border-color: #fecaca !important;
+}
+
+.field-app .field-tl-block--busy {
+  background: #f1f5f9 !important;
+  border-style: dashed !important;
 }
 
 .field-app .stock-tabs button.active,
 .field-app .stock-owner-tabs a.active {
-  color: #fff !important;
+  color: var(--field-accent) !important;
   background: var(--field-accent-soft) !important;
 }
 
 .field-app .stock-table th {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: rgba(241, 245, 249, 0.9) !important;
   color: var(--field-muted) !important;
-  border-color: var(--field-stroke) !important;
 }
 
 .field-app .stock-table td {
   color: var(--field-text) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-.field-app .stock-cat td {
-  background: rgba(255, 255, 255, 0.05) !important;
-}
-
-.field-app .stock-zero .stock-name {
-  color: rgba(148, 163, 184, 0.75) !important;
-}
-
-.field-app .stock-neg .stock-name,
-.field-app .stock-neg .stock-master {
-  color: #fda4af !important;
-}
-
-.field-app .field-chip,
-.field-app .field-jump-chip,
-.field-app .field-status-pill {
+.field-app .stock-act-pop,
+.field-app .stock-act-pop--tech {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 1px solid var(--field-stroke) !important;
   color: var(--field-text) !important;
-  border-color: var(--field-stroke) !important;
+}
+
+.field-app .field-fab,
+.field-app .field-schedule-fab,
+.field-app a.field-fab {
+  background: linear-gradient(180deg, #5b8cff, #2f6bff) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 28px rgba(47, 107, 255, 0.35) !important;
+}
+
+.field-app .field-fab-root {
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.field-app .inv-sign-card canvas {
+  background: #fff !important;
+  border-radius: 12px;
 }
 
 .field-app .field-jump-chip strong {
@@ -647,65 +939,4 @@
 
 .field-app .field-jump-chip span {
   color: var(--field-muted) !important;
-}
-
-.field-app a {
-  color: var(--field-accent) !important;
-}
-
-.field-app .field-today-link,
-.field-app .field-back a {
-  color: var(--field-accent) !important;
-  font-weight: var(--field-fw-semi) !important;
-}
-
-/* FAB */
-.field-app .field-fab-root {
-  bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
-}
-
-.field-app .field-fab,
-.field-app .field-schedule-fab,
-.field-app a.field-fab {
-  background: linear-gradient(180deg, #7dd3fc, #2563eb) !important;
-  color: #fff !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 14px 32px rgba(37, 99, 235, 0.5) !important;
-}
-
-.field-app .field-fab.is-open {
-  background: rgba(255, 255, 255, 0.18) !important;
-}
-
-.field-app .field-fab-menu__item {
-  color: var(--field-text) !important;
-}
-
-.field-app .field-fab-menu__item:hover {
-  background: var(--field-accent-soft) !important;
-}
-
-/* Signature pad stays light for ink contrast */
-.field-app .inv-sign-card canvas {
-  background: #fff !important;
-  border-radius: 12px;
-}
-
-.field-app .bos-table {
-  color: var(--field-text) !important;
-}
-
-.field-app .bos-table th,
-.field-app .bos-table td {
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-.field-app .field-history-day-head,
-.field-app .stock-history-day-head {
-  color: var(--field-text) !important;
-}
-
-.field-app .stock-history-day-head:hover {
-  background: rgba(125, 211, 252, 0.1) !important;
 }
