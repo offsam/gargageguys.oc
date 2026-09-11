@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "@/styles/bos.css";
+import "@/styles/field-mobile.css";
 
 export const metadata: Metadata = {
   title: "Garage Guys BOS",

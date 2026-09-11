@@ -3060,45 +3060,49 @@ body.sheet-col-resizing * {
 
 /* —— Field app (phone / tech) —— */
 .field-app {
-  --field-bg0: #060d14;
-  --field-bg1: #0b1622;
-  --field-glass: rgba(255, 255, 255, 0.08);
-  --field-glass-strong: rgba(255, 255, 255, 0.12);
-  --field-glass-soft: rgba(255, 255, 255, 0.05);
-  --field-stroke: rgba(255, 255, 255, 0.12);
-  --field-stroke-strong: rgba(255, 255, 255, 0.2);
-  --field-text: #f3f7fb;
+  /* Tokens reinforced in styles/field-mobile.css (imported by FieldShell). */
+  --field-bg0: #050a10;
+  --field-bg1: #0a1420;
+  --field-glass: rgba(255, 255, 255, 0.16);
+  --field-glass-strong: rgba(255, 255, 255, 0.22);
+  --field-glass-soft: rgba(255, 255, 255, 0.1);
+  --field-stroke: rgba(255, 255, 255, 0.18);
+  --field-stroke-strong: rgba(255, 255, 255, 0.28);
+  --field-text: #f8fafc;
   --field-muted: #94a3b8;
-  --field-accent: #6eb6ef;
-  --field-accent-soft: rgba(110, 182, 239, 0.18);
-  --field-ok: #34d399;
+  --field-accent: #7dd3fc;
+  --field-accent-soft: rgba(125, 211, 252, 0.22);
+  --field-ok: #4ade80;
   --field-warn: #fbbf24;
   --field-danger: #fb7185;
   --bos-bg: transparent;
   --bos-text: var(--field-text);
-  --bos-muted: #94a3b8;
+  --bos-muted: var(--field-muted);
   --bos-border: var(--field-stroke);
   --bos-panel: var(--field-glass);
   --bos-panel-soft: var(--field-glass-soft);
-  --bos-accent: #93c5fd;
+  --bos-accent: #bae6fd;
   --bos-accent-2: var(--field-accent);
   --bos-accent-2-soft: var(--field-accent-soft);
   --bos-ok: var(--field-ok);
+  --bos-ok-soft: rgba(74, 222, 128, 0.18);
   --bos-danger: var(--field-danger);
-  --bos-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  --bos-danger-soft: rgba(251, 113, 133, 0.2);
+  --bos-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
   isolation: isolate;
   background:
-    radial-gradient(900px 420px at 12% -8%, rgba(56, 140, 210, 0.28) 0%, transparent 58%),
-    radial-gradient(760px 380px at 100% 8%, rgba(45, 212, 191, 0.12) 0%, transparent 50%),
-    radial-gradient(700px 420px at 50% 110%, rgba(251, 146, 60, 0.08) 0%, transparent 55%),
+    radial-gradient(920px 480px at 8% -12%, rgba(56, 189, 248, 0.45) 0%, transparent 55%),
+    radial-gradient(780px 420px at 100% 0%, rgba(45, 212, 191, 0.28) 0%, transparent 52%),
+    radial-gradient(640px 380px at 70% 100%, rgba(251, 146, 60, 0.18) 0%, transparent 50%),
     linear-gradient(180deg, var(--field-bg1) 0%, var(--field-bg0) 100%);
   color: var(--field-text);
   padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue",
+    Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -3118,13 +3122,17 @@ body.sheet-col-resizing * {
 }
 
 .field-glass {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
   border-color: var(--field-stroke);
-  backdrop-filter: saturate(1.4) blur(22px);
-  -webkit-backdrop-filter: saturate(1.4) blur(22px);
+  backdrop-filter: saturate(1.8) blur(26px);
+  -webkit-backdrop-filter: saturate(1.8) blur(26px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 10px 30px rgba(0, 0, 0, 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 12px 32px rgba(0, 0, 0, 0.32);
 }
 
 .field-top {
@@ -6785,293 +6793,3 @@ button.bos-btn:disabled {
   }
 }
 
-/* —— Field liquid glass surfaces (dark iOS) —— */
-.field-app .bos-card,
-.field-app .field-cal,
-.field-app .field-timeline,
-.field-app .field-detail-card,
-.field-app .field-day-client,
-.field-app .field-report-card,
-.field-app .stock-board .bos-card,
-.field-app .stock-add-form,
-.field-app .stock-history-day,
-.field-app .stock-history-empty {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--field-stroke);
-  backdrop-filter: saturate(1.25) blur(18px);
-  -webkit-backdrop-filter: saturate(1.25) blur(18px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 12px 28px rgba(0, 0, 0, 0.28);
-  color: var(--field-text);
-}
-
-.field-app .field-cal,
-.field-app .field-timeline,
-.field-app .field-detail-card {
-  border-radius: 18px;
-}
-
-.field-app .field-signout {
-  color: var(--field-accent);
-  padding: 0.28rem 0.55rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--field-stroke);
-  margin-top: 0.25rem;
-}
-
-.field-app .field-cal-cell {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--field-text);
-  border-radius: 10px;
-}
-
-.field-app .field-cal-cell--empty {
-  background: transparent;
-}
-
-.field-app .field-cal-cell.has-jobs {
-  background: rgba(110, 182, 239, 0.18);
-  border-color: rgba(110, 182, 239, 0.35);
-}
-
-.field-app .field-cal-cell.has-jobs-past {
-  background: rgba(52, 211, 153, 0.16);
-  border-color: rgba(52, 211, 153, 0.32);
-}
-
-.field-app .field-cal-cell.is-today {
-  box-shadow: inset 0 0 0 1.5px rgba(110, 182, 239, 0.85);
-}
-
-.field-app .field-cal-cell.is-selected {
-  background: rgba(251, 191, 36, 0.16);
-  border-color: rgba(251, 191, 36, 0.45);
-}
-
-.field-app .field-cal-cell.is-selected .field-cal-count {
-  background: #fbbf24;
-  color: #1f2937;
-}
-
-.field-app .field-cal-nav button {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--field-stroke);
-  color: var(--field-text);
-  border-radius: 12px;
-}
-
-.field-app .field-timeline-hours {
-  background: rgba(255, 255, 255, 0.04);
-  border-right-color: var(--field-stroke);
-}
-
-.field-app .field-timeline-line {
-  border-top-color: rgba(255, 255, 255, 0.08);
-}
-
-.field-app .field-day-client {
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.field-app .field-job-owner--gg {
-  background: rgba(110, 182, 239, 0.14);
-  border-color: rgba(110, 182, 239, 0.3);
-  color: #dbeafe;
-}
-
-.field-app .field-job-owner--partner {
-  background: rgba(251, 146, 60, 0.14);
-  border-color: rgba(251, 146, 60, 0.32);
-  color: #ffedd5;
-}
-
-.field-app .field-muted,
-.field-app .field-owner-hint,
-.field-app .stock-owner-hint,
-.field-app .stock-meta,
-.field-app .stock-history-line-meta,
-.field-app .stock-history-lead {
-  color: var(--bos-muted);
-}
-
-.field-app input,
-.field-app select,
-.field-app textarea,
-.field-app .stock-search,
-.field-app .stock-tech-select,
-.field-app .field-detail-card select,
-.field-app .field-detail-card input,
-.field-app .inv-row input,
-.field-app .inv-row select,
-.field-app .inv-row textarea {
-  background: rgba(0, 0, 0, 0.28) !important;
-  border-color: var(--field-stroke) !important;
-  color: var(--field-text) !important;
-  border-radius: 12px;
-}
-
-.field-app input::placeholder,
-.field-app textarea::placeholder {
-  color: rgba(148, 163, 184, 0.75);
-}
-
-.field-app .stock-tabs,
-.field-app .stock-owner-tabs {
-  border-bottom-color: var(--field-stroke);
-}
-
-.field-app .stock-tabs button,
-.field-app .stock-owner-tabs a {
-  color: var(--bos-muted);
-  background: transparent;
-}
-
-.field-app .stock-tabs button.active,
-.field-app .stock-owner-tabs a.active {
-  color: #fff;
-  background: var(--field-accent-soft);
-  border-color: rgba(110, 182, 239, 0.35);
-}
-
-.field-app .stock-table th {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--bos-muted);
-  border-bottom-color: var(--field-stroke);
-}
-
-.field-app .stock-table td {
-  border-bottom-color: rgba(255, 255, 255, 0.06);
-  color: var(--field-text);
-}
-
-.field-app .stock-cat td {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.field-app .stock-zero .stock-name {
-  color: rgba(148, 163, 184, 0.7);
-}
-
-.field-app .stock-add-btn,
-.field-app .stock-act-toggle--plus,
-.field-app .emp-add-btn,
-.field-app button.field-primary,
-.field-app .inv-row button[type="submit"],
-.field-app .inv-row > button:not(.emp-cancel):not(.stock-act-quick) {
-  border-radius: 12px;
-}
-
-.field-app .stock-add-btn,
-.field-app .stock-act-toggle--plus {
-  background: linear-gradient(180deg, rgba(110, 182, 239, 0.95), rgba(59, 130, 246, 0.9));
-  color: #fff;
-  border: 0;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
-}
-
-.field-app .stock-act-pop,
-.field-app .stock-act-pop--tech {
-  background: rgba(12, 20, 30, 0.96);
-  border: 1px solid var(--field-stroke);
-  backdrop-filter: blur(16px);
-}
-
-.field-app .field-alert-board,
-.field-app .field-chip,
-.field-app .jump-chip,
-.field-app [class*="alert-"] {
-  border-radius: 14px;
-}
-
-.field-app a {
-  color: var(--field-accent);
-}
-
-.field-app .field-back a {
-  color: var(--field-accent);
-}
-
-.field-app .inv-locked {
-  background: rgba(251, 191, 36, 0.12);
-  border-color: rgba(251, 191, 36, 0.35);
-  color: #fde68a;
-}
-
-.field-app .field-section-head h2,
-.field-app h2,
-.field-app h3 {
-  color: var(--field-text);
-  letter-spacing: -0.01em;
-}
-
-.field-app .field-tl-block {
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-}
-
-.field-app .leaflet-container {
-  border-radius: 18px;
-  border: 1px solid var(--field-stroke);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.field-app .field-day-board__map,
-.field-app .field-map-wrap {
-  border-radius: 18px;
-  overflow: hidden;
-  border: 1px solid var(--field-stroke);
-}
-
-.field-app .field-fab-root {
-  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
-}
-
-.field-app .field-fab,
-.field-app .field-schedule-fab,
-.field-app a.field-fab {
-  background: linear-gradient(180deg, #7cc0f5, #3b82f6);
-  color: #fff;
-  border: 0;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 12px 28px rgba(37, 99, 235, 0.45);
-}
-
-.field-app .field-fab-menu {
-  background: rgba(10, 18, 28, 0.92);
-  border: 1px solid var(--field-stroke);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 16px 40px rgba(0, 0, 0, 0.45);
-}
-
-.field-app .field-fab-menu__item {
-  color: var(--field-text);
-}
-
-.field-app .field-fab-menu__item:hover {
-  background: rgba(110, 182, 239, 0.14);
-}
-
-.field-app .bos-table {
-  color: var(--field-text);
-}
-
-.field-app .bos-table th,
-.field-app .bos-table td {
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.field-app .field-history-day-head,
-.field-app .stock-history-day-head {
-  color: var(--field-text);
-}
-
-.field-app .stock-history-day-head:hover {
-  background: rgba(110, 182, 239, 0.1);
-}
