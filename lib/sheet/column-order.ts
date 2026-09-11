@@ -46,10 +46,8 @@ export function moveSheetColumnOrder<T extends string>(
 }
 
 /**
- * Pick a drop target column by X, only among the same sticky/non-sticky group
- * as the dragged column — avoids sticky headers stealing hits after H-scroll.
- * Place is before/after based on which half of the header the pointer is over
- * so adjacent right-drags actually swap instead of no-op.
+ * Pick a drop slot by X among the same sticky/non-sticky group as the dragged column.
+ * Walks left→right midpoints (excluding the dragged column) so adjacent swaps work.
  */
 export function sheetColumnDropAtX<T extends string>(
   clientX: number,
@@ -59,26 +57,19 @@ export function sheetColumnDropAtX<T extends string>(
 ): SheetColumnDropTarget<T> | null {
   const dragSticky = isStickySheetColumn(dragKey, sticky);
   const group = headers.filter((h) => isStickySheetColumn(h.key, sticky) === dragSticky);
-  if (group.length === 0) return null;
+  if (group.length < 2) return null;
 
-  let hit: { key: T; left: number; right: number } | null = null;
-  let best: { key: T; left: number; right: number; dist: number } | null = null;
-  for (const h of group) {
-    if (h.key === dragKey) continue;
-    const width = h.right - h.left;
-    if (width <= 0) continue;
-    if (clientX >= h.left && clientX <= h.right) hit = h;
+  const others = group.filter((h) => h.key !== dragKey && h.right - h.left > 0);
+  if (others.length === 0) return null;
+
+  for (const h of others) {
     const mid = (h.left + h.right) / 2;
-    const dist = Math.abs(clientX - mid);
-    if (!best || dist < best.dist) best = { ...h, dist };
+    if (clientX < mid) {
+      return { key: h.key, place: "before" };
+    }
   }
-  const target = hit || (best && best.dist < 220 ? best : null);
-  if (!target) return null;
-  const mid = (target.left + target.right) / 2;
-  return {
-    key: target.key,
-    place: clientX < mid ? "before" : "after",
-  };
+  const last = others[others.length - 1];
+  return { key: last.key, place: "after" };
 }
 
 /** @deprecated Prefer sheetColumnDropAtX — kept for call sites that only need the key. */

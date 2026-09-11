@@ -42,7 +42,6 @@ describe("moveSheetColumnOrder", () => {
   });
 
   it("does not no-op when insert-before would leave adjacent order unchanged", () => {
-    // Old bug: insert-before on the right neighbor always returned null.
     assert.equal(
       moveSheetColumnOrder([...order], "date", "status", STICKY_SHEET_COLUMNS, "before"),
       null,
@@ -70,31 +69,33 @@ describe("sheetColumnDropAtX", () => {
   const headers = [
     { key: "jobNumber", left: 42, right: 120 },
     { key: "clientName", left: 120, right: 260 },
-    // scrolled column visually under sticky zone (left is off-screen-ish)
-    { key: "date", left: -40, right: 80 },
-    { key: "status", left: 260, right: 360 },
-    { key: "address", left: 360, right: 500 },
+    { key: "date", left: 260, right: 360 },
+    { key: "status", left: 360, right: 460 },
+    { key: "address", left: 460, right: 600 },
   ] as const;
 
   it("does not drop a scroll column onto sticky when X is over Client", () => {
     const hit = sheetColumnKeyAtX(180, "status", [...headers], STICKY_SHEET_COLUMNS);
-    // Same-group nearest is date (scrolled under sticky), never clientName.
     assert.equal(hit, "date");
     assert.notEqual(hit, "clientName");
   });
 
-  it("hits the visible scroll column under the pointer", () => {
-    const hit = sheetColumnKeyAtX(300, "address", [...headers], STICKY_SHEET_COLUMNS);
-    assert.equal(hit, "status");
+  it("moves date one step right when past status midpoint", () => {
+    // status mid = 410 — past it inserts before address (same final order as after status)
+    const drop = sheetColumnDropAtX(420, "date", [...headers], STICKY_SHEET_COLUMNS);
+    assert.ok(drop);
+    const next = moveSheetColumnOrder(
+      ["jobNumber", "clientName", "date", "status", "address"],
+      "date",
+      drop.key,
+      STICKY_SHEET_COLUMNS,
+      drop.place,
+    );
+    assert.deepEqual(next, ["jobNumber", "clientName", "status", "date", "address"]);
   });
 
-  it("places after when pointer is on the right half of the target", () => {
-    const drop = sheetColumnDropAtX(330, "date", [...headers], STICKY_SHEET_COLUMNS);
-    assert.deepEqual(drop, { key: "status", place: "after" });
-  });
-
-  it("places before when pointer is on the left half of the target", () => {
-    const drop = sheetColumnDropAtX(280, "address", [...headers], STICKY_SHEET_COLUMNS);
+  it("places before when pointer is left of target midpoint", () => {
+    const drop = sheetColumnDropAtX(370, "address", [...headers], STICKY_SHEET_COLUMNS);
     assert.deepEqual(drop, { key: "status", place: "before" });
   });
 });

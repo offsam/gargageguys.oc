@@ -796,17 +796,17 @@ export function SheetTable({
   const focusGenRef = useRef(0);
   const [widths, setWidths] = useState<Record<string, number>>(defaultWidths);
   const [columnOrder, setColumnOrder] = useState<SheetColumnKey[]>(DEFAULT_COLUMN_ORDER);
-  const [draggingCol, setDraggingCol] = useState<SheetColumnKey | null>(null);
-  const [dragOverCol, setDragOverCol] = useState<SheetColumnKey | null>(null);
-  const [dragOverPlace, setDragOverPlace] = useState<SheetColumnDropPlace | null>(null);
   const dragRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
   const colReorderRef = useRef<{
     key: SheetColumnKey;
     startX: number;
     active: boolean;
+    pointerId: number;
+    target: HTMLElement | null;
   } | null>(null);
   const dragOverColRef = useRef<SheetColumnKey | null>(null);
   const dragOverPlaceRef = useRef<SheetColumnDropPlace | null>(null);
+  const colDragDidMoveRef = useRef(false);
   const rowsRef = useRef(rows);
   const inFlightRef = useRef(0);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
@@ -1036,6 +1036,33 @@ export function SheetTable({
   const moveColumnRef = useRef(moveColumn);
   moveColumnRef.current = moveColumn;
 
+  function clearColDragPaint() {
+    document.querySelectorAll<HTMLElement>(".sheet-grid thead th[data-sheet-col]").forEach((th) => {
+      th.classList.remove(
+        "is-col-dragging",
+        "is-col-drop",
+        "is-col-drop-before",
+        "is-col-drop-after",
+      );
+    });
+  }
+
+  function paintColDrag(
+    dragKey: SheetColumnKey,
+    drop: { key: SheetColumnKey; place: SheetColumnDropPlace } | null,
+  ) {
+    clearColDragPaint();
+    const dragTh = document.querySelector<HTMLElement>(
+      `.sheet-grid thead th[data-sheet-col="${dragKey}"]`,
+    );
+    dragTh?.classList.add("is-col-dragging");
+    if (!drop || drop.key === dragKey) return;
+    const overTh = document.querySelector<HTMLElement>(
+      `.sheet-grid thead th[data-sheet-col="${drop.key}"]`,
+    );
+    overTh?.classList.add("is-col-drop", `is-col-drop-${drop.place}`);
+  }
+
   /**
    * Hit-test by X among the same sticky/non-sticky group as the dragged column.
    * Sticky Job#/Client sit on top after H-scroll and used to steal drop targets.
@@ -1062,11 +1089,12 @@ export function SheetTable({
   const onColReorderMove = useCallback((e: PointerEvent) => {
     const drag = colReorderRef.current;
     if (!drag) return;
+    if (drag.pointerId !== e.pointerId) return;
     e.preventDefault();
     if (!drag.active) {
-      if (Math.abs(e.clientX - drag.startX) < 4) return;
+      if (Math.abs(e.clientX - drag.startX) < 3) return;
       drag.active = true;
-      setDraggingCol(drag.key);
+      colDragDidMoveRef.current = true;
       document.body.classList.add("sheet-col-reordering");
       if (!STICKY_COLUMNS.includes(drag.key)) {
         document.body.classList.add("sheet-col-reordering-scroll");
@@ -1078,19 +1106,37 @@ export function SheetTable({
     if (dragOverColRef.current === nextOver && dragOverPlaceRef.current === nextPlace) return;
     dragOverColRef.current = nextOver;
     dragOverPlaceRef.current = nextPlace;
-    setDragOverCol(nextOver);
-    setDragOverPlace(nextPlace);
+    paintColDrag(
+      drag.key,
+      nextOver && nextPlace ? { key: nextOver, place: nextPlace } : null,
+    );
   }, []);
 
   const onColReorderEnd = useCallback(
     (e: PointerEvent) => {
       const drag = colReorderRef.current;
+      if (drag && drag.pointerId !== e.pointerId) return;
       colReorderRef.current = null;
+      const target = drag?.target;
+      if (target) {
+        try {
+          if (target.hasPointerCapture(e.pointerId)) {
+            target.releasePointerCapture(e.pointerId);
+          }
+        } catch {
+          /* ignore */
+        }
+        target.removeEventListener("pointermove", onColReorderMove);
+        target.removeEventListener("pointerup", onColReorderEnd);
+        target.removeEventListener("pointercancel", onColReorderEnd);
+      }
       window.removeEventListener("pointermove", onColReorderMove);
       window.removeEventListener("pointerup", onColReorderEnd);
       window.removeEventListener("pointercancel", onColReorderEnd);
       document.body.classList.remove("sheet-col-reordering");
       document.body.classList.remove("sheet-col-reordering-scroll");
+      clearColDragPaint();
+
       const drop =
         (drag ? colDropFromPoint(e.clientX, drag.key) : null) ||
         (dragOverColRef.current && dragOverPlaceRef.current
@@ -1101,9 +1147,10 @@ export function SheetTable({
       if (drag?.active && drop && drop.key !== drag.key) {
         moveColumnRef.current(drag.key, drop.key, drop.place);
       }
-      setDraggingCol(null);
-      setDragOverCol(null);
-      setDragOverPlace(null);
+      // Keep didMove true through the following click so Date sort ignores it.
+      window.setTimeout(() => {
+        colDragDidMoveRef.current = false;
+      }, 0);
     },
     [onColReorderMove],
   );
@@ -1111,12 +1158,35 @@ export function SheetTable({
   function startColReorder(key: SheetColumnKey, e: React.PointerEvent<HTMLElement>) {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest(".sheet-col-resize")) return;
+    // Capture on the header so React re-renders (or scroll) cannot drop the gesture.
     e.preventDefault();
-    // Do not setPointerCapture — remounts/class updates were dropping the gesture.
-    colReorderRef.current = { key, startX: e.clientX, active: false };
-    window.addEventListener("pointermove", onColReorderMove, { passive: false });
-    window.addEventListener("pointerup", onColReorderEnd);
-    window.addEventListener("pointercancel", onColReorderEnd);
+    e.stopPropagation();
+    const target = e.currentTarget;
+    colDragDidMoveRef.current = false;
+    colReorderRef.current = {
+      key,
+      startX: e.clientX,
+      active: false,
+      pointerId: e.pointerId,
+      target,
+    };
+    dragOverColRef.current = null;
+    dragOverPlaceRef.current = null;
+    let captured = false;
+    try {
+      target.setPointerCapture(e.pointerId);
+      captured = target.hasPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    target.addEventListener("pointermove", onColReorderMove);
+    target.addEventListener("pointerup", onColReorderEnd);
+    target.addEventListener("pointercancel", onColReorderEnd);
+    if (!captured) {
+      window.addEventListener("pointermove", onColReorderMove, { passive: false });
+      window.addEventListener("pointerup", onColReorderEnd);
+      window.addEventListener("pointercancel", onColReorderEnd);
+    }
   }
 
   function persistWidths(next: Record<string, number>) {
@@ -2073,25 +2143,20 @@ export function SheetTable({
                 <th
                   key={col.key}
                   data-sheet-col={col.key}
-                  className={[
-                    sticky.className || "",
-                    draggingCol === col.key ? "is-col-dragging" : "",
-                    dragOverCol === col.key && draggingCol && draggingCol !== col.key
-                      ? `is-col-drop is-col-drop-${dragOverPlace || "before"}`
-                      : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ") || undefined}
+                  className={sticky.className || undefined}
                   style={{ width: widths[col.key] || col.width, ...sticky.style }}
                   onPointerDown={(e) => startColReorder(col.key, e)}
                   title="Drag header to reorder columns"
                 >
+                  <span className="sheet-col-grip" aria-hidden>
+                    ⠿
+                  </span>
                   {col.key === "date" ? (
                     <button
                       type="button"
                       className="sheet-sort-head"
                       onClick={() => {
-                        if (colReorderRef.current?.active) return;
+                        if (colDragDidMoveRef.current || colReorderRef.current?.active) return;
                         changeDateSort(dateSort === "newest" ? "oldest" : "newest");
                       }}
                       title={
@@ -2106,12 +2171,12 @@ export function SheetTable({
                       </span>
                     </button>
                   ) : (
-                    <>
+                    <span className="sheet-col-head-text">
                       <span className="sheet-col-letter">{String.fromCharCode(65 + idx)}</span>
                       <span className="sheet-col-label">
                         {col.money ? `$ ${col.label}` : col.label}
                       </span>
-                    </>
+                    </span>
                   )}
                   <span
                     className="sheet-col-resize"

@@ -2032,6 +2032,26 @@ textarea {
 .sheet-grid thead th[data-sheet-col] {
   cursor: grab;
   touch-action: none;
+  display: table-cell;
+  padding-left: 1.35rem;
+}
+
+.sheet-col-grip {
+  position: absolute;
+  left: 0.15rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  line-height: 1;
+  color: #94a3b8;
+  letter-spacing: -0.05em;
+  pointer-events: none;
+  user-select: none;
+}
+
+.sheet-col-head-text {
+  display: block;
+  min-width: 0;
 }
 
 .sheet-grid thead th[data-sheet-col]:active,
@@ -2058,6 +2078,11 @@ body.sheet-col-reordering .sheet-grid thead th[data-sheet-col] {
 body.sheet-col-reordering {
   cursor: grabbing !important;
   user-select: none !important;
+}
+
+body.sheet-col-reordering .sheet-wrap {
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 body.sheet-col-reordering * {
