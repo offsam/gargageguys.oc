@@ -120,7 +120,11 @@ function NextJobCard({ jobs }: { jobs: FieldJob[] }) {
   return (
     <section className={`field-next-job field-glass-card field-next-job--${accent}`}>
       <div className="field-next-job__accent" aria-hidden />
-      <div className="field-next-job__body">
+      <Link
+        href={`/field/jobs/${job.id}`}
+        className="field-next-job__hit"
+        aria-label={`Open job ${job.title || "details"}`}
+      >
         <div className="field-next-job__head">
           <p className="field-next-job__eyebrow">Next Job</p>
           <span className="field-next-job__count">
@@ -146,38 +150,34 @@ function NextJobCard({ jobs }: { jobs: FieldJob[] }) {
             )}
             <p className="field-next-job__service">{serviceHint(job)}</p>
           </div>
-
-          <div className="field-next-job__actions">
-            {address ? <MapsNavButton address={address} /> : null}
-            <Link
-              href={`/field/jobs/${job.id}`}
-              className="field-next-job__open"
-              aria-label={`Open job ${job.title || ""}`}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path
-                  d="M9 6l6 6-6 6"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
-          </div>
         </div>
+      </Link>
 
-        {items.length > 1 ? (
-          <div className="field-next-job__pager">
-            <button type="button" onClick={() => step(-1)} aria-label="Previous job">
-              ‹
-            </button>
-            <button type="button" onClick={() => step(1)} aria-label="Next job">
-              ›
-            </button>
-          </div>
-        ) : null}
+      <div className="field-next-job__actions">
+        {address ? <MapsNavButton address={address} /> : null}
+        <span className="field-next-job__chevron" aria-hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M9 6l6 6-6 6"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
       </div>
+
+      {items.length > 1 ? (
+        <div className="field-next-job__pager">
+          <button type="button" onClick={() => step(-1)} aria-label="Previous job">
+            ‹
+          </button>
+          <button type="button" onClick={() => step(1)} aria-label="Next job">
+            ›
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

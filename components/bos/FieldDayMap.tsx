@@ -208,6 +208,10 @@ export function FieldDayMap({
             Waiting
           </li>
           <li>
+            <span className="field-map-legend__swatch field-map-legend__swatch--active" />
+            On the way
+          </li>
+          <li>
             <span className="field-map-legend__swatch field-map-legend__swatch--done" />
             Completed
           </li>

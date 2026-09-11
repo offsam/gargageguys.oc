@@ -321,6 +321,7 @@
   width: 5px;
   border-radius: 999px;
   background: #f5c518;
+  z-index: 2;
 }
 
 .field-app .field-next-job--ok .field-next-job__accent {
@@ -333,8 +334,16 @@
   background: #fb923c;
 }
 
-.field-app .field-next-job__body {
-  padding: 0.95rem 1rem 0.95rem 1.15rem;
+.field-app .field-next-job__hit {
+  display: block;
+  padding: 0.95rem 4.1rem 0.95rem 1.15rem;
+  text-decoration: none !important;
+  color: inherit !important;
+  border-radius: 22px;
+}
+
+.field-app .field-next-job__hit:active {
+  background: rgba(47, 107, 255, 0.04);
 }
 
 .field-app .field-next-job__head {
@@ -360,7 +369,7 @@
 .field-app .field-next-job__row {
   display: flex;
   gap: 0.65rem;
-  align-items: stretch;
+  align-items: center;
 }
 
 .field-app .field-next-job__main {
@@ -433,13 +442,23 @@
   text-overflow: ellipsis;
 }
 
+.field-app .field-next-job__chevron {
+  color: var(--field-muted);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+}
+
 .field-app .field-next-job__actions {
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  flex: 0 0 auto;
+  gap: 0.45rem;
 }
 
 .field-app .field-next-job__nav {
@@ -454,20 +473,13 @@
   text-decoration: none !important;
 }
 
-.field-app .field-next-job__open {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  color: var(--field-muted) !important;
-  text-decoration: none !important;
-}
-
 .field-app .field-next-job__pager {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.45rem;
+  z-index: 3;
   display: flex;
-  justify-content: flex-end;
-  gap: 0.35rem;
-  margin-top: 0.45rem;
+  gap: 0.3rem;
 }
 
 .field-app .field-next-job__pager button {
@@ -475,7 +487,7 @@
   height: 28px;
   border-radius: 999px;
   border: 1px solid var(--field-stroke);
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
   color: var(--field-text-secondary);
   font-size: 1rem;
   line-height: 1;
@@ -601,6 +613,9 @@
 }
 .field-app .field-map-legend__swatch--wait {
   background: #f59e0b;
+}
+.field-app .field-map-legend__swatch--active {
+  background: #fbbf24;
 }
 .field-app .field-map-legend__swatch--done {
   background: #22c55e;
@@ -939,4 +954,65 @@
 
 .field-app .field-jump-chip span {
   color: var(--field-muted) !important;
+}
+
+/* Report / empty / owner banner / alert chips — close white leaks */
+.field-app .field-summary > div,
+.field-app .field-report-list li,
+.field-app .field-empty,
+.field-app .field-alert a {
+  background: rgba(255, 255, 255, 0.78) !important;
+  border-color: var(--field-stroke) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  box-shadow: var(--field-shadow-soft) !important;
+  color: var(--field-text) !important;
+  border-radius: 16px !important;
+}
+
+.field-app .field-summary > div strong {
+  color: var(--field-text) !important;
+}
+
+.field-app .field-summary > div span,
+.field-app .field-report-list li .field-muted {
+  color: var(--field-muted) !important;
+}
+
+.field-app .field-job-owner--gg {
+  background: rgba(219, 234, 254, 0.6) !important;
+  border-color: rgba(147, 197, 253, 0.45) !important;
+  color: #1e3a8a !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+.field-app .field-job-owner--partner {
+  background: rgba(254, 243, 199, 0.6) !important;
+  border-color: rgba(253, 211, 77, 0.45) !important;
+  color: #92400e !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+.field-app .field-chip--danger {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #b91c1c !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+}
+
+.field-app .field-chip--warn {
+  background: rgba(245, 158, 11, 0.13) !important;
+  color: #92400e !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.field-app .field-chip--info {
+  background: rgba(37, 99, 235, 0.1) !important;
+  color: #1e3a8a !important;
+  border-color: rgba(37, 99, 235, 0.22) !important;
+}
+
+.field-app .field-jump-chip {
+  background: rgba(255, 255, 255, 0.82) !important;
 }
