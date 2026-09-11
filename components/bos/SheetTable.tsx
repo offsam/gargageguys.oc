@@ -36,7 +36,6 @@ import {
 import {
   moveSheetColumnOrder,
   sheetColumnDropAtX,
-  STICKY_SHEET_COLUMNS,
   type SheetColumnDropPlace,
 } from "@/lib/sheet/column-order";
 import { normalizeSheetTime } from "@/lib/sheet/sync-job-from-sheet";
@@ -112,7 +111,7 @@ const LEAD_SOURCES = [
   "Yelp",
 ] as const;
 const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths-v4";
-const ORDER_STORAGE_KEY = "bos-sheet-col-order-v1";
+const ORDER_STORAGE_KEY = "bos-sheet-col-order-v2";
 const SORT_STORAGE_KEY = "bos-sheet-date-sort";
 const PERIOD_STORAGE_KEY = "bos-sheet-period-v1";
 const LEAD_SOURCE_LIST_ID = "sheet-lead-source-list";
@@ -182,27 +181,28 @@ const COLUMNS: Array<{
   { key: "description", label: "Description", width: 220 },
 ];
 
-/** Columns frozen on the left when scrolling horizontally (after the row #). */
-const STICKY_COLUMNS: SheetColumnKey[] = [...STICKY_SHEET_COLUMNS];
+/** How many leading columns stay frozen on horizontal scroll (after the row #). */
+const PINNED_COLUMN_COUNT = 2;
 const COLUMN_BY_KEY = new Map(COLUMNS.map((col) => [col.key, col]));
 const DEFAULT_COLUMN_ORDER = COLUMNS.map((col) => col.key);
 
 function normalizeColumnOrder(keys: SheetColumnKey[]): SheetColumnKey[] {
   const valid = keys.filter((key) => COLUMN_BY_KEY.has(key));
-  const sticky = STICKY_COLUMNS.filter((key) => valid.includes(key));
-  const rest = valid.filter((key) => !STICKY_COLUMNS.includes(key));
-  const seen = new Set([...sticky, ...rest]);
+  const seen = new Set(valid);
+  const out = [...valid];
   for (const key of DEFAULT_COLUMN_ORDER) {
     if (seen.has(key)) continue;
-    if (STICKY_COLUMNS.includes(key)) sticky.push(key);
-    else rest.push(key);
+    out.push(key);
+    seen.add(key);
   }
-  return [...sticky, ...rest];
+  return out;
 }
 
 function loadColumnOrder(): SheetColumnKey[] {
   try {
-    const raw = localStorage.getItem(ORDER_STORAGE_KEY);
+    const raw =
+      localStorage.getItem(ORDER_STORAGE_KEY) ||
+      localStorage.getItem("bos-sheet-col-order-v1");
     if (!raw) return [...DEFAULT_COLUMN_ORDER];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [...DEFAULT_COLUMN_ORDER];
@@ -997,8 +997,7 @@ export function SheetTable({
   const stickyLeftByKey = useMemo(() => {
     const map: Partial<Record<SheetColumnKey, number>> = {};
     let left = ROW_NUM_WIDTH;
-    for (const col of orderedColumns) {
-      if (!STICKY_COLUMNS.includes(col.key)) continue;
+    for (const col of orderedColumns.slice(0, PINNED_COLUMN_COUNT)) {
       map[col.key] = left;
       left += widths[col.key] || col.width;
     }
@@ -1011,8 +1010,8 @@ export function SheetTable({
   } {
     const left = stickyLeftByKey[key];
     if (left == null) return { className: "" };
-    const stickyInOrder = orderedColumns.filter((col) => STICKY_COLUMNS.includes(col.key));
-    const isEdge = key === stickyInOrder[stickyInOrder.length - 1]?.key;
+    const pinned = orderedColumns.slice(0, PINNED_COLUMN_COUNT);
+    const isEdge = key === pinned[pinned.length - 1]?.key;
     return {
       className: ["sheet-col-sticky", isEdge ? "sheet-col-sticky-edge" : ""].filter(Boolean).join(" "),
       style: { left, width: widths[key] || COLUMN_BY_KEY.get(key)?.width },
@@ -1026,7 +1025,7 @@ export function SheetTable({
   ) {
     setColumnOrder((prev) => {
       const next = normalizeColumnOrder(prev);
-      const moved = moveSheetColumnOrder(next, fromKey, toKey, STICKY_COLUMNS, place);
+      const moved = moveSheetColumnOrder(next, fromKey, toKey, place);
       if (!moved) return prev;
       persistColumnOrder(moved);
       return moved;
@@ -1083,7 +1082,7 @@ export function SheetTable({
       })
       .filter((row): row is { key: SheetColumnKey; left: number; right: number } => Boolean(row));
 
-    return sheetColumnDropAtX(clientX, dragKey, headers, STICKY_COLUMNS);
+    return sheetColumnDropAtX(clientX, dragKey, headers);
   }
 
   const onColReorderMove = useCallback((e: PointerEvent) => {
@@ -1096,9 +1095,8 @@ export function SheetTable({
       drag.active = true;
       colDragDidMoveRef.current = true;
       document.body.classList.add("sheet-col-reordering");
-      if (!STICKY_COLUMNS.includes(drag.key)) {
-        document.body.classList.add("sheet-col-reordering-scroll");
-      }
+      // Pinned (left) headers sit above scrolled ones — disable them for the gesture.
+      document.body.classList.add("sheet-col-reordering-scroll");
     }
     const drop = colDropFromPoint(e.clientX, drag.key);
     const nextOver = drop && drop.key !== drag.key ? drop.key : null;
