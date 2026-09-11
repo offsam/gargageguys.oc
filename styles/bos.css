@@ -1943,6 +1943,7 @@ textarea {
 
 .sheet-grid thead th[data-sheet-col] {
   cursor: grab;
+  touch-action: none;
 }
 
 .sheet-grid thead th[data-sheet-col]:active,
@@ -1956,6 +1957,7 @@ body.sheet-col-reordering .sheet-grid thead th[data-sheet-col] {
 
 .sheet-grid thead th.is-col-drop {
   box-shadow: inset 3px 0 0 var(--bos-accent-2);
+  background: #e8f0fe !important;
 }
 
 body.sheet-col-reordering {
@@ -1966,6 +1968,11 @@ body.sheet-col-reordering {
 body.sheet-col-reordering * {
   cursor: grabbing !important;
   user-select: none !important;
+}
+
+/* While dragging a scrollable column, sticky headers must not eat the drop X. */
+body.sheet-col-reordering-scroll .sheet-grid thead th.sheet-col-sticky {
+  pointer-events: none;
 }
 
 .sheet-col-resize {

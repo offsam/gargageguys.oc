@@ -33,6 +33,11 @@ import {
   type SheetColumnKey,
   type SheetPartner,
 } from "@/lib/sheet/work-source";
+import {
+  moveSheetColumnOrder,
+  sheetColumnKeyAtX,
+  STICKY_SHEET_COLUMNS,
+} from "@/lib/sheet/column-order";
 import { normalizeSheetTime } from "@/lib/sheet/sync-job-from-sheet";
 import {
   findWindowForSheetTime,
@@ -177,7 +182,7 @@ const COLUMNS: Array<{
 ];
 
 /** Columns frozen on the left when scrolling horizontally (after the row #). */
-const STICKY_COLUMNS: SheetColumnKey[] = ["jobNumber", "clientName"];
+const STICKY_COLUMNS: SheetColumnKey[] = [...STICKY_SHEET_COLUMNS];
 const COLUMN_BY_KEY = new Map(COLUMNS.map((col) => [col.key, col]));
 const DEFAULT_COLUMN_ORDER = COLUMNS.map((col) => col.key);
 
@@ -1012,47 +1017,34 @@ export function SheetTable({
   }
 
   function moveColumn(fromKey: SheetColumnKey, toKey: SheetColumnKey) {
-    if (fromKey === toKey) return;
-
     setColumnOrder((prev) => {
       const next = normalizeColumnOrder(prev);
-      if (!next.includes(fromKey) || !next.includes(toKey)) return prev;
-
-      const fromSticky = STICKY_COLUMNS.includes(fromKey);
-      const toSticky = STICKY_COLUMNS.includes(toKey);
-
-      // Job # / Client stay sticky on the left; only reorder within sticky or within the rest.
-      if (fromSticky !== toSticky) return prev;
-
-      const without = next.filter((key) => key !== fromKey);
-      const insertAt = without.indexOf(toKey);
-      if (insertAt < 0) return prev;
-      without.splice(insertAt, 0, fromKey);
-      const normalized = normalizeColumnOrder(without);
-      if (normalized.join("|") === next.join("|")) return prev;
-      persistColumnOrder(normalized);
-      return normalized;
+      const moved = moveSheetColumnOrder(next, fromKey, toKey, STICKY_COLUMNS);
+      if (!moved) return prev;
+      persistColumnOrder(moved);
+      return moved;
     });
   }
 
   const moveColumnRef = useRef(moveColumn);
   moveColumnRef.current = moveColumn;
 
-  /** Hit-test by X only so vertical drift / sticky overlay still finds a header. */
-  function colKeyFromPoint(clientX: number): SheetColumnKey | null {
-    const headers = document.querySelectorAll<HTMLElement>(".sheet-grid thead th[data-sheet-col]");
-    let best: { key: SheetColumnKey; dist: number } | null = null;
-    for (const th of headers) {
+  /**
+   * Hit-test by X among the same sticky/non-sticky group as the dragged column.
+   * Sticky Job#/Client sit on top after H-scroll and used to steal drop targets.
+   */
+  function colKeyFromPoint(clientX: number, dragKey: SheetColumnKey): SheetColumnKey | null {
+    const headers = Array.from(
+      document.querySelectorAll<HTMLElement>(".sheet-grid thead th[data-sheet-col]"),
+    ).map((th) => {
       const key = th.dataset.sheetCol as SheetColumnKey | undefined;
-      if (!key || !COLUMN_BY_KEY.has(key)) continue;
       const rect = th.getBoundingClientRect();
-      if (rect.width <= 0) continue;
-      if (clientX >= rect.left && clientX <= rect.right) return key;
-      const mid = (rect.left + rect.right) / 2;
-      const dist = Math.abs(clientX - mid);
-      if (!best || dist < best.dist) best = { key, dist };
-    }
-    return best && best.dist < 120 ? best.key : null;
+      return key && COLUMN_BY_KEY.has(key)
+        ? { key, left: rect.left, right: rect.right }
+        : null;
+    }).filter((row): row is { key: SheetColumnKey; left: number; right: number } => Boolean(row));
+
+    return sheetColumnKeyAtX(clientX, dragKey, headers, STICKY_COLUMNS);
   }
 
   const onColReorderMove = useCallback((e: PointerEvent) => {
@@ -1060,12 +1052,15 @@ export function SheetTable({
     if (!drag) return;
     e.preventDefault();
     if (!drag.active) {
-      if (Math.abs(e.clientX - drag.startX) < 5) return;
+      if (Math.abs(e.clientX - drag.startX) < 4) return;
       drag.active = true;
       setDraggingCol(drag.key);
       document.body.classList.add("sheet-col-reordering");
+      if (!STICKY_COLUMNS.includes(drag.key)) {
+        document.body.classList.add("sheet-col-reordering-scroll");
+      }
     }
-    const over = colKeyFromPoint(e.clientX);
+    const over = colKeyFromPoint(e.clientX, drag.key);
     const nextOver = over && over !== drag.key ? over : null;
     if (dragOverColRef.current === nextOver) return;
     dragOverColRef.current = nextOver;
@@ -1080,7 +1075,9 @@ export function SheetTable({
       window.removeEventListener("pointerup", onColReorderEnd);
       window.removeEventListener("pointercancel", onColReorderEnd);
       document.body.classList.remove("sheet-col-reordering");
-      const over = colKeyFromPoint(e.clientX) || dragOverColRef.current;
+      document.body.classList.remove("sheet-col-reordering-scroll");
+      const over =
+        (drag ? colKeyFromPoint(e.clientX, drag.key) : null) || dragOverColRef.current;
       dragOverColRef.current = null;
       if (drag?.active && over && over !== drag.key) {
         moveColumnRef.current(drag.key, over);
@@ -1095,12 +1092,7 @@ export function SheetTable({
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest(".sheet-col-resize")) return;
     e.preventDefault();
-    e.stopPropagation();
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      /* ignore */
-    }
+    // Do not setPointerCapture — remounts/class updates were dropping the gesture.
     colReorderRef.current = { key, startX: e.clientX, active: false };
     window.addEventListener("pointermove", onColReorderMove, { passive: false });
     window.addEventListener("pointerup", onColReorderEnd);
@@ -1158,6 +1150,7 @@ export function SheetTable({
       window.removeEventListener("pointercancel", onColReorderEnd);
       document.body.classList.remove("sheet-col-resizing");
       document.body.classList.remove("sheet-col-reordering");
+      document.body.classList.remove("sheet-col-reordering-scroll");
     };
   }, [onResizeMove, onResizeEnd, onColReorderMove, onColReorderEnd]);
 
