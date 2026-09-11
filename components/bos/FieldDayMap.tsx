@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { CARTO_POSITRON_URL, OC_MAP_CENTER, type GeoPoint } from "@/lib/field/maps";
+import { FIELD_BASEMAP_URL, OC_MAP_CENTER, type GeoPoint } from "@/lib/field/maps";
 
 export type FieldMapPin = {
   id: string;
@@ -83,9 +83,8 @@ export function FieldDayMap({
           scrollWheelZoom: false,
         }).setView([OC_MAP_CENTER.lat, OC_MAP_CENTER.lng], 11);
 
-        L.tileLayer(CARTO_POSITRON_URL, {
-          maxZoom: 19,
-          subdomains: "abcd",
+        L.tileLayer(FIELD_BASEMAP_URL, {
+          maxZoom: 16,
         }).addTo(map);
 
         L.control.zoom({ position: "bottomright" }).addTo(map);

@@ -4,7 +4,7 @@ import {
   formatJobAddress,
   mapsAppUrl,
   googleMapsFallbackUrl,
-  CARTO_POSITRON_URL,
+  FIELD_BASEMAP_URL,
 } from "./maps";
 
 describe("field maps helpers", () => {
@@ -25,8 +25,9 @@ describe("field maps helpers", () => {
     assert.equal(formatJobAddress("1 Oak Ave", null), "1 Oak Ave");
   });
 
-  it("uses Carto Positron tiles (no OSM flag tiles)", () => {
-    assert.match(CARTO_POSITRON_URL, /basemaps\.cartocdn\.com/);
-    assert.doesNotMatch(CARTO_POSITRON_URL, /tile\.openstreetmap\.org/);
+  it("uses key-free Esri light tiles (no OSM flag tiles, no Carto watermark)", () => {
+    assert.match(FIELD_BASEMAP_URL, /arcgisonline\.com/);
+    assert.doesNotMatch(FIELD_BASEMAP_URL, /tile\.openstreetmap\.org/);
+    assert.doesNotMatch(FIELD_BASEMAP_URL, /cartocdn\.com/);
   });
 });
