@@ -444,21 +444,25 @@
 
 .field-app .field-next-job__chevron {
   color: var(--field-muted);
-  flex: 0 0 auto;
   display: grid;
   place-items: center;
+  pointer-events: none !important;
 }
 
 .field-app .field-next-job__actions {
   position: absolute;
-  right: 0.85rem;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 0.75rem;
+  top: 3.15rem;
   z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
+  pointer-events: none;
+}
+
+.field-app .field-next-job__actions > * {
+  pointer-events: auto;
 }
 
 .field-app .field-next-job__nav {
