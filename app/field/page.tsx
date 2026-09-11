@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { BosShell } from "@/components/bos/BosShell";
 import { FieldScheduleFab } from "@/components/bos/FieldScheduleFab";
 import { FieldShell } from "@/components/bos/FieldShell";
@@ -59,26 +60,32 @@ export default async function FieldPage() {
 
   const supabase = await createSupabaseServerClient();
 
+  // Backfill must not block first paint — runs after the response is sent.
   if (user.role === "technician") {
-    try {
-      await ensureTechFieldJobsFromSheet({
-        technicianId: user.id,
-        technicianName: user.fullName || user.email || "",
+    const technicianId = user.id;
+    const technicianName = user.fullName || user.email || "";
+    after(() => {
+      void ensureTechFieldJobsFromSheet({ technicianId, technicianName }).catch((err) => {
+        console.error("[field] sheet→job backfill", err);
       });
-    } catch (err) {
-      console.error("[field] sheet→job backfill", err);
-    }
+    });
   }
 
   let query = supabase
     .from("jobs")
-    .select("*")
+    .select(
+      "id, title, status, zip, address, notes, scheduled_start, scheduled_end, technician_id, updated_at, created_at",
+    )
     .not("scheduled_start", "is", null)
     .order("scheduled_start", { ascending: false });
   if (user.role === "technician") {
     query = query.eq("technician_id", user.id);
   }
-  const { data: jobsRaw } = await query.limit(800);
+
+  const [{ data: jobsRaw }, attentionCount] = await Promise.all([
+    query.limit(800),
+    user.role === "technician" ? getFieldAttentionCount(user.id) : Promise.resolve(0),
+  ]);
   const jobs = (jobsRaw || []) as FieldJob[];
 
   const todayJobs = jobsForDay(jobs, todayKey);
@@ -93,15 +100,12 @@ export default async function FieldPage() {
     })
     .slice(0, 60);
 
+  // Geocode only the three-day window shown on the map — not the full "All" list.
   const mapJobs = [
     ...jobsForDayIncludingCancelled(jobs, yesterdayKey),
     ...jobsForDayIncludingCancelled(jobs, todayKey),
     ...jobsForDayIncludingCancelled(jobs, tomorrowKey),
-    ...allJobs,
   ];
-
-  const attentionCount =
-    user.role === "technician" ? await getFieldAttentionCount(user.id) : 0;
 
   const seen = new Set<string>();
   const geocodeQueries = mapJobs

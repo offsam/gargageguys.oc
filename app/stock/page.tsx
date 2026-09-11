@@ -26,15 +26,15 @@ export default async function StockPage({
 
   const params = await searchParams;
   const admin = getSupabaseAdmin();
-  const { data: techs } = await admin
-    .from("profiles")
-    .select("id, full_name, email")
-    .eq("role", "technician")
-    .order("created_at", { ascending: true });
-
-  const { data: allProfiles } = await admin
-    .from("profiles")
-    .select("id, full_name, email");
+  const [{ data: techs }, { data: allProfiles }, attentionCount] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("role", "technician")
+      .order("created_at", { ascending: true }),
+    admin.from("profiles").select("id, full_name, email"),
+    user.role === "technician" ? getFieldAttentionCount(user.id) : Promise.resolve(0),
+  ]);
 
   const technicians = techs || [];
   const profileLabels = (allProfiles || []).map((p) => ({
@@ -42,8 +42,6 @@ export default async function StockPage({
     label: p.full_name || p.email || "Staff",
   }));
   const seedTechId = technicians[0]?.id;
-  const attentionCount =
-    user.role === "technician" ? await getFieldAttentionCount(user.id) : 0;
 
   if (!seedTechId) {
     const empty = (
@@ -80,14 +78,19 @@ export default async function StockPage({
   await ensureStockSeeded(seedTechId);
   const isTechOnly = user.role === "technician";
   const canManage = !isTechOnly;
-  if (!isTechOnly) {
-    // Idempotent: Champion names appear in GG Stock as a list with 0 qty.
-    await ensureGgCatalogFromChampionList().catch((err) => {
-      console.error("[stock] champion→GG catalog", err);
-    });
-  }
 
-  const partners = await listPartnersAction();
+  const [partners, catalogOk] = await Promise.all([
+    listPartnersAction(),
+    isTechOnly
+      ? Promise.resolve(true)
+      : ensureGgCatalogFromChampionList()
+          .then(() => true)
+          .catch((err) => {
+            console.error("[stock] champion→GG catalog", err);
+            return false;
+          }),
+  ]);
+  void catalogOk;
   let state = await loadStockState();
   const showPrices = user.role === "owner";
 

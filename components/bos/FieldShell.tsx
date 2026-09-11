@@ -7,6 +7,7 @@ import { FieldSessionKeeper } from "@/components/bos/FieldSessionKeeper";
 import { FieldPwaRegister } from "@/components/bos/FieldPwaRegister";
 import { FieldWeather } from "@/components/bos/FieldWeather";
 import { FieldLocationBeacon } from "@/components/bos/FieldLocationBeacon";
+import { NavPendingLink } from "@/components/bos/NavPendingLink";
 import { BUSINESS_TZ } from "@/lib/datetime";
 
 type TabId = "schedule" | "calendar" | "report" | "stock" | "attention";
@@ -188,10 +189,11 @@ export function FieldShell({
 
       <nav className="field-tabs field-tabs--5 field-tabs--dock" aria-label="Field">
         {TABS.map((tab) => (
-          <Link
+          <NavPendingLink
             key={tab.id}
             href={tab.href}
             className={activeId === tab.id ? "active" : undefined}
+            showMark={false}
           >
             <span className="field-tab-icon">
               <TabIcon id={tab.id} />
@@ -200,7 +202,7 @@ export function FieldShell({
               ) : null}
             </span>
             <span className="field-tab-label">{tab.label}</span>
-          </Link>
+          </NavPendingLink>
         ))}
       </nav>
     </div>

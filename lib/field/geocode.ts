@@ -32,7 +32,9 @@ async function geocodeGeoapify(text: string, key: string): Promise<GeoPoint | nu
   url.searchParams.set("limit", "1");
   url.searchParams.set("lang", "en");
 
-  const res = await fetch(url.toString(), { cache: "no-store" });
+  const res = await fetch(url.toString(), {
+    next: { revalidate: 60 * 60 * 12 },
+  });
   if (!res.ok) return null;
   const data = (await res.json()) as {
     features?: Array<{ geometry?: { coordinates?: number[] } }>;
@@ -53,7 +55,7 @@ async function geocodeNominatim(text: string): Promise<GeoPoint | null> {
   url.searchParams.set("countrycodes", "us");
 
   const res = await fetch(url.toString(), {
-    cache: "no-store",
+    next: { revalidate: 60 * 60 * 12 },
     headers: {
       Accept: "application/json",
       "User-Agent": "GarageGuysOC-Field/1.0 (field schedule map)",

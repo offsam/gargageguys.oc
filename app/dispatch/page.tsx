@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { BosShell } from "@/components/bos/BosShell";
 import { DispatchCalendar } from "@/components/bos/DispatchCalendar";
 import { requireRouteAccess } from "@/lib/auth/require";
@@ -40,11 +41,12 @@ export default async function DispatchPage({
       : "week";
 
   const admin = getSupabaseAdmin();
-  try {
-    await ensureInvoicesForScheduledJobs(user.id);
-  } catch (err) {
-    console.error("[dispatch] ensure invoices", err);
-  }
+  // Draft invoice backfill must not block calendar paint.
+  after(() => {
+    void ensureInvoicesForScheduledJobs(user.id).catch((err) => {
+      console.error("[dispatch] ensure invoices", err);
+    });
+  });
   const [{ data: jobsRaw }, { data: leadsRaw }, { data: techs }] = await Promise.all([
     admin
       .from("jobs")

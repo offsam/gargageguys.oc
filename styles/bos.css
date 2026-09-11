@@ -108,6 +108,94 @@ textarea {
   font-weight: 600;
 }
 
+.bos-nav a:has(.is-navigating) {
+  opacity: 0.72;
+}
+
+.bos-nav-pending-wrap {
+  display: contents;
+}
+
+.bos-nav-pending {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-left: 0.45rem;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  vertical-align: middle;
+  animation: bos-spin 0.7s linear infinite;
+}
+
+.bos-route-loading {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 2.5rem;
+  padding: 0 0 2rem;
+}
+
+.bos-route-loading-bar {
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--bos-accent-2, #2563eb) 40%,
+    var(--bos-accent-2, #2563eb) 60%,
+    transparent 100%
+  );
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: bos-loading-bar 1.1s ease-in-out infinite;
+}
+
+.bos-route-loading-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--bos-muted, #64748b);
+  font-size: 0.95rem;
+}
+
+.bos-route-loading-spinner {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 2.5px solid var(--bos-border, #e2e8f0);
+  border-top-color: var(--bos-accent-2, #2563eb);
+  animation: bos-spin 0.75s linear infinite;
+}
+
+@keyframes bos-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bos-loading-bar {
+  0% {
+    background-position: -40% 0;
+  }
+  100% {
+    background-position: 140% 0;
+  }
+}
+
+.ads-period-bar.is-pending {
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.ads-period-loading {
+  font-size: 0.85rem;
+  color: var(--bos-muted, #64748b);
+}
+
 .bos-main {
   padding: 1.5rem 1.75rem 2.5rem;
 }
@@ -3747,6 +3835,27 @@ body.sheet-col-resizing * {
   color: var(--field-accent);
   background: var(--field-accent-soft);
   box-shadow: none;
+}
+
+.field-tabs a {
+  position: relative;
+}
+
+.field-tabs a:has(.is-navigating) {
+  opacity: 0.7;
+}
+
+.field-tabs a:has(.is-navigating)::after {
+  content: "";
+  position: absolute;
+  top: 0.35rem;
+  right: 0.45rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  animation: bos-spin 0.7s linear infinite;
 }
 
 .field-tab-icon {

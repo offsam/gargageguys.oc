@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { SessionUser } from "@/lib/auth/session";
 import { signOutAction } from "@/app/actions/auth";
+import { NavPendingLink } from "@/components/bos/NavPendingLink";
 
 const LINKS: Array<{ href: string; label: string; roles?: Array<SessionUser["role"]> }> = [
   { href: "/owner", label: "Overview", roles: ["owner"] },
@@ -68,14 +69,14 @@ export function BosShell({
           Garage Guys <span>BOS</span>
         </p>
         {links.map((link) => (
-          <Link
+          <NavPendingLink
             key={link.href}
             href={link.href}
             className={active === link.href ? "active" : undefined}
             tabIndex={navCollapsed ? -1 : undefined}
           >
             {link.label}
-          </Link>
+          </NavPendingLink>
         ))}
         <div className="bos-user">
           <div>{user.fullName || user.email}</div>

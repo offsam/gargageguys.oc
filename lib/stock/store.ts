@@ -127,7 +127,12 @@ export function buildSeedState(technicianId: string): StockState {
   };
 }
 
+let bucketReady = false;
+let stockMemCache: { state: StockState; at: number } | null = null;
+const STOCK_MEM_TTL_MS = 15_000;
+
 async function ensureBucket() {
+  if (bucketReady) return;
   const admin = getSupabaseAdmin();
   const { data: buckets } = await admin.storage.listBuckets();
   if (!(buckets || []).some((b) => b.name === STOCK_BUCKET)) {
@@ -138,11 +143,19 @@ async function ensureBucket() {
       throw error;
     }
   }
+  bucketReady = true;
 }
 
 export async function loadStockState(options?: {
   skipRepair?: boolean;
 }): Promise<StockState> {
+  if (
+    !options?.skipRepair &&
+    stockMemCache &&
+    Date.now() - stockMemCache.at < STOCK_MEM_TTL_MS
+  ) {
+    return stockMemCache.state;
+  }
   await ensureBucket();
   const admin = getSupabaseAdmin();
   const { data, error } = await admin.storage.from(STOCK_BUCKET).download(STOCK_OBJECT);
@@ -159,13 +172,18 @@ export async function loadStockState(options?: {
   if (options?.skipRepair) return state;
   const removedDupes = stripDuplicatedPartnerWarehouse(state);
   const splitPairs = splitSpringPairs(state);
-  if (removedDupes <= 0 && splitPairs <= 0) return state;
+  if (removedDupes <= 0 && splitPairs <= 0) {
+    stockMemCache = { state, at: Date.now() };
+    return state;
+  }
   await saveStockState(state);
-  return {
+  const next = {
     ...state,
     version: state.version + 1,
     updatedAt: new Date().toISOString(),
   };
+  stockMemCache = { state: next, at: Date.now() };
+  return next;
 }
 
 export async function saveStockState(state: StockState): Promise<void> {
@@ -182,6 +200,7 @@ export async function saveStockState(state: StockState): Promise<void> {
     upsert: true,
   });
   if (error) throw error;
+  stockMemCache = { state: next, at: Date.now() };
 }
 
 export function balanceKey(
