@@ -9,11 +9,18 @@ import {
   buildAttentionItems,
   formatMoney,
   isInRange,
-  money,
   startOfMonth,
 } from "@/lib/field/attention";
-import { startOfToday, type FieldJob } from "@/lib/field/days";
+import { type FieldJob } from "@/lib/field/days";
 import { ensureTechFieldJobsFromSheet } from "@/lib/sheet/sync-job-from-sheet";
+import {
+  namesMatch,
+  pacificMonthToDate,
+  pacificWeekToDate,
+  sheetPayDateYmd,
+  sheetTechPayAmount,
+  ymdInInclusiveRange,
+} from "@/lib/sheet/pay-period";
 
 export default async function FieldReportPage() {
   const user = await getSessionUser();
@@ -39,7 +46,11 @@ export default async function FieldReportPage() {
       .eq("technician_id", user.id)
       .order("scheduled_start", { ascending: false })
       .limit(800),
-    admin.from("leads").select("id, name, stage, deal_price, metadata, assigned_to, updated_at, created_at").limit(500),
+    admin
+      .from("leads")
+      .select("id, name, stage, deal_price, metadata, assigned_to, updated_at, created_at")
+      .order("created_at", { ascending: false })
+      .limit(1500),
     ensureStockSeeded(user.id),
   ]);
 
@@ -52,45 +63,51 @@ export default async function FieldReportPage() {
 
   const monthStart = startOfMonth();
   const nextMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
-  const weekStart = startOfToday();
-  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
+  const weekRange = pacificWeekToDate();
+  const monthRange = pacificMonthToDate();
 
   const doneJobs = jobs.filter((j) => j.status === "done");
   const doneThisMonth = doneJobs.filter((j) =>
     isInRange(j.scheduled_start || j.updated_at || j.created_at || null, monthStart, nextMonth),
   );
-  const doneThisWeek = doneJobs.filter((j) =>
-    isInRange(j.scheduled_start || j.updated_at || j.created_at || null, weekStart, weekEnd),
-  );
-
-  const techName = (user.fullName || user.email || "").trim().toLowerCase();
-  const myLeads = (leads || []).filter((lead) => {
-    if (lead.assigned_to === user.id) return true;
-    const meta = (lead.metadata || {}) as Record<string, unknown>;
-    const tech = String(meta.technician || "").trim().toLowerCase();
-    return Boolean(tech && tech === techName);
+  const doneThisWeek = doneJobs.filter((j) => {
+    const iso = j.scheduled_start || j.updated_at || j.created_at || null;
+    if (!iso) return false;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return false;
+    return ymdInInclusiveRange(
+      new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles" }).format(d),
+      weekRange,
+    );
   });
 
-  const completedLeads = myLeads.filter((l) =>
-    ["completed", "won"].includes(String(l.stage || "")),
-  );
+  const techName = (user.fullName || user.email || "").trim();
+  const myLeads = (leads || []).filter((lead) => {
+    const meta = (lead.metadata || {}) as Record<string, unknown>;
+    const tech = String(meta.technician || meta.tech_name || "").trim();
+    if (tech) return namesMatch(tech, techName);
+    return lead.assigned_to === user.id;
+  });
 
   function commissionFor(lead: (typeof myLeads)[number]) {
     const meta = (lead.metadata || {}) as Record<string, unknown>;
-    return money(meta.techSalary ?? meta.tech_salary);
+    return sheetTechPayAmount(meta, lead.deal_price);
   }
 
-  const commissionMonth = completedLeads
-    .filter((l) => isInRange(l.updated_at || l.created_at, monthStart, nextMonth))
+  function leadPayDate(lead: (typeof myLeads)[number]) {
+    const meta = (lead.metadata || {}) as Record<string, unknown>;
+    return sheetPayDateYmd(meta, lead.created_at);
+  }
+
+  const commissionMonth = myLeads
+    .filter((l) => ymdInInclusiveRange(leadPayDate(l), monthRange))
     .reduce((sum, l) => sum + commissionFor(l), 0);
 
-  const commissionWeek = completedLeads
-    .filter((l) => isInRange(l.updated_at || l.created_at, weekStart, weekEnd))
+  const commissionWeek = myLeads
+    .filter((l) => ymdInInclusiveRange(leadPayDate(l), weekRange))
     .reduce((sum, l) => sum + commissionFor(l), 0);
 
-  const commissionAll = completedLeads.reduce((sum, l) => sum + commissionFor(l), 0);
+  const commissionAll = myLeads.reduce((sum, l) => sum + commissionFor(l), 0);
 
   const recentJobs = doneJobs
     .slice()
@@ -101,7 +118,7 @@ export default async function FieldReportPage() {
     })
     .slice(0, 12);
 
-  const recent = completedLeads
+  const recent = myLeads.filter((l) => commissionFor(l) > 0)
     .slice()
     .sort(
       (a, b) =>
@@ -147,7 +164,9 @@ export default async function FieldReportPage() {
             </div>
           </div>
           <p className="field-muted">
-            From Sheet Tech salary on your completed jobs. Logged total: {formatMoney(commissionAll)}.
+            Same as Sheet Tech salary for {techName || "you"}: job date, week Monday–today, month
+            1st–today. Partner jobs with a blank salary count as 30% of job cost. Logged total:{" "}
+            {formatMoney(commissionAll)}.
           </p>
         </section>
 

@@ -1436,6 +1436,23 @@ textarea {
   flex: 0 0 auto;
 }
 
+.sheet-tech-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--bos-muted);
+}
+
+.sheet-tech-filter select {
+  border: 1px solid var(--bos-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--bos-text);
+  font: inherit;
+  padding: 0.28rem 0.45rem;
+}
+
 .sheet-top-row .sheet-totals {
   margin: 0;
   flex: 1 1 auto;

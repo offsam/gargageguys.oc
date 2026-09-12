@@ -64,6 +64,11 @@ import {
   parseMoney as money,
   partnerTechSalary,
 } from "@/lib/sheet/money";
+import {
+  pacificMonthToDate,
+  pacificTodayYmd,
+  pacificWeekToDate,
+} from "@/lib/sheet/pay-period";
 
 export type SheetRow = {
   id: string;
@@ -266,25 +271,18 @@ function ymdLocal(d: Date): string {
 }
 
 function startOfToday(): Date {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-/** Week starts Monday. */
-function startOfWeekMonday(d: Date): Date {
-  const day = d.getDay();
-  const diff = day === 0 ? 6 : day - 1;
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - diff);
-}
-
-function parseYmdLocal(ymd: string): Date {
-  const [y, m, d] = ymd.split("-").map(Number);
+  const [y, m, d] = pacificTodayYmd().split("-").map(Number);
   return new Date(y, (m || 1) - 1, d || 1);
 }
 
 /** Monday YMD for the week containing this date (Sheet day/week separators). */
 function weekStartYmd(ymd: string): string {
-  return ymdLocal(startOfWeekMonday(parseYmdLocal(ymd)));
+  const [y, m, d] = ymd.split("-").map(Number);
+  const day = new Date(Date.UTC(y, (m || 1) - 1, d || 1, 12)).getUTCDay();
+  const diff = day === 0 ? 6 : day - 1;
+  const monday = new Date(Date.UTC(y, (m || 1) - 1, (d || 1) - diff, 12));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${monday.getUTCFullYear()}-${pad(monday.getUTCMonth() + 1)}-${pad(monday.getUTCDate())}`;
 }
 
 function periodRange(
@@ -294,14 +292,8 @@ function periodRange(
 ): { from: string | null; to: string | null } {
   const today = startOfToday();
   if (period === "all") return { from: null, to: null };
-  if (period === "week") {
-    const from = startOfWeekMonday(today);
-    return { from: ymdLocal(from), to: ymdLocal(today) };
-  }
-  if (period === "month") {
-    const from = new Date(today.getFullYear(), today.getMonth(), 1);
-    return { from: ymdLocal(from), to: ymdLocal(today) };
-  }
+  if (period === "week") return pacificWeekToDate();
+  if (period === "month") return pacificMonthToDate();
   if (period === "last_month") {
     const from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const to = new Date(today.getFullYear(), today.getMonth(), 0);
@@ -765,6 +757,7 @@ export function SheetTable({
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [techFilter, setTechFilter] = useState("");
   const [searchHitKey, setSearchHitKey] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [partsPickerRowId, setPartsPickerRowId] = useState<string | null>(null);
@@ -1821,13 +1814,15 @@ export function SheetTable({
 
   const periodRows = useMemo(
     () =>
-      rows.filter(
-        (row) =>
-          // Keep unsaved drafts visible; everything else must match the period filter
-          // so totals below match what is on screen.
-          row.id.startsWith("new-") || rowInPeriod(row, activeRange.from, activeRange.to),
-      ),
-    [rows, activeRange],
+      rows.filter((row) => {
+        if (row.id.startsWith("new-")) return true;
+        if (!rowInPeriod(row, activeRange.from, activeRange.to)) return false;
+        if (techFilter && row.technician.trim().toLowerCase() !== techFilter.trim().toLowerCase()) {
+          return false;
+        }
+        return true;
+      }),
+    [rows, activeRange, techFilter],
   );
 
   const searchActive = Boolean(normalizeSheetSearch(searchQuery));
@@ -2081,6 +2076,21 @@ export function SheetTable({
             <span className="sheet-total-label">Period</span>
             <strong className="sheet-total-value sheet-total-period-value">{periodTotalsLabel}</strong>
           </div>
+          <label className="sheet-tech-filter">
+            <span className="sheet-search-label">Technician</span>
+            <select
+              value={techFilter}
+              onChange={(e) => setTechFilter(e.target.value)}
+              aria-label="Filter totals by technician"
+            >
+              <option value="">All technicians</option>
+              {techOptions.filter(Boolean).map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <label className="sheet-search">
           <span className="sheet-search-label">Search</span>

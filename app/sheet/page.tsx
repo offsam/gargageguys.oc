@@ -47,7 +47,7 @@ export default async function SheetPage() {
         "id, name, phone, zip, address, stage, source, message, created_at, deal_title, deal_price, lead_type, metadata, assigned_to",
       )
       .order("created_at", { ascending: false })
-      .limit(500),
+      .limit(1500),
     admin
       .from("profiles")
       .select("id, full_name, email")
