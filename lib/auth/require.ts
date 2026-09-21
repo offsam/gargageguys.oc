@@ -19,6 +19,7 @@ export const ROUTE_ROLES: Record<string, AppRole[]> = {
   "/dispatch": ["owner", "dispatcher"],
   "/finance": ["owner", "accountant"],
   "/field": ["owner", "technician", "dispatcher"],
+  "/test": ["owner"],
 };
 
 export async function requireSession(): Promise<SessionUser> {

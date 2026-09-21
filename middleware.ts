@@ -17,6 +17,7 @@ const PROTECTED = [
   "/ads",
   "/reviews",
   "/schedule",
+  "/test",
 ];
 
 function canonicalHostRedirect(request: NextRequest): NextResponse | null {
@@ -85,5 +86,7 @@ export const config = {
     "/reviews/:path*",
     "/schedule",
     "/schedule/:path*",
+    "/test",
+    "/test/:path*",
   ],
 };

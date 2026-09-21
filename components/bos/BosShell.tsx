@@ -22,6 +22,7 @@ const LINKS: Array<{ href: string; label: string; roles?: Array<SessionUser["rol
   { href: "/dispatch", label: "Dispatch", roles: ["owner", "dispatcher"] },
   { href: "/finance", label: "Finance", roles: ["owner", "accountant"] },
   { href: "/field", label: "Field", roles: ["owner", "technician", "dispatcher"] },
+  { href: "/test", label: "Test", roles: ["owner"] },
 ];
 
 const NAV_COLLAPSED_KEY = "bos-nav-collapsed";

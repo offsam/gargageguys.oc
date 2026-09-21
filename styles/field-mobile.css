@@ -1050,3 +1050,326 @@
 .field-app .field-jump-chip {
   background: rgba(255, 255, 255, 0.82) !important;
 }
+
+/* —— CSLB mini-course (Field + BOS) —— */
+.cslb-teaser {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0.75rem 0;
+  padding: 0.95rem 1.1rem;
+  min-height: 88px;
+  border-radius: 16px;
+  text-decoration: none;
+  color: inherit;
+  background: #fff;
+  border: 1px solid rgba(15, 35, 64, 0.1);
+  box-shadow: 0 8px 24px rgba(15, 40, 80, 0.06);
+}
+
+.cslb-teaser:active {
+  transform: scale(0.99);
+}
+
+.field-app .cslb-teaser {
+  margin: 0;
+}
+
+.bos-main .field-home--glass {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.cslb-teaser__kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.cslb-teaser strong {
+  font-size: 1.15rem;
+  font-weight: 750;
+}
+
+.cslb-teaser span {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.cslb-teaser__due {
+  margin-top: 0.35rem;
+  align-self: flex-start;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(47, 107, 255, 0.12);
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.cslb-course {
+  width: 100%;
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 0 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.cslb-hero h2,
+.cslb-course > h2 {
+  margin: 0;
+  font-size: 1.45rem;
+  line-height: 1.2;
+}
+
+.cslb-hero p,
+.cslb-lesson,
+.cslb-q-ru,
+.cslb-explain p {
+  margin: 0.4rem 0 0;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.cslb-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.cslb-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1d4ed8;
+  font-size: 0.95rem;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cslb-review-btn,
+.cslb-primary,
+.cslb-topic__actions button,
+.cslb-option,
+.cslb-speak,
+.cslb-translate {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 35, 64, 0.12);
+  background: #fff;
+  color: #0f172a;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.cslb-review-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.85rem 1rem;
+  text-align: left;
+}
+
+.cslb-review-btn:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.cslb-review-btn span {
+  font-weight: 500;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.cslb-topics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.cslb-topic {
+  padding: 0.85rem 0.9rem;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(15, 35, 64, 0.1);
+}
+
+.cslb-topic__text {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+
+.cslb-topic__num {
+  flex: 0 0 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(47, 107, 255, 0.12);
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.cslb-topic__text strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.cslb-topic__text em {
+  display: block;
+  font-style: normal;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.cslb-topic__text small {
+  display: block;
+  margin-top: 0.2rem;
+  color: #64748b;
+}
+
+.cslb-topic__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+.cslb-topic__actions button {
+  flex: 1;
+}
+
+.cslb-topic__actions button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.cslb-terms {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.cslb-terms dt {
+  font-weight: 750;
+  font-size: 0.92rem;
+}
+
+.cslb-terms dd {
+  margin: 0.15rem 0 0;
+  color: #334155;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.cslb-primary {
+  width: 100%;
+  background: #2f6bff;
+  color: #fff;
+  border-color: #2f6bff;
+  font-size: 1rem;
+}
+
+.cslb-quiz-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.cslb-speak-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cslb-speak,
+.cslb-translate {
+  flex: 1;
+}
+
+.cslb-translate[aria-pressed="true"] {
+  background: rgba(47, 107, 255, 0.12);
+  border-color: rgba(47, 107, 255, 0.35);
+}
+
+.cslb-q {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.35;
+}
+
+.cslb-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.cslb-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.8rem 0.9rem;
+  text-align: left;
+  font-weight: 600;
+  min-height: 48px;
+}
+
+.cslb-option small {
+  font-weight: 500;
+  color: #64748b;
+}
+
+.cslb-option.is-correct {
+  background: rgba(22, 163, 74, 0.12);
+  border-color: #16a34a;
+  color: #166534;
+}
+
+.cslb-option.is-wrong {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.cslb-explain {
+  padding: 0.85rem 0.95rem;
+  border-radius: 12px;
+}
+
+.cslb-explain.is-ok {
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.cslb-explain.is-bad {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.cslb-explain strong {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .cslb-course {
+    padding-top: 0.5rem;
+  }
+}

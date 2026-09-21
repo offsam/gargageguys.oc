@@ -159,6 +159,7 @@ export default async function FieldPage() {
         initialFilter="today"
         lastKnownTech={lastKnownTech}
         lastKnownTechAt={techLoc?.updatedAt || null}
+        showCslbTest={user.role === "owner"}
       />
     </div>
   );

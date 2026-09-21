@@ -14,6 +14,7 @@ import {
 } from "@/lib/field/maps";
 import { FieldDayClients } from "@/components/bos/FieldDayClients";
 import { FieldDayMap, type FieldMapPin } from "@/components/bos/FieldDayMap";
+import { CslbDueHint } from "@/components/bos/CslbCourse";
 
 export type FieldDayFilter = "yesterday" | "today" | "tomorrow" | "all";
 type ViewMode = "map" | "list";
@@ -30,6 +31,7 @@ type Props = {
   initialFilter?: FieldDayFilter;
   lastKnownTech?: GeoPoint | null;
   lastKnownTechAt?: string | null;
+  showCslbTest?: boolean;
 };
 
 function homeStatusLabel(status: string): string {
@@ -201,6 +203,7 @@ export function FieldTodayHome({
   initialFilter = "today",
   lastKnownTech = null,
   lastKnownTechAt = null,
+  showCslbTest = false,
 }: Props) {
   const [filter, setFilter] = useState<FieldDayFilter>(initialFilter);
   const [view, setView] = useState<ViewMode>("map");
@@ -213,6 +216,14 @@ export function FieldTodayHome({
   return (
     <div className="field-home field-home--glass">
       <NextJobCard jobs={jobs} />
+      {showCslbTest ? (
+        <Link href="/field/test" className="cslb-teaser">
+          <p className="cslb-teaser__kicker">CSLB</p>
+          <strong>Law &amp; Business</strong>
+          <span>Урок · практика · повтор</span>
+          <CslbDueHint />
+        </Link>
+      ) : null}
 
       <section className="field-map-panel field-glass-card">
         <div className="field-seg field-seg--days" role="tablist" aria-label="Day filter">
