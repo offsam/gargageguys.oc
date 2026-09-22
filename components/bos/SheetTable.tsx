@@ -7,6 +7,10 @@ import { AddressAutocomplete } from "@/components/bos/AddressAutocomplete";
 import { ClientAutocomplete } from "@/components/bos/ClientAutocomplete";
 import { SheetPartsPicker } from "@/components/bos/SheetPartsPicker";
 import { SheetServicesPicker } from "@/components/bos/SheetServicesPicker";
+import {
+  SheetColumnFilterControl,
+  normalizeFilterValue,
+} from "@/components/bos/SheetColumnFilter";
 import { ScheduleLeadModal, type CrmTechnician } from "@/components/bos/ScheduleLeadModal";
 import { scheduleCrmLeadAction } from "@/app/actions/crm";
 import type { FieldJob } from "@/lib/field/days";
@@ -119,6 +123,49 @@ const WIDTHS_STORAGE_KEY = "bos-sheet-col-widths-v4";
 const ORDER_STORAGE_KEY = "bos-sheet-col-order-v2";
 const SORT_STORAGE_KEY = "bos-sheet-date-sort";
 const PERIOD_STORAGE_KEY = "bos-sheet-period-v1";
+
+type SheetFilterColumnKey = SheetColumnKey | "__profit";
+type ColumnFilters = Partial<Record<SheetFilterColumnKey, string[]>>;
+
+function sheetFilterCellValue(
+  row: SheetRow,
+  key: SheetFilterColumnKey,
+  partners: SheetPartner[],
+): string {
+  if (key === "__profit") {
+    return normalizeFilterValue(clearProfitFor(row, partners));
+  }
+  return normalizeFilterValue(String(row[key] ?? ""));
+}
+
+function rowMatchesColumnFilters(
+  row: SheetRow,
+  filters: ColumnFilters,
+  partners: SheetPartner[],
+  exceptKey?: SheetFilterColumnKey,
+): boolean {
+  for (const [rawKey, allowed] of Object.entries(filters)) {
+    const key = rawKey as SheetFilterColumnKey;
+    if (key === exceptKey || !allowed) continue;
+    const cell = sheetFilterCellValue(row, key, partners);
+    if (!allowed.includes(cell)) return false;
+  }
+  return true;
+}
+
+function uniqueFilterValues(
+  rows: SheetRow[],
+  key: SheetFilterColumnKey,
+  partners: SheetPartner[],
+): string[] {
+  const set = new Set<string>();
+  for (const row of rows) set.add(sheetFilterCellValue(row, key, partners));
+  return [...set].sort((a, b) => {
+    if (a === "(blank)") return 1;
+    if (b === "(blank)") return -1;
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+  });
+}
 const LEAD_SOURCE_LIST_ID = "sheet-lead-source-list";
 const PARTNER_LIST_ID = "sheet-partner-list";
 
@@ -758,6 +805,7 @@ export function SheetTable({
   const [customTo, setCustomTo] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [techFilter, setTechFilter] = useState("");
+  const [columnFilters, setColumnFilters] = useState<ColumnFilters>({});
   const [searchHitKey, setSearchHitKey] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [partsPickerRowId, setPartsPickerRowId] = useState<string | null>(null);
@@ -1828,10 +1876,49 @@ export function SheetTable({
   const searchActive = Boolean(normalizeSheetSearch(searchQuery));
 
   /** Search looks across the whole Sheet (any period); empty search keeps the period filter. */
-  const filteredRows = useMemo(() => {
+  const searchRows = useMemo(() => {
     if (!searchActive) return periodRows;
     return rows.filter((row) => sheetRowMatchesSearch(row, searchQuery));
   }, [periodRows, rows, searchQuery, searchActive]);
+
+  const columnFiltersActive = Object.keys(columnFilters).length > 0;
+
+  /** Excel-style column value filters apply on top of period/search. */
+  const filteredRows = useMemo(() => {
+    if (!columnFiltersActive) return searchRows;
+    return searchRows.filter((row) => rowMatchesColumnFilters(row, columnFilters, partners));
+  }, [searchRows, columnFilters, columnFiltersActive, partners]);
+
+  const filterOptionsByColumn = useMemo(() => {
+    const map = new Map<SheetFilterColumnKey, string[]>();
+    const keys: SheetFilterColumnKey[] = [...orderedColumns.map((c) => c.key), "__profit"];
+    for (const key of keys) {
+      const pool = searchRows.filter((row) =>
+        rowMatchesColumnFilters(row, columnFilters, partners, key),
+      );
+      map.set(key, uniqueFilterValues(pool, key, partners));
+    }
+    return map;
+  }, [searchRows, columnFilters, partners, orderedColumns]);
+
+  function setColumnFilter(key: SheetFilterColumnKey, next: string[] | null) {
+    releaseQueuedRef.current = false;
+    frozenIdsRef.current = null;
+    setFreezeOrder(false);
+    setColumnFilters((prev) => {
+      const copy = { ...prev };
+      if (next == null) delete copy[key];
+      else copy[key] = next;
+      return copy;
+    });
+  }
+
+  function clearColumnFilters() {
+    releaseQueuedRef.current = false;
+    frozenIdsRef.current = null;
+    setFreezeOrder(false);
+    setColumnFilters({});
+  }
 
   /** Column money totals for the rows currently on screen. */
   const sheetTotals = useMemo(() => {
@@ -2120,6 +2207,18 @@ export function SheetTable({
             </span>
           ) : null}
         </label>
+        {columnFiltersActive ? (
+          <div className="sheet-filter-bar">
+            <span className="sheet-search-meta">
+              {displayRows.length
+                ? `${displayRows.length} row${displayRows.length === 1 ? "" : "s"}`
+                : "No rows"}
+              <button type="button" className="sheet-search-clear" onClick={clearColumnFilters}>
+                Clear column filters
+              </button>
+            </span>
+          </div>
+        ) : null}
         <label className="sheet-sort">
           Date / time
           <select
@@ -2186,6 +2285,12 @@ export function SheetTable({
                       </span>
                     </span>
                   )}
+                  <SheetColumnFilterControl
+                    label={col.label}
+                    options={filterOptionsByColumn.get(col.key) || []}
+                    value={columnFilters[col.key] ?? null}
+                    onChange={(next) => setColumnFilter(col.key, next)}
+                  />
                   <span
                     className="sheet-col-resize"
                     onPointerDown={(e) => {
@@ -2199,11 +2304,20 @@ export function SheetTable({
                 </th>
                 );
               })}
-              <th style={{ width: widths.__profit || PROFIT_DEFAULT_WIDTH }}>
+              <th
+                className="sheet-profit-head"
+                style={{ width: widths.__profit || PROFIT_DEFAULT_WIDTH }}
+              >
                 <span className="sheet-col-letter">
                   {String.fromCharCode(65 + profitColIndex)}
                 </span>
                 <span className="sheet-col-label">$ Clear profit</span>
+                <SheetColumnFilterControl
+                  label="Clear profit"
+                  options={filterOptionsByColumn.get("__profit") || []}
+                  value={columnFilters.__profit ?? null}
+                  onChange={(next) => setColumnFilter("__profit", next)}
+                />
                 <span
                   className="sheet-col-resize"
                   onPointerDown={(e) => {
